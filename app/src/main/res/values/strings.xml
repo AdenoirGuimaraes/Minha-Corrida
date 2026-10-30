@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Minha Corrida</string>
+    <string name="service_name">Minha Corrida – leitor de ofertas</string>
+    <string name="accessibility_description">Lê apenas o valor e as distâncias das ofertas no Uber Driver e inDrive para mostrar quanto você ganha por km. Nenhum dado sai do celular.</string>
+    <string name="status_on">✅ Leitura de tela ATIVA</string>
+    <string name="status_off">⚠️ Leitura de tela DESATIVADA</string>
+    <string name="open_settings">Ativar leitura de tela</string>
+    <string name="min_label">Mínimo aceitável (R$/km)</string>
+    <string name="save">Salvar</string>
+    <string name="saved">Mínimo salvo</string>
+    <string name="invalid_value">Informe um valor maior que zero, ex.: 1,80</string>
+    <string name="help">Abra o Uber Driver ou o inDrive. Quando chegar uma oferta, o valor por km aparece no topo da tela: verde se atinge o seu mínimo, vermelho se não.</string>
+</resources>
