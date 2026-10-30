@@ -1,7 +1,15 @@
 package br.com.minhacorrida.core.update
 
 /** Versão publicada do app, disponível para download. */
-data class AppRelease(val versionCode: Int, val apkUrl: String)
+data class AppRelease(val versionCode: Int, val apkUrl: String) {
+    /** Nome exibido ao motorista; segue a mesma regra do app/build.gradle.kts ("0.2.<versionCode>"). */
+    val versionName: String get() = AppVersion.nameOf(versionCode)
+}
+
+/** Regra única do nome da versão a partir do número da compilação. */
+object AppVersion {
+    fun nameOf(versionCode: Int): String = "0.2.$versionCode"
+}
 
 /** Fonte das versões publicadas (implementação Android consulta o GitHub Releases). */
 interface ReleaseSource {

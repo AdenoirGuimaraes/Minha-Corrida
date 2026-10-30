@@ -17,7 +17,7 @@
     <string name="version_label">Versão %1$s</string>
     <string name="help">Abra o Uber Driver ou o inDrive. Quando chegar uma oferta, o valor por km aparece no topo da tela: verde se atinge o seu mínimo, vermelho se não.\n\nNo inDrive, abra a oferta: o app lê as duas distâncias do mapa (até o passageiro + viagem).\n\nO leitor fecha com um toque ou após o tempo configurado.</string>
     <string name="update_title">Nova versão disponível</string>
-    <string name="update_message">Quer baixar e instalar agora?</string>
+    <string name="update_message">A versão %1$s está pronta (você tem a %2$s). Toque em Atualizar para baixar e instalar.</string>
     <string name="update_now">Atualizar</string>
     <string name="update_later">Depois</string>
     <string name="update_downloading">Baixando atualização… %1$d%%</string>

@@ -3,10 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-// Assinatura fixa (necessária para atualizar por cima). Vem de variáveis de ambiente
-// preenchidas pelos segredos do GitHub; sem elas, usa a chave de debug.
-val signingStoreFile: String? = System.getenv("SIGNING_STORE_FILE")
-val hasReleaseSigning = !signingStoreFile.isNullOrBlank() && file(signingStoreFile!!).exists()
+// Assinatura fixa (necessária para o Android aceitar a atualização por cima).
+// A chave NÃO fica no repositório: o GitHub Actions a recria a partir do segredo
+// SIGNING_KEYSTORE_BASE64, e a senha vem de SIGNING_STORE_PASSWORD. Sem eles, usa a chave de debug.
+val signingStoreFile: String? = System.getenv("SIGNING_STORE_FILE")?.takeIf { it.isNotBlank() }
+val signingPassword: String? = System.getenv("SIGNING_STORE_PASSWORD")?.takeIf { it.isNotBlank() }
+val hasReleaseSigning = signingStoreFile != null && signingPassword != null && file(signingStoreFile).exists()
 
 android {
     namespace = "br.com.minhacorrida"
@@ -30,9 +32,9 @@ android {
         if (hasReleaseSigning) {
             create("release") {
                 storeFile = file(signingStoreFile!!)
-                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
-                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
-                keyPassword = System.getenv("SIGNING_KEY_PASSWORD") ?: System.getenv("SIGNING_STORE_PASSWORD")
+                storePassword = signingPassword
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "minha-corrida"
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: signingPassword
             }
         }
     }

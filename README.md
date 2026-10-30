@@ -43,6 +43,18 @@ Quando o cartão da Uber fecha, o inDrive recomeça a leitura do mapa do zero. U
 2. Nova classe `XxxOfferParser : RideOfferParser` + teste com os textos da tela.
 3. Registrar em `AppContainer`.
 
+## Atualização pelo próprio app
+Ao abrir o Minha Corrida, ele consulta a release `ultima-versao` no GitHub. Havendo versão nova,
+aparece **"Nova versão disponível"** com o botão **Atualizar**: o app baixa o APK e abre o
+instalador do Android (o Android sempre pede um toque de confirmação em "Instalar").
+
+Requisitos:
+- Repositório **público** (o app consulta o GitHub sem login).
+- Segredos **SIGNING_KEYSTORE_BASE64** (a chave de assinatura em base64) e
+  **SIGNING_STORE_PASSWORD** em *Settings → Secrets and variables → Actions*. A chave nunca
+  vai para o repositório; sem ela, cada APK sai com assinatura diferente e o Android recusa
+  instalar por cima.
+
 ## Gerar o APK sem computador
 A cada envio para `main`, o GitHub Actions roda os testes e publica o APK em
 **Releases → ultima-versao → MinhaCorrida.apk**.

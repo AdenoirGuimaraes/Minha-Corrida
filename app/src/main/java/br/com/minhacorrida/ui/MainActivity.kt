@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Button
 import android.widget.EditText
@@ -40,6 +41,10 @@ class MainActivity : Activity() {
     /** APK baixado aguardando o usuário liberar a instalação. */
     private var pendingApk: File? = null
 
+    /** Evita consultar o GitHub várias vezes seguidas e empilhar avisos. */
+    private var lastUpdateCheckMs = 0L
+    private var updateFlowActive = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -61,8 +66,6 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.btnSave).setOnClickListener { saveSettings() }
         findViewById<Button>(R.id.btnDiagnostics).setOnClickListener { showDiagnostics() }
-
-        if (savedInstanceState == null) checkForUpdate()
     }
 
     override fun onResume() {
@@ -74,7 +77,10 @@ class MainActivity : Activity() {
         if (apk != null && installer.canInstall()) {
             pendingApk = null
             installer.install(this, apk)
+            return
         }
+        // Toda vez que o app é aberto (ou volta para a frente), procura versão nova.
+        checkForUpdate()
     }
 
     override fun onDestroy() {
@@ -85,21 +91,34 @@ class MainActivity : Activity() {
 
     // ---- Atualização ----
 
+    /**
+     * Consulta o GitHub fora da thread principal e mostra o aviso se houver versão nova.
+     * Ignorada enquanto um aviso/download está aberto ou se a última consulta foi há pouco.
+     */
     private fun checkForUpdate() {
-        ioExecutor.execute {
-            val release = container.checkForUpdate()
-            mainHandler.post {
-                if (release != null && !isFinishing && !isDestroyed) showUpdateDialog(release)
+        val now = SystemClock.elapsedRealtime()
+        if (updateFlowActive || (lastUpdateCheckMs != 0L && now - lastUpdateCheckMs < UPDATE_CHECK_INTERVAL_MS)) return
+        lastUpdateCheckMs = now
+        try {
+            ioExecutor.execute {
+                val release = container.checkForUpdate()
+                mainHandler.post {
+                    if (release != null && !isFinishing && !isDestroyed && !updateFlowActive) showUpdateDialog(release)
+                }
             }
+        } catch (e: Exception) {
+            android.util.Log.e("MC/MainActivity", "Falha ao agendar verificação de atualização", e)
         }
     }
 
     private fun showUpdateDialog(release: AppRelease) {
+        updateFlowActive = true
         AlertDialog.Builder(this)
             .setTitle(R.string.update_title)
-            .setMessage(R.string.update_message)
+            .setMessage(getString(R.string.update_message, release.versionName, BuildConfig.VERSION_NAME))
             .setPositiveButton(R.string.update_now) { _, _ -> startDownload(release) }
-            .setNegativeButton(R.string.update_later, null)
+            .setNegativeButton(R.string.update_later) { _, _ -> updateFlowActive = false }
+            .setOnCancelListener { updateFlowActive = false }
             .show()
     }
 
@@ -116,6 +135,7 @@ class MainActivity : Activity() {
             release,
             onProgress = { percent -> progressText.text = getString(R.string.update_downloading, percent) },
             onFinished = { apk ->
+                updateFlowActive = false
                 if (!isDestroyed) dialog.dismiss()
                 if (apk == null) toast(getString(R.string.update_failed)) else installOrAskPermission(apk)
             },
@@ -184,6 +204,11 @@ class MainActivity : Activity() {
             android.util.Log.e("MC/MainActivity", "Falha ao salvar configurações", e)
             toast(getString(R.string.save_error))
         }
+    }
+
+    private companion object {
+        /** Intervalo mínimo entre consultas ao GitHub (abrir e fechar o app rápido não repete). */
+        const val UPDATE_CHECK_INTERVAL_MS = 60_000L
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()

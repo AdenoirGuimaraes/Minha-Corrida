@@ -21,6 +21,10 @@ class CheckForUpdateUseCaseTest {
     }
 
     @Test
+    fun `nome da versao segue o numero da compilacao`() =
+        assertEquals("0.2.10", AppRelease(10, "x").versionName)
+
+    @Test
     fun `mesma versao nao e oferecida`() =
         assertNull(CheckForUpdateUseCase(sourceOf(AppRelease(4, "x")), 4, NoOpLogger)())
 
