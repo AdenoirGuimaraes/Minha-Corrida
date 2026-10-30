@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone do Minha Corrida: carro preto visto de frente e as letras AGO.
+     Desenho em 108x108 (padrão do ícone adaptativo); o conteúdo fica na área segura central. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Retrovisores -->
+    <path android:fillColor="#111111" android:pathData="M25.5,43.5h6v4h-6a1.5,1.5 0,0 1,-1.5 -1.5v-1a1.5,1.5 0,0 1,1.5 -1.5z" />
+    <path android:fillColor="#111111" android:pathData="M82.5,43.5h-6v4h6a1.5,1.5 0,0 0,1.5 -1.5v-1a1.5,1.5 0,0 0,-1.5 -1.5z" />
+    <!-- Cabine -->
+    <path android:fillColor="#111111" android:pathData="M39,33L69,33Q71,33 72,35L77.5,47L30.5,47L36,35Q37,33 39,33Z" />
+    <!-- Para-brisa -->
+    <path android:fillColor="#5C6B73" android:pathData="M40.5,36L67.5,36L72.5,45L35.5,45Z" />
+    <!-- Rodas -->
+    <path android:fillColor="#111111" android:pathData="M30,56h9v8a2,2 0,0 1,-2 2h-5a2,2 0,0 1,-2 -2z" />
+    <path android:fillColor="#111111" android:pathData="M69,56h9v8a2,2 0,0 1,-2 2h-5a2,2 0,0 1,-2 -2z" />
+    <!-- Carroceria -->
+    <path android:fillColor="#111111" android:pathData="M31,46L77,46A5,5 0,0 1,82 51L82,57A3,3 0,0 1,79 60L29,60A3,3 0,0 1,26 57L26,51A5,5 0,0 1,31 46Z" />
+    <!-- Faróis -->
+    <path android:fillColor="#FFF8E1" android:pathData="M30,50.5h8.5a1.5,1.5 0,0 1,1.5 1.5v1.5a1.5,1.5 0,0 1,-1.5 1.5h-7a2.5,2.5 0,0 1,-2.5 -2.5v-0.5a1.5,1.5 0,0 1,1.5 -1.5z" />
+    <path android:fillColor="#FFF8E1" android:pathData="M78,50.5h-8.5a1.5,1.5 0,0 0,-1.5 1.5v1.5a1.5,1.5 0,0 0,1.5 1.5h7a2.5,2.5 0,0 0,2.5 -2.5v-0.5a1.5,1.5 0,0 0,-1.5 -1.5z" />
+    <!-- Grade -->
+    <path android:fillColor="#3A4247" android:pathData="M44.5,51h19a1.5,1.5 0,0 1,1.5 1.5v2a1.5,1.5 0,0 1,-1.5 1.5h-19a1.5,1.5 0,0 1,-1.5 -1.5v-2a1.5,1.5 0,0 1,1.5 -1.5z" />
+    <!-- Letras AGO -->
+    <path android:strokeColor="#111111" android:strokeWidth="3.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M34.5,82L40,69L45.5,82M36.7,77.3L43.3,77.3" />
+    <path android:strokeColor="#111111" android:strokeWidth="3.2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M60.2,71.3A6,6.8 0,1 0,61 76.5L55.8,76.5" />
+    <path android:strokeColor="#111111" android:strokeWidth="3.2" android:strokeLineCap="round"
+        android:pathData="M64.5,75.5A5.5,6.5 0,1 0,75.5 75.5A5.5,6.5 0,1 0,64.5 75.5Z" />
+</vector>
