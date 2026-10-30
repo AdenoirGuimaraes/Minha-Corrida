@@ -1,63 +1,160 @@
 package br.com.minhacorrida.ui
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import br.com.minhacorrida.BuildConfig
 import br.com.minhacorrida.MinhaCorridaApp
 import br.com.minhacorrida.R
+import br.com.minhacorrida.core.model.OverlayTimeout
 import br.com.minhacorrida.core.parser.NumberParser
-import br.com.minhacorrida.core.port.SettingsRepository
+import br.com.minhacorrida.core.update.AppRelease
+import br.com.minhacorrida.di.AppContainer
 import br.com.minhacorrida.service.RideReaderService
+import br.com.minhacorrida.update.ApkUpdateInstaller
+import java.io.File
+import java.util.concurrent.Executors
 
-/** Tela de configuração: status do serviço e valor mínimo por km. */
+/** Tela de configuração: status do serviço, mínimo por km, tempo do leitor e atualização. */
 class MainActivity : Activity() {
 
-    private lateinit var settings: SettingsRepository
+    private lateinit var container: AppContainer
+    private lateinit var installer: ApkUpdateInstaller
     private lateinit var tvStatus: TextView
     private lateinit var etMinValue: EditText
+    private lateinit var etTimeout: EditText
+
+    private val ioExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    /** APK baixado aguardando o usuário liberar a instalação. */
+    private var pendingApk: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val container = (application as MinhaCorridaApp).container
-        settings = container.settings
+        container = (application as MinhaCorridaApp).container
+        installer = ApkUpdateInstaller(this, container.logger)
 
         tvStatus = findViewById(R.id.tvStatus)
         etMinValue = findViewById(R.id.etMinValue)
+        etTimeout = findViewById(R.id.etTimeout)
+        findViewById<TextView>(R.id.tvVersion).text = getString(R.string.version_label, BuildConfig.VERSION_NAME)
+
+        val settings = container.settings
         etMinValue.setText(settings.getMinValuePerKm().toPlainString().replace('.', ','))
+        etTimeout.setText(settings.getOverlayTimeoutSeconds().toString())
 
         findViewById<Button>(R.id.btnOpenSettings).setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        findViewById<Button>(R.id.btnSave).setOnClickListener { saveMinValue() }
+        findViewById<Button>(R.id.btnSave).setOnClickListener { saveSettings() }
+
+        if (savedInstanceState == null) checkForUpdate()
     }
 
     override fun onResume() {
         super.onResume()
         tvStatus.setText(if (isServiceEnabled()) R.string.status_on else R.string.status_off)
-    }
 
-    private fun saveMinValue() {
-        try {
-            val value = NumberParser.parse(etMinValue.text.toString())
-            if (value == null || value.signum() <= 0) {
-                Toast.makeText(this, R.string.invalid_value, Toast.LENGTH_SHORT).show()
-                return
-            }
-            settings.setMinValuePerKm(value)
-            Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            android.util.Log.e("MC/MainActivity", "Falha ao salvar mínimo", e)
-            Toast.makeText(this, R.string.invalid_value, Toast.LENGTH_SHORT).show()
+        // Voltou da tela de permissão: instala o APK que já estava baixado.
+        val apk = pendingApk
+        if (apk != null && installer.canInstall()) {
+            pendingApk = null
+            installer.install(this, apk)
         }
     }
+
+    override fun onDestroy() {
+        ioExecutor.shutdownNow()
+        installer.shutdown()
+        super.onDestroy()
+    }
+
+    // ---- Atualização ----
+
+    private fun checkForUpdate() {
+        ioExecutor.execute {
+            val release = container.checkForUpdate()
+            mainHandler.post {
+                if (release != null && !isFinishing && !isDestroyed) showUpdateDialog(release)
+            }
+        }
+    }
+
+    private fun showUpdateDialog(release: AppRelease) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.update_title)
+            .setMessage(R.string.update_message)
+            .setPositiveButton(R.string.update_now) { _, _ -> startDownload(release) }
+            .setNegativeButton(R.string.update_later, null)
+            .show()
+    }
+
+    private fun startDownload(release: AppRelease) {
+        val progressText = TextView(this).apply {
+            val padding = (24 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+            textSize = 16f
+            text = getString(R.string.update_downloading, 0)
+        }
+        val dialog = AlertDialog.Builder(this).setView(progressText).setCancelable(false).show()
+
+        installer.download(
+            release,
+            onProgress = { percent -> progressText.text = getString(R.string.update_downloading, percent) },
+            onFinished = { apk ->
+                if (!isDestroyed) dialog.dismiss()
+                if (apk == null) toast(getString(R.string.update_failed)) else installOrAskPermission(apk)
+            },
+        )
+    }
+
+    private fun installOrAskPermission(apk: File) {
+        if (installer.canInstall()) {
+            installer.install(this, apk)
+        } else {
+            pendingApk = apk
+            toast(getString(R.string.update_allow_install))
+            installer.openInstallPermissionSettings(this)
+        }
+    }
+
+    // ---- Configurações ----
+
+    /** Valida os dois campos antes de gravar qualquer um deles. */
+    private fun saveSettings() {
+        try {
+            val minValue = NumberParser.parse(etMinValue.text.toString())
+            if (minValue == null || minValue.signum() <= 0) {
+                toast(getString(R.string.invalid_value))
+                return
+            }
+            val timeout = etTimeout.text.toString().trim().toIntOrNull()
+            if (timeout == null || !OverlayTimeout.isValid(timeout)) {
+                toast(getString(R.string.invalid_timeout, OverlayTimeout.MIN_SECONDS, OverlayTimeout.MAX_SECONDS))
+                return
+            }
+            container.settings.setMinValuePerKm(minValue)
+            container.settings.setOverlayTimeoutSeconds(timeout)
+            toast(getString(R.string.saved))
+        } catch (e: Exception) {
+            android.util.Log.e("MC/MainActivity", "Falha ao salvar configurações", e)
+            toast(getString(R.string.save_error))
+        }
+    }
+
+    private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
 
     private fun isServiceEnabled(): Boolean {
         val enabled = Settings.Secure.getString(

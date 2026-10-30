@@ -2,13 +2,25 @@
 <resources>
     <string name="app_name">Minha Corrida</string>
     <string name="service_name">Minha Corrida – leitor de ofertas</string>
-    <string name="accessibility_description">Lê apenas o valor e as distâncias das ofertas no Uber Driver e inDrive para mostrar quanto você ganha por km. Nenhum dado sai do celular.</string>
+    <string name="accessibility_description">Lê o valor e as distâncias das ofertas no Uber Driver e inDrive (incluindo as distâncias do mapa) para mostrar quanto você ganha por km. Nenhum dado sai do celular.</string>
     <string name="status_on">✅ Leitura de tela ATIVA</string>
     <string name="status_off">⚠️ Leitura de tela DESATIVADA</string>
     <string name="open_settings">Ativar leitura de tela</string>
     <string name="min_label">Mínimo aceitável (R$/km)</string>
+    <string name="timeout_label">Fechar o leitor sozinho após (segundos)</string>
     <string name="save">Salvar</string>
-    <string name="saved">Mínimo salvo</string>
+    <string name="saved">Configurações salvas</string>
+    <string name="save_error">Não foi possível salvar. Tente novamente.</string>
     <string name="invalid_value">Informe um valor maior que zero, ex.: 1,80</string>
-    <string name="help">Abra o Uber Driver ou o inDrive. Quando chegar uma oferta, o valor por km aparece no topo da tela: verde se atinge o seu mínimo, vermelho se não.</string>
+    <string name="invalid_timeout">Informe entre %1$d e %2$d segundos</string>
+    <string name="tap_to_close">toque para fechar</string>
+    <string name="version_label">Versão %1$s</string>
+    <string name="help">Abra o Uber Driver ou o inDrive. Quando chegar uma oferta, o valor por km aparece no topo da tela: verde se atinge o seu mínimo, vermelho se não.\n\nNo inDrive, abra a oferta: o app lê as duas distâncias do mapa (até o passageiro + viagem).\n\nO leitor fecha com um toque ou após o tempo configurado.</string>
+    <string name="update_title">Nova versão disponível</string>
+    <string name="update_message">Quer baixar e instalar agora?</string>
+    <string name="update_now">Atualizar</string>
+    <string name="update_later">Depois</string>
+    <string name="update_downloading">Baixando atualização… %1$d%%</string>
+    <string name="update_failed">Não foi possível baixar a atualização. Tente mais tarde.</string>
+    <string name="update_allow_install">Permita \"Instalar apps desconhecidos\" para o Minha Corrida e volte ao app.</string>
 </resources>

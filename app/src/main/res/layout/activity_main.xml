@@ -17,6 +17,13 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tvVersion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0.7"
+            android:textSize="13sp" />
+
+        <TextView
             android:id="@+id/tvStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -41,10 +48,26 @@
             android:id="@+id/etMinValue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:digits="0123456789,."
             android:hint="1,80"
             android:importantForAutofill="no"
-            android:inputType="numberDecimal"
-            android:digits="0123456789,." />
+            android:inputType="numberDecimal" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/timeout_label"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/etTimeout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="10"
+            android:importantForAutofill="no"
+            android:inputType="number"
+            android:maxLength="3" />
 
         <Button
             android:id="@+id/btnSave"

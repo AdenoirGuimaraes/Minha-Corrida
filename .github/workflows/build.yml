@@ -1,5 +1,5 @@
-# Gera o APK do Minha Corrida na nuvem (GitHub Actions) a cada envio para o repositório.
-# O APK fica em "Releases" > "ultima-versao" para baixar direto no celular.
+# Gera o APK do Minha Corrida na nuvem (GitHub Actions) a cada envio para a main.
+# O APK fica em "Releases" > "ultima-versao"; o app consulta essa release para se atualizar.
 name: Gerar APK
 
 on:
@@ -13,6 +13,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VERSION_CODE: ${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,18 +27,35 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      # Chave fixa de assinatura (segredos do repositório). Sem ela as atualizações
+      # por cima falham, pois cada compilação teria uma assinatura diferente.
+      - name: Preparar assinatura
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/minha-corrida.jks"
+            echo "SIGNING_STORE_FILE=$RUNNER_TEMP/minha-corrida.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Segredo SIGNING_KEYSTORE_BASE64 ausente: APK assinado com chave temporária (não atualiza por cima)."
+          fi
+
       - name: Testes do núcleo
         run: gradle :core:test --no-daemon
 
       - name: Gerar APK
-        run: gradle :app:assembleDebug --no-daemon
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+        run: gradle :app:assembleRelease --no-daemon
 
       - name: Publicar APK em Releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MinhaCorrida.apk
+          cp app/build/outputs/apk/release/app-release.apk MinhaCorrida.apk
           gh release delete ultima-versao -y --cleanup-tag || true
           gh release create ultima-versao MinhaCorrida.apk \
             --title "Minha Corrida (última versão)" \
-            --notes "APK gerado automaticamente em $(date -u '+%d/%m/%Y %H:%M') UTC"
+            --notes "APK gerado automaticamente em $(date -u '+%d/%m/%Y %H:%M') UTC
+          versionCode=${VERSION_CODE}"

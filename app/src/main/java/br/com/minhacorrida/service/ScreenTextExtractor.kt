@@ -1,8 +1,12 @@
 package br.com.minhacorrida.service
 
+import android.graphics.Rect
 import android.os.Build
 import android.view.accessibility.AccessibilityNodeInfo
 import br.com.minhacorrida.core.port.AppLogger
+
+/** Texto visível e a posição vertical (px) do seu topo na tela. */
+data class ScreenText(val text: String, val topPx: Int)
 
 /**
  * Percorre a árvore de acessibilidade e devolve os textos visíveis na ordem de leitura.
@@ -14,11 +18,12 @@ class ScreenTextExtractor(
 
     /**
      * @param root nó raiz da janela do app de corrida.
-     * @return textos e descrições de conteúdo não vazios.
+     * @return textos e descrições de conteúdo não vazios, com a posição na tela.
      */
-    fun extract(root: AccessibilityNodeInfo): List<String> {
-        val texts = ArrayList<String>(64)
+    fun extract(root: AccessibilityNodeInfo): List<ScreenText> {
+        val result = ArrayList<ScreenText>(64)
         val stack = ArrayDeque<AccessibilityNodeInfo>().apply { addLast(root) }
+        val bounds = Rect()
         var visited = 0
 
         try {
@@ -27,12 +32,15 @@ class ScreenTextExtractor(
             while (stack.isNotEmpty() && visited < maxNodes) {
                 val node = stack.removeLast()
                 visited++
+                node.getBoundsInScreen(bounds)
 
                 val text = node.text?.toString()?.trim()
-                if (!text.isNullOrEmpty()) texts.add(text)
+                if (!text.isNullOrEmpty()) result.add(ScreenText(text, bounds.top))
 
                 val description = node.contentDescription?.toString()?.trim()
-                if (!description.isNullOrEmpty() && description != text) texts.add(description)
+                if (!description.isNullOrEmpty() && description != text) {
+                    result.add(ScreenText(description, bounds.top))
+                }
 
                 for (i in node.childCount - 1 downTo 0) {
                     node.getChild(i)?.let(stack::addLast)
@@ -44,7 +52,7 @@ class ScreenTextExtractor(
         } finally {
             stack.forEach { if (it !== root) recycleCompat(it) }
         }
-        return texts
+        return result
     }
 
     @Suppress("DEPRECATION")

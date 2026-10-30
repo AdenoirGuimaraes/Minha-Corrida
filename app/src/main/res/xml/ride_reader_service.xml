@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sem filtro de pacote: precisamos saber quando o motorista sai do app para esconder o overlay. -->
+<!-- Sem filtro de pacote: precisamos saber quando o motorista sai do app para esconder o leitor.
+     canTakeScreenshot: lê as bolhas do mapa do inDrive (são imagem) com OCR. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagReportViewIds|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
     android:description="@string/accessibility_description"
     android:notificationTimeout="60"
     android:settingsActivity="br.com.minhacorrida.ui.MainActivity" />
