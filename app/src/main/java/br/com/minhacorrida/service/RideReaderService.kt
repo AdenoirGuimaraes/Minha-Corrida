@@ -41,6 +41,7 @@ class RideReaderService : AccessibilityService() {
     private lateinit var overlay: RideOverlayController
 
     private var currentTarget: ReadingTarget? = null
+    private var paused = false
     private var lastAnalysis: RideAnalysis? = null
     private val analyzeTask = Runnable { evaluate() }
     private val pollTask = Runnable { evaluate() }
@@ -86,6 +87,13 @@ class RideReaderService : AccessibilityService() {
         val pkg = event.packageName?.toString()
         if (pkg == packageName) return // o próprio leitor
 
+        // Motorista tocou em Encerrar: serviço fica ocioso até o app ser aberto de novo.
+        if (!container.readingSession.isActive()) {
+            pauseReading()
+            return
+        }
+        paused = false
+
         // Abertura/fechamento de janelas (ex.: cartão da Uber surgindo sobre o inDrive).
         val windowsChanged = event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
         if (pkg != null && !windowsChanged && !container.parserRegistry.supports(pkg)) {
@@ -96,6 +104,31 @@ class RideReaderService : AccessibilityService() {
         // Debounce: a tela dispara dezenas de eventos por segundo; avaliamos só o último.
         handler.removeCallbacks(analyzeTask)
         handler.postDelayed(analyzeTask, DEBOUNCE_MS)
+    }
+
+    /**
+     * Para tudo de uma vez (uma só vez por pausa): leituras agendadas, OCR em andamento
+     * e o leitor na tela. O estado volta limpo quando a leitura for retomada.
+     */
+    private fun pauseReading() {
+        if (paused) return
+        paused = true
+        try {
+            handler.removeCallbacksAndMessages(null)
+            overlay.hideNow()
+            currentTarget = null
+            lastAnalysis = null
+            ocrPackage = null
+            ocrOfferKey = null
+            ocrTexts = emptyList()
+            ocrAttempts = 0
+            // ocrInFlight fica como está: o OCR em curso termina e se descarta sozinho.
+            uberCardKey = null
+            uberPartialReads = 0
+            container.logger.debug(TAG, "Leitura encerrada pelo motorista")
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao pausar a leitura", e)
+        }
     }
 
     /** Esconde o leitor quando o motorista troca para outro app (sem cartão da Uber na tela). */
@@ -111,6 +144,11 @@ class RideReaderService : AccessibilityService() {
 
     private fun evaluate() {
         handler.removeCallbacks(pollTask)
+        // Um OCR que terminou depois do Encerrar não pode reabrir a leitura.
+        if (!container.readingSession.isActive()) {
+            pauseReading()
+            return
+        }
         try {
             val target = chooseTarget()
             if (target == null) {

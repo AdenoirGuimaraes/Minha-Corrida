@@ -23,6 +23,8 @@
     <string name="update_downloading">Baixando atualização… %1$d%%</string>
     <string name="update_failed">Não foi possível baixar a atualização. Tente mais tarde.</string>
     <string name="update_allow_install">Permita \"Instalar apps desconhecidos\" para o Minha Corrida e volte ao app.</string>
+    <string name="exit">Encerrar</string>
+    <string name="exit_done">Minha Corrida encerrado. Abra o app para voltar a ler as ofertas.</string>
     <string name="diagnostics_title">Diagnóstico da leitura</string>
     <string name="diagnostics_share">Compartilhar</string>
     <string name="diagnostics_clear">Limpar</string>

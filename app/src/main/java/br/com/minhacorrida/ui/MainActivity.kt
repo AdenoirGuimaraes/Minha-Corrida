@@ -66,10 +66,13 @@ class MainActivity : Activity() {
         }
         findViewById<Button>(R.id.btnSave).setOnClickListener { saveSettings() }
         findViewById<Button>(R.id.btnDiagnostics).setOnClickListener { showDiagnostics() }
+        findViewById<Button>(R.id.btnExit).setOnClickListener { exitApp() }
     }
 
     override fun onResume() {
         super.onResume()
+        // Abrir o app = voltar a trabalhar: retoma a leitura se tinha sido encerrada.
+        container.readingSession.start()
         tvStatus.setText(if (isServiceEnabled()) R.string.status_on else R.string.status_off)
 
         // Voltou da tela de permissão: instala o APK que já estava baixado.
@@ -149,6 +152,24 @@ class MainActivity : Activity() {
             pendingApk = apk
             toast(getString(R.string.update_allow_install))
             installer.openInstallPermissionSettings(this)
+        }
+    }
+
+    // ---- Encerrar ----
+
+    /**
+     * Pausa a leitura (sem OCR nem leitor na tela) e fecha o app, tirando-o dos recentes.
+     * A acessibilidade continua ativada para não precisar religá-la nas Configurações;
+     * abrir o app de novo retoma a leitura.
+     */
+    private fun exitApp() {
+        try {
+            container.readingSession.stop()
+            toast(getString(R.string.exit_done))
+        } catch (e: Exception) {
+            android.util.Log.e("MC/MainActivity", "Falha ao encerrar a leitura", e)
+        } finally {
+            finishAndRemoveTask()
         }
     }
 
