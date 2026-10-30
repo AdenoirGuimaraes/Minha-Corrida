@@ -41,6 +41,21 @@ class ReadingPriorityPolicyTest {
     }
 
     @Test
+    fun `faixa baixa da parte de baixo do cartao tambem entra no OCR`() {
+        val strip = WindowSnapshot("com.ubercab.driver", false, false, 0, 1700, w, 1900)
+        val t = policy.choose(listOf(uberCardTop, strip, uberBubble, inDriveFront), w, h)!!
+        assertEquals(1200, t.ocrTopPx)
+        assertEquals(1900, t.ocrBottomPx)
+    }
+
+    @Test
+    fun `faixa baixa sozinha nao e cartao`() {
+        val strip = WindowSnapshot("com.ubercab.driver", false, false, 0, 2150, w, 2350)
+        val t = policy.choose(listOf(strip, uberBubble, inDriveFront), w, h)!!
+        assertEquals(Source.FOREGROUND, t.source)
+    }
+
+    @Test
     fun `sobreposicao do tamanho da tela le so a metade de baixo`() {
         val full = WindowSnapshot("com.ubercab.driver", false, false, 0, 0, w, h)
         val t = policy.choose(listOf(full, inDriveFront), w, h)!!

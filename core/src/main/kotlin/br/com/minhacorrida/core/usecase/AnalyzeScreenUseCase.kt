@@ -52,6 +52,15 @@ class AnalyzeScreenUseCase(
             VisualReadingMode.NONE
         }
 
+    /** True quando a oferta está na tela, mas incompleta (ex.: cartão da Uber sem a parte de baixo). */
+    fun isPartialOffer(packageName: String, texts: List<String>): Boolean =
+        try {
+            registry.parserFor(packageName)?.isPartialOffer(texts) ?: false
+        } catch (e: Exception) {
+            logger.error(TAG, "Erro ao verificar oferta parcial de $packageName", e)
+            false
+        }
+
     /** True quando a oferta depende de dados que só existem como imagem na tela. */
     fun needsVisualReading(packageName: String, texts: List<String>): Boolean =
         visualReadingMode(packageName, texts) != VisualReadingMode.NONE

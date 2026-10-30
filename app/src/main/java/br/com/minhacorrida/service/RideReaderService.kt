@@ -61,6 +61,11 @@ class RideReaderService : AccessibilityService() {
     private var uberCardCountedOcrAt = 0L
     private var ignoredUberCardKey: String? = null
 
+    // Cartão da Uber lido pela metade (valor + 1 distância): insiste mais rápido e,
+    // depois de algumas leituras, amplia o OCR até o fim da tela para pegar a parte de baixo.
+    private var uberPartialReads = 0
+    private var uberPartialCountedOcrAt = 0L
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         try {
@@ -150,6 +155,8 @@ class RideReaderService : AccessibilityService() {
             uberCardMisses = 0
             uberCardCountedOcrAt = 0L
             ignoredUberCardKey = null
+            uberPartialReads = 0
+            uberPartialCountedOcrAt = 0L
         }
         return if (cardKey != null && cardKey == ignoredUberCardKey) {
             priority.choose(snapshots, dm.widthPixels, dm.heightPixels, ignoreUberCard = true)
@@ -164,8 +171,11 @@ class RideReaderService : AccessibilityService() {
         val pkg = target.packageName
         val isCard = target.source == ReadingTarget.Source.UBER_CARD_OVERLAY
         try {
-            val root = if (isCard) uberCardRoot() else (foregroundRootOf(pkg) ?: return)
-            val screenTexts = root?.let(extractor::extract).orEmpty()
+            val screenTexts = if (isCard) {
+                uberCardTexts()
+            } else {
+                extractor.extract(foregroundRootOf(pkg) ?: return)
+            }
             val texts = screenTexts.map { it.text }
             resetOcrIfNewScreen(pkg, target.source.name + "|" + offerKeyOf(texts))
 
@@ -185,30 +195,53 @@ class RideReaderService : AccessibilityService() {
                 VisualReadingMode.LOWER_SCREEN_CONTINUOUS -> {
                     val height = resources.displayMetrics.heightPixels
                     val top = target.ocrTopPx ?: (height * LOWER_SCREEN_START_RATIO).toInt()
-                    val bottom = target.ocrBottomPx ?: height
+                    // Cartão lido pela metade: a parte de baixo pode estar fora das janelas da Uber.
+                    val expand = isCard && uberPartialReads >= PARTIAL_EXPAND_AFTER
+                    val bottom = if (expand) height else target.ocrBottomPx ?: height
                     requestLowerScreenReading(pkg, top, bottom)
                     // O cartão sobreposto pode não gerar eventos: relê enquanto ele estiver na tela.
-                    if (isCard) handler.postDelayed(pollTask, CONTINUOUS_OCR_INTERVAL_MS)
+                    if (isCard) handler.postDelayed(pollTask, continuousOcrIntervalMs())
                 }
                 VisualReadingMode.NONE -> Unit
             }
 
             val analysis = container.analyzeScreen.analyze(pkg, combined)
-            if (isCard) countUberCardResult(analysis)
-            recordDiagnostics(target, texts, analysis?.let { container.formatter.headline(it) } ?: "nenhuma oferta reconhecida")
+            val partial = analysis == null && mode == VisualReadingMode.LOWER_SCREEN_CONTINUOUS &&
+                container.analyzeScreen.isPartialOffer(pkg, combined)
+            if (isCard) countUberCardResult(analysis, partial)
+            val result = when {
+                analysis != null -> container.formatter.headline(analysis)
+                partial -> "cartão Uber incompleto: falta a parte de baixo (leitura ${uberPartialReads.coerceAtLeast(1)})"
+                else -> "nenhuma oferta reconhecida"
+            }
+            recordDiagnostics(target, texts, result)
             showOrHide(analysis)
         } catch (e: Exception) {
             container.logger.error(TAG, "Erro ao analisar a tela de $pkg", e)
         }
     }
 
-    /** Conta leituras de OCR do cartão que não formaram oferta (uma vez por OCR novo). */
-    private fun countUberCardResult(analysis: RideAnalysis?) {
+    /**
+     * Conta leituras de OCR do cartão que não formaram oferta (uma vez por OCR novo).
+     * Cartão parcial (valor + 1 distância) é oferta de verdade: não conta como "não é oferta"
+     * até esgotar [MAX_PARTIAL_READS], para o inDrive não roubar a vez da Uber.
+     */
+    private fun countUberCardResult(analysis: RideAnalysis?, partial: Boolean) {
         if (analysis != null) {
             uberCardMisses = 0
+            uberPartialReads = 0
             return
         }
-        if (ocrTakenAtMs == 0L || ocrTakenAtMs == uberCardCountedOcrAt || ocrPackage != currentTarget?.packageName) return
+        if (ocrTakenAtMs == 0L || ocrPackage != currentTarget?.packageName) return
+        if (partial && uberPartialReads < MAX_PARTIAL_READS) {
+            if (ocrTakenAtMs != uberPartialCountedOcrAt) {
+                uberPartialCountedOcrAt = ocrTakenAtMs
+                uberPartialReads++
+                container.logger.debug(TAG, "Cartão da Uber incompleto, leitura $uberPartialReads")
+            }
+            return
+        }
+        if (ocrTakenAtMs == uberCardCountedOcrAt) return
         uberCardCountedOcrAt = ocrTakenAtMs
         uberCardMisses++
         if (uberCardMisses >= MAX_UBER_CARD_MISSES) {
@@ -275,11 +308,15 @@ class RideReaderService : AccessibilityService() {
         if (ocrInFlight || !ocrReader.isSupported) return
         // Intervalo próprio: um OCR do mapa do inDrive não atrasa a leitura do cartão.
         val now = SystemClock.elapsedRealtime()
-        if (now - lastContinuousOcrMs < CONTINUOUS_OCR_INTERVAL_MS) return
+        if (now - lastContinuousOcrMs < continuousOcrIntervalMs()) return
         lastContinuousOcrMs = now
         ocrPackage = pkg
         runOcr(topPx = topPx, bottomPx = bottomPx, delayMs = 0)
     }
+
+    /** Cartão pela metade: relê mais rápido, a parte de baixo costuma chegar logo depois. */
+    private fun continuousOcrIntervalMs(): Long =
+        if (uberPartialReads > 0) PARTIAL_OCR_INTERVAL_MS else CONTINUOUS_OCR_INTERVAL_MS
 
     private fun runOcr(topPx: Int, bottomPx: Int, delayMs: Long) {
         ocrInFlight = true
@@ -330,14 +367,17 @@ class RideReaderService : AccessibilityService() {
         }.getOrNull()
     }
 
-    /** Raiz da maior janela da Uber que não é a ativa (o cartão sobreposto). */
-    private fun uberCardRoot(): AccessibilityNodeInfo? = runCatching {
+    /**
+     * Textos de TODAS as janelas da Uber que não são a ativa (cartão sobreposto),
+     * de cima para baixo: o cartão pode vir dividido em janelas (parte de cima e de baixo).
+     */
+    private fun uberCardTexts(): List<ScreenText> = runCatching {
         val bounds = Rect()
         windows
             .filter { !it.isActive && Platform.fromPackage(it.root?.packageName?.toString().orEmpty()) == Platform.UBER }
-            .maxByOrNull { it.getBoundsInScreen(bounds); bounds.height() }
-            ?.root
-    }.getOrNull()
+            .sortedBy { it.getBoundsInScreen(bounds); bounds.top }
+            .flatMap { w -> w.root?.let(extractor::extract).orEmpty() }
+    }.getOrDefault(emptyList())
 
     private fun recordDiagnostics(target: ReadingTarget, texts: List<String>, result: String) {
         val pkg = target.packageName
@@ -381,5 +421,8 @@ class RideReaderService : AccessibilityService() {
         const val CONTINUOUS_OCR_MAX_AGE_MS = 3_000L
         const val LOWER_SCREEN_START_RATIO = 0.4
         const val MAX_UBER_CARD_MISSES = 4
+        const val PARTIAL_OCR_INTERVAL_MS = 500L
+        const val PARTIAL_EXPAND_AFTER = 2
+        const val MAX_PARTIAL_READS = 10
     }
 }

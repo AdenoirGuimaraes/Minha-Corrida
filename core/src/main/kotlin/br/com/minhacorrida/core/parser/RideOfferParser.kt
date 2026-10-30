@@ -31,6 +31,13 @@ interface RideOfferParser {
      */
     fun visualReadingMode(texts: List<String>): VisualReadingMode = VisualReadingMode.NONE
 
+    /**
+     * @param texts textos da tela (acessibilidade + OCR).
+     * @return true quando a oferta está na tela mas foi lida pela metade (ex.: cartão
+     * da Uber sem a parte de baixo): vale insistir na leitura em vez de desistir.
+     */
+    fun isPartialOffer(texts: List<String>): Boolean = false
+
     /** Atalho: true quando há leitura visual pendente. */
     fun needsVisualReading(texts: List<String>): Boolean = visualReadingMode(texts) != VisualReadingMode.NONE
 }

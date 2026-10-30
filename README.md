@@ -29,6 +29,8 @@ Mostra, em cima do Uber Driver e do inDrive, **quanto você ganha por km rodado*
 2. **App em primeiro plano** — ex.: oferta do inDrive aberta em tela inteira (com leitura do mapa).
 3. Nada a ler (tela inicial do inDrive, só a bolha da Uber).
 
+O cartão da Uber só é mostrado **completo** (valor + distância até o passageiro + distância da viagem). Se vier só a parte de cima, o leitor insiste a cada 0,5 s e, depois de 2 leituras, amplia o OCR até o fim da tela para pegar a parte de baixo — sem devolver a vez ao inDrive nesse meio-tempo. Os textos de todas as janelas da Uber (partes de cima e de baixo) são juntados numa leitura só.
+
 Quando o cartão da Uber fecha, o inDrive recomeça a leitura do mapa do zero. Uma sobreposição grande da Uber que não seja oferta é ignorada após algumas leituras sem resultado.
 
 ## Limitações conhecidas (MVP)

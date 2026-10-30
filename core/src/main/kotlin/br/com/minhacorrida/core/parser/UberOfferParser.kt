@@ -22,15 +22,24 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
             val fare = TextPatterns.findFirstFare(texts) ?: return null
             val distances = findDistances(texts)
 
-            when {
-                distances.isEmpty() -> null
-                distances.size == 1 -> RideOffer(platform, fare, tripKm = distances[0], pickupKm = null)
-                else -> RideOffer(platform, fare, tripKm = distances[1], pickupKm = distances[0])
-            }
+            // O cartão sempre traz as duas distâncias (busca e viagem). Com só uma,
+            // a parte de baixo ainda não foi lida: mostrar o R$/km agora daria um valor errado.
+            if (distances.size < 2) return null
+            RideOffer(platform, fare, tripKm = distances[1], pickupKm = distances[0])
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta da Uber", e)
             null
         }
+    }
+
+    /**
+     * True quando o cartão foi lido pela metade: há valor e uma única distância
+     * (parte de cima lida, parte de baixo não). O serviço insiste em vez de desistir.
+     */
+    override fun isPartialOffer(texts: List<String>): Boolean = try {
+        TextPatterns.findFirstFare(texts) != null && findDistances(texts).size == 1
+    } catch (e: Exception) {
+        false
     }
 
     /**

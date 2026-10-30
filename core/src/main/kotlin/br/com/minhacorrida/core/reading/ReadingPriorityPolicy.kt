@@ -78,13 +78,17 @@ class ReadingPriorityPolicy(
 
     private fun uberCard(windows: List<WindowSnapshot>, screenWidth: Int, screenHeight: Int): ReadingTarget? {
         if (screenWidth <= 0 || screenHeight <= 0) return null
-        val cards = windows.filter { w ->
+        // Janelas largas da Uber que não são a ativa: o cartão e suas faixas.
+        val wide = windows.filter { w ->
             platformOf(w) == Platform.UBER &&
                 !w.isActive &&
-                w.height >= screenHeight * minCardHeightRatio &&
+                w.height > 0 &&
                 w.width >= screenWidth * minCardWidthRatio
         }
-        if (cards.isEmpty()) return null
+        // Precisa de ao menos uma janela alta (o corpo do cartão) para ser cartão;
+        // a partir dela, faixas baixas (ex.: parte de baixo com o botão Aceitar) também entram.
+        if (wide.none { it.height >= screenHeight * minCardHeightRatio }) return null
+        val cards = wide
 
         val top = cards.minOf { it.top }.coerceAtLeast(0)
         val bottom = cards.maxOf { it.bottom }.coerceAtMost(screenHeight)

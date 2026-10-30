@@ -5,7 +5,9 @@ import br.com.minhacorrida.core.parser.VisualReadingMode
 import java.math.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class UberOfferParserTest {
     private val parser = UberOfferParser()
@@ -60,6 +62,19 @@ class UberOfferParserTest {
         val homeScreen = listOf("Página inicial", "R$ 13,92", "Hoje", "Você está online", "1-6 min")
         assertNull(parser.parse(homeScreen))
         assertEquals(VisualReadingMode.LOWER_SCREEN_CONTINUOUS, parser.visualReadingMode(homeScreen))
+    }
+
+    @Test
+    fun `cartao lido so pela parte de cima nao vira oferta e e marcado como parcial`() {
+        val topOnly = listOf("UberX", "R$ 8,91", "* 5,00 (12)", "12 min (6.6 km)", "R. Ábramo Baú, Do Tributo, Lages")
+        assertNull(parser.parse(topOnly))
+        assertTrue(parser.isPartialOffer(topOnly))
+    }
+
+    @Test
+    fun `cartao completo nao e parcial e tela sem valor tambem nao`() {
+        assertFalse(parser.isPartialOffer(Fixtures.UBER_OFFER))
+        assertFalse(parser.isPartialOffer(listOf("Você está online", "1-6 min")))
     }
 
     @Test
