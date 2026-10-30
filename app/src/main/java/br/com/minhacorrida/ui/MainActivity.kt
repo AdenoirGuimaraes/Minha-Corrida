@@ -10,6 +10,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import br.com.minhacorrida.BuildConfig
@@ -59,6 +60,7 @@ class MainActivity : Activity() {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         findViewById<Button>(R.id.btnSave).setOnClickListener { saveSettings() }
+        findViewById<Button>(R.id.btnDiagnostics).setOnClickListener { showDiagnostics() }
 
         if (savedInstanceState == null) checkForUpdate()
     }
@@ -127,6 +129,36 @@ class MainActivity : Activity() {
             pendingApk = apk
             toast(getString(R.string.update_allow_install))
             installer.openInstallPermissionSettings(this)
+        }
+    }
+
+    // ---- Diagnóstico ----
+
+    /** Mostra a última leitura de cada app, com opção de compartilhar o texto. */
+    private fun showDiagnostics() {
+        val report = container.diagnostics.dump()
+        val content = TextView(this).apply {
+            val padding = (16 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+            setTextIsSelectable(true)
+            textSize = 12f
+            text = report
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.diagnostics_title)
+            .setView(ScrollView(this).apply { addView(content) })
+            .setPositiveButton(R.string.diagnostics_share) { _, _ -> shareText(report) }
+            .setNeutralButton(R.string.diagnostics_clear) { _, _ -> container.diagnostics.clear() }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    private fun shareText(text: String) {
+        try {
+            val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+            startActivity(Intent.createChooser(send, getString(R.string.diagnostics_share)))
+        } catch (e: Exception) {
+            android.util.Log.e("MC/MainActivity", "Falha ao compartilhar diagnóstico", e)
         }
     }
 

@@ -12,6 +12,7 @@ import br.com.minhacorrida.core.update.CheckForUpdateUseCase
 import br.com.minhacorrida.core.usecase.AnalyzeScreenUseCase
 import br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase
 import br.com.minhacorrida.infra.AndroidLogger
+import br.com.minhacorrida.infra.DiagnosticsStore
 import br.com.minhacorrida.infra.SharedPrefsSettingsRepository
 import br.com.minhacorrida.update.GitHubReleaseSource
 
@@ -21,6 +22,7 @@ import br.com.minhacorrida.update.GitHubReleaseSource
  */
 class AppContainer(context: Context) {
     val logger: AppLogger = AndroidLogger()
+    val diagnostics = DiagnosticsStore(context, logger)
     val settings: SettingsRepository = SharedPrefsSettingsRepository(context.applicationContext)
     val parserRegistry = ParserRegistry(
         listOf(UberOfferParser(logger), InDriveOfferParser(logger)),

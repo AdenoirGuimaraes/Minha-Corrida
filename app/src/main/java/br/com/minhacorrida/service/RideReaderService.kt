@@ -90,11 +90,13 @@ class RideReaderService : AccessibilityService() {
             val combined = texts + ocrTexts
 
             if (container.analyzeScreen.needsVisualReading(pkg, combined)) {
+                recordDiagnostics(pkg, texts, "aguardando leitura do mapa (tentativa ${ocrAttempts + 1})")
                 requestMapReading(offerKey, mapBottomOf(screenTexts))
                 return
             }
 
             val analysis = container.analyzeScreen.analyze(pkg, combined)
+            recordDiagnostics(pkg, texts, analysis?.let { container.formatter.headline(it) } ?: "nenhuma oferta reconhecida")
             if (analysis == null) {
                 lastAnalysis = null
                 overlay.scheduleHide()
@@ -147,6 +149,13 @@ class RideReaderService : AccessibilityService() {
             ?.topPx
         val fallback = (resources.displayMetrics.heightPixels * MAP_FALLBACK_RATIO).toInt()
         return cardTop?.takeIf { it > 0 } ?: fallback
+    }
+
+    private fun recordDiagnostics(pkg: String, texts: List<String>, result: String) {
+        val windowPackages = runCatching {
+            windows.mapNotNull { it.root?.packageName?.toString() }
+        }.getOrDefault(emptyList())
+        container.diagnostics.record(pkg, windowPackages, texts, ocrTexts, result)
     }
 
     /** A oferta pode estar numa janela que não é a ativa (ex.: cartão flutuante da Uber). */
