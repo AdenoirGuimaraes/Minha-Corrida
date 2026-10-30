@@ -33,6 +33,11 @@ O cartão da Uber só é mostrado **completo** (valor + distância até o passag
 
 Quando o cartão da Uber fecha, o inDrive recomeça a leitura do mapa do zero. Uma sobreposição grande da Uber que não seja oferta é ignorada após algumas leituras sem resultado.
 
+## Encerrar
+O botão **Encerrar** pausa a leitura (serviço ocioso, sem OCR nem leitor na tela) e fecha o app.
+A acessibilidade continua ativada, porque o Android não deixa o app religá-la sozinho;
+abrir o app retoma a leitura automaticamente.
+
 ## Limitações conhecidas (MVP)
 - Na **lista** do inDrive não aparece a distância até o passageiro; o cálculo usa só o trajeto até você abrir a oferta.
 - Se a Uber renderizar o cartão sem texto acessível em alguma versão, será preciso um modo OCR de reserva.
