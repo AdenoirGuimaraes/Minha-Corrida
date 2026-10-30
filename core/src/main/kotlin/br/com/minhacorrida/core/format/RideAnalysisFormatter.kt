@@ -25,6 +25,10 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
         }
     }
 
+    /** Ex.: "Mín. p/ R$ 2,00/km: R$ 10,40". */
+    fun minimumFare(analysis: RideAnalysis): String =
+        "Mín. p/ R$ ${money(analysis.minimum.minValuePerKm)}/km: R$ ${money(analysis.minimum.minimumFare)}"
+
     // DecimalFormat não é thread-safe: cria uma instância por chamada.
     private fun money(value: BigDecimal) = DecimalFormat("#,##0.00", DecimalFormatSymbols(locale)).format(value)
     private fun km(value: BigDecimal) = DecimalFormat("#,##0.#", DecimalFormatSymbols(locale)).format(value)

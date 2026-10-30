@@ -27,12 +27,13 @@ class AnalyzeScreenUseCase(
             val parser = registry.parserFor(packageName) ?: return null
             val offer = parser.parse(texts) ?: return null
             val metrics = calculateMetrics(offer)
-            val rating = if (metrics.valuePerKm >= settings.getMinValuePerKm()) {
+            val minValuePerKm = settings.getMinValuePerKm()
+            val rating = if (metrics.valuePerKm >= minValuePerKm) {
                 RideRating.GOOD
             } else {
                 RideRating.BELOW_MINIMUM
             }
-            RideAnalysis(offer, metrics, rating)
+            RideAnalysis(offer, metrics, rating, calculateMetrics.minimumFare(metrics, minValuePerKm))
         } catch (e: Exception) {
             logger.error(TAG, "Erro ao analisar tela de $packageName", e)
             null

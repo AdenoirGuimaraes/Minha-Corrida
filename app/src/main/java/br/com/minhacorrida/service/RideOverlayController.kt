@@ -105,6 +105,7 @@ class RideOverlayController(
         root.findViewById<TextView>(R.id.tvPlatform).text = analysis.offer.platform.displayName
         root.findViewById<TextView>(R.id.tvValuePerKm).text = formatter.headline(analysis)
         root.findViewById<TextView>(R.id.tvDetails).text = formatter.details(analysis)
+        root.findViewById<TextView>(R.id.tvMinimumFare).text = formatter.minimumFare(analysis)
         root.background = GradientDrawable().apply {
             cornerRadius = dp(18).toFloat()
             setColor(if (analysis.rating == RideRating.GOOD) COLOR_GOOD else COLOR_BAD)

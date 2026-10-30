@@ -1,5 +1,6 @@
 package br.com.minhacorrida.core.usecase
 
+import br.com.minhacorrida.core.model.MinimumFare
 import br.com.minhacorrida.core.model.RideMetrics
 import br.com.minhacorrida.core.model.RideOffer
 import java.math.BigDecimal
@@ -21,4 +22,14 @@ class CalculateRideMetricsUseCase {
             includesPickup = offer.pickupKm != null,
         )
     }
+
+    /**
+     * Valor da corrida que atinge o mínimo: mínimo R$/km × km total,
+     * arredondado PARA CIMA no centavo (para nunca ficar abaixo do mínimo).
+     */
+    fun minimumFare(metrics: RideMetrics, minValuePerKm: BigDecimal): MinimumFare =
+        MinimumFare(
+            minValuePerKm = minValuePerKm,
+            minimumFare = (minValuePerKm * metrics.totalKm).setScale(2, RoundingMode.CEILING),
+        )
 }
