@@ -1,6 +1,7 @@
 package br.com.minhacorrida.service
 
 import android.accessibilityservice.AccessibilityService
+import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -8,9 +9,13 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import br.com.minhacorrida.MinhaCorridaApp
+import br.com.minhacorrida.core.model.Platform
 import br.com.minhacorrida.core.model.RideAnalysis
 import br.com.minhacorrida.core.overlay.OverlayVisibilityPolicy
 import br.com.minhacorrida.core.parser.VisualReadingMode
+import br.com.minhacorrida.core.reading.ReadingPriorityPolicy
+import br.com.minhacorrida.core.reading.ReadingTarget
+import br.com.minhacorrida.core.reading.WindowSnapshot
 import br.com.minhacorrida.di.AppContainer
 
 /**
@@ -18,29 +23,43 @@ import br.com.minhacorrida.di.AppContainer
  * extrai os textos (e, quando preciso, lê a tela com OCR), calcula o R$/km
  * e mostra o leitor.
  *
- * Só analisa o app que está em primeiro plano: janelas flutuantes de outro app
- * (ex.: o botão "Uber →" sobre o inDrive) são ignoradas e não escondem o leitor.
+ * Prioridade de leitura (ver [ReadingPriorityPolicy]):
+ *  1º  cartão de oferta da Uber em sobreposição, mesmo com o inDrive na frente;
+ *  2º  app de corrida em primeiro plano (oferta do inDrive em tela inteira);
+ *  3º  nada.
+ * Só um alvo é lido por vez; quando o cartão da Uber some, o inDrive recomeça
+ * a leitura do mapa do zero.
  */
 class RideReaderService : AccessibilityService() {
 
     private val handler = Handler(Looper.getMainLooper())
     private val visibility = OverlayVisibilityPolicy()
+    private val priority = ReadingPriorityPolicy()
     private lateinit var container: AppContainer
     private lateinit var extractor: ScreenTextExtractor
     private lateinit var ocrReader: ScreenOcrReader
     private lateinit var overlay: RideOverlayController
 
-    private var pendingPackage: String? = null
+    private var currentTarget: ReadingTarget? = null
     private var lastAnalysis: RideAnalysis? = null
-    private val analyzeTask = Runnable { pendingPackage?.let(::analyzeScreen) }
+    private val analyzeTask = Runnable { evaluate() }
+    private val pollTask = Runnable { evaluate() }
 
-    // Estado da leitura visual (OCR).
+    // Estado da leitura visual (OCR) — pertence sempre a um único alvo.
     private var ocrOfferKey: String? = null
     private var ocrPackage: String? = null
     private var ocrTexts: List<String> = emptyList()
     private var ocrTakenAtMs = 0L
     private var ocrAttempts = 0
     private var ocrInFlight = false
+    private var lastContinuousOcrMs = 0L
+
+    // Sobreposição grande da Uber que não é oferta (ex.: aviso): após algumas
+    // leituras sem oferta, é ignorada para não travar o inDrive.
+    private var uberCardKey: String? = null
+    private var uberCardMisses = 0
+    private var uberCardCountedOcrAt = 0L
+    private var ignoredUberCardKey: String? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -58,36 +77,97 @@ class RideReaderService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (!::overlay.isInitialized) return
-        val pkg = event?.packageName?.toString() ?: return
+        if (!::overlay.isInitialized || event == null) return
+        val pkg = event.packageName?.toString()
+        if (pkg == packageName) return // o próprio leitor
 
-        if (!container.parserRegistry.supports(pkg)) {
+        // Abertura/fechamento de janelas (ex.: cartão da Uber surgindo sobre o inDrive).
+        val windowsChanged = event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        if (pkg != null && !windowsChanged && !container.parserRegistry.supports(pkg)) {
             handleForeignPackage(event, pkg)
             return
         }
 
-        // Debounce: a tela dispara dezenas de eventos por segundo; analisamos só o último.
-        pendingPackage = pkg
+        // Debounce: a tela dispara dezenas de eventos por segundo; avaliamos só o último.
         handler.removeCallbacks(analyzeTask)
         handler.postDelayed(analyzeTask, DEBOUNCE_MS)
     }
 
-    /** Esconde o leitor quando o motorista troca para outro app. */
+    /** Esconde o leitor quando o motorista troca para outro app (sem cartão da Uber na tela). */
     private fun handleForeignPackage(event: AccessibilityEvent, pkg: String) {
-        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || pkg == packageName) return
-        if (foregroundPackage() == pkg) {
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (foregroundPackage() == pkg && currentTarget?.source != ReadingTarget.Source.UBER_CARD_OVERLAY) {
             lastAnalysis = null
             overlay.scheduleHide()
         }
     }
 
-    private fun analyzeScreen(pkg: String) {
+    // ---- Escolha do alvo ----
+
+    private fun evaluate() {
+        handler.removeCallbacks(pollTask)
         try {
-            // Evento de janela flutuante de um app que não está na frente: ignora sem esconder nada.
-            val root = foregroundRootOf(pkg) ?: return
-            val screenTexts = extractor.extract(root)
+            val target = chooseTarget()
+            if (target == null) {
+                if (currentTarget != null) {
+                    container.logger.debug(TAG, "Nenhum app de corrida para ler")
+                    currentTarget = null
+                    lastAnalysis = null
+                    overlay.scheduleHide()
+                }
+                return
+            }
+            if (target.packageName != currentTarget?.packageName || target.source != currentTarget?.source) {
+                container.logger.debug(TAG, "Leitura assumida por: ${target.describe()}")
+            }
+            currentTarget = target
+            analyzeScreen(target)
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Erro ao escolher a tela a ler", e)
+        }
+    }
+
+    private fun chooseTarget(): ReadingTarget? {
+        val list = runCatching { windows }.getOrNull() ?: return null
+        val bounds = Rect()
+        val snapshots = list.map { w ->
+            w.getBoundsInScreen(bounds)
+            WindowSnapshot(
+                packageName = runCatching { w.root?.packageName?.toString() }.getOrNull(),
+                isActive = w.isActive,
+                isApplication = w.type == AccessibilityWindowInfo.TYPE_APPLICATION,
+                left = bounds.left, top = bounds.top, right = bounds.right, bottom = bounds.bottom,
+            )
+        }
+        val dm = resources.displayMetrics
+        val withCard = priority.choose(snapshots, dm.widthPixels, dm.heightPixels)
+        val cardKey = withCard?.takeIf { it.source == ReadingTarget.Source.UBER_CARD_OVERLAY }
+            ?.let { "${it.ocrTopPx}-${it.ocrBottomPx}" }
+
+        if (cardKey != uberCardKey) {
+            // Cartão novo (ou sumiu): zera a contagem e volta a confiar nele.
+            uberCardKey = cardKey
+            uberCardMisses = 0
+            uberCardCountedOcrAt = 0L
+            ignoredUberCardKey = null
+        }
+        return if (cardKey != null && cardKey == ignoredUberCardKey) {
+            priority.choose(snapshots, dm.widthPixels, dm.heightPixels, ignoreUberCard = true)
+        } else {
+            withCard
+        }
+    }
+
+    // ---- Leitura do alvo ----
+
+    private fun analyzeScreen(target: ReadingTarget) {
+        val pkg = target.packageName
+        val isCard = target.source == ReadingTarget.Source.UBER_CARD_OVERLAY
+        try {
+            val root = if (isCard) uberCardRoot() else (foregroundRootOf(pkg) ?: return)
+            val screenTexts = root?.let(extractor::extract).orEmpty()
             val texts = screenTexts.map { it.text }
-            resetOcrIfNewScreen(pkg, offerKeyOf(texts))
+            resetOcrIfNewScreen(pkg, target.source.name + "|" + offerKeyOf(texts))
 
             val mode = container.analyzeScreen.visualReadingMode(pkg, texts)
             val ocr = freshOcrTexts(pkg, mode)
@@ -98,19 +178,44 @@ class RideReaderService : AccessibilityService() {
             when (mode) {
                 VisualReadingMode.MAP_ONCE_PER_OFFER ->
                     if (container.analyzeScreen.needsVisualReading(pkg, combined)) {
-                        recordDiagnostics(pkg, texts, "aguardando leitura do mapa (tentativa ${ocrAttempts + 1})")
+                        recordDiagnostics(target, texts, "aguardando leitura do mapa (tentativa ${ocrAttempts + 1})")
                         requestMapReading(mapBottomOf(screenTexts))
                         return
                     }
-                VisualReadingMode.LOWER_SCREEN_CONTINUOUS -> requestLowerScreenReading(pkg)
+                VisualReadingMode.LOWER_SCREEN_CONTINUOUS -> {
+                    val height = resources.displayMetrics.heightPixels
+                    val top = target.ocrTopPx ?: (height * LOWER_SCREEN_START_RATIO).toInt()
+                    val bottom = target.ocrBottomPx ?: height
+                    requestLowerScreenReading(pkg, top, bottom)
+                    // O cartão sobreposto pode não gerar eventos: relê enquanto ele estiver na tela.
+                    if (isCard) handler.postDelayed(pollTask, CONTINUOUS_OCR_INTERVAL_MS)
+                }
                 VisualReadingMode.NONE -> Unit
             }
 
             val analysis = container.analyzeScreen.analyze(pkg, combined)
-            recordDiagnostics(pkg, texts, analysis?.let { container.formatter.headline(it) } ?: "nenhuma oferta reconhecida")
+            if (isCard) countUberCardResult(analysis)
+            recordDiagnostics(target, texts, analysis?.let { container.formatter.headline(it) } ?: "nenhuma oferta reconhecida")
             showOrHide(analysis)
         } catch (e: Exception) {
             container.logger.error(TAG, "Erro ao analisar a tela de $pkg", e)
+        }
+    }
+
+    /** Conta leituras de OCR do cartão que não formaram oferta (uma vez por OCR novo). */
+    private fun countUberCardResult(analysis: RideAnalysis?) {
+        if (analysis != null) {
+            uberCardMisses = 0
+            return
+        }
+        if (ocrTakenAtMs == 0L || ocrTakenAtMs == uberCardCountedOcrAt || ocrPackage != currentTarget?.packageName) return
+        uberCardCountedOcrAt = ocrTakenAtMs
+        uberCardMisses++
+        if (uberCardMisses >= MAX_UBER_CARD_MISSES) {
+            container.logger.debug(TAG, "Sobreposição da Uber sem oferta: devolvendo a leitura ao app da frente")
+            ignoredUberCardKey = uberCardKey
+            handler.removeCallbacks(analyzeTask)
+            handler.post(analyzeTask)
         }
     }
 
@@ -132,7 +237,7 @@ class RideReaderService : AccessibilityService() {
 
     // ---- OCR ----
 
-    /** Nova oferta (ou outro app): descarta o OCR anterior. */
+    /** Nova oferta (ou outro alvo): descarta o OCR anterior e as tentativas do mapa. */
     private fun resetOcrIfNewScreen(pkg: String, offerKey: String) {
         if (pkg == ocrPackage && offerKey == ocrOfferKey) return
         ocrPackage = pkg
@@ -162,15 +267,18 @@ class RideReaderService : AccessibilityService() {
     }
 
     /**
-     * Uber: o cartão bloqueia a acessibilidade, então lemos a metade de baixo da tela
-     * em intervalos. O leitor fica no topo, fora da área lida.
+     * Uber: o cartão bloqueia a acessibilidade, então lemos por OCR a faixa do cartão
+     * (ou a metade de baixo, com a Uber em tela inteira) em intervalos.
+     * O leitor fica no topo, fora da área lida.
      */
-    private fun requestLowerScreenReading(pkg: String) {
+    private fun requestLowerScreenReading(pkg: String, topPx: Int, bottomPx: Int) {
         if (ocrInFlight || !ocrReader.isSupported) return
-        if (SystemClock.elapsedRealtime() - ocrTakenAtMs < CONTINUOUS_OCR_INTERVAL_MS) return
-        val height = resources.displayMetrics.heightPixels
+        // Intervalo próprio: um OCR do mapa do inDrive não atrasa a leitura do cartão.
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastContinuousOcrMs < CONTINUOUS_OCR_INTERVAL_MS) return
+        lastContinuousOcrMs = now
         ocrPackage = pkg
-        runOcr(topPx = (height * LOWER_SCREEN_START_RATIO).toInt(), bottomPx = height, delayMs = 0)
+        runOcr(topPx = topPx, bottomPx = bottomPx, delayMs = 0)
     }
 
     private fun runOcr(topPx: Int, bottomPx: Int, delayMs: Long) {
@@ -180,11 +288,11 @@ class RideReaderService : AccessibilityService() {
             ocrReader.read(topPx, bottomPx) { lines ->
                 ocrInFlight = false
                 ocrTakenAtMs = SystemClock.elapsedRealtime()
-                if (requestedFor == (ocrPackage to ocrOfferKey)) {
-                    ocrTexts = lines
-                    handler.removeCallbacks(analyzeTask)
-                    handler.post(analyzeTask)
-                }
+                // Resultado de um alvo que já perdeu a vez (ex.: mapa do inDrive quando
+                // o cartão da Uber apareceu) é descartado.
+                if (requestedFor == (ocrPackage to ocrOfferKey)) ocrTexts = lines
+                handler.removeCallbacks(analyzeTask)
+                handler.post(analyzeTask)
             }
         }, delayMs)
     }
@@ -222,10 +330,23 @@ class RideReaderService : AccessibilityService() {
         }.getOrNull()
     }
 
-    private fun recordDiagnostics(pkg: String, texts: List<String>, result: String) {
+    /** Raiz da maior janela da Uber que não é a ativa (o cartão sobreposto). */
+    private fun uberCardRoot(): AccessibilityNodeInfo? = runCatching {
+        val bounds = Rect()
+        windows
+            .filter { !it.isActive && Platform.fromPackage(it.root?.packageName?.toString().orEmpty()) == Platform.UBER }
+            .maxByOrNull { it.getBoundsInScreen(bounds); bounds.height() }
+            ?.root
+    }.getOrNull()
+
+    private fun recordDiagnostics(target: ReadingTarget, texts: List<String>, result: String) {
+        val pkg = target.packageName
         val source = runCatching {
-            "app em primeiro plano: ${foregroundPackage()} | janelas: " +
-                windows.joinToString { "${it.root?.packageName}(${windowTypeName(it.type)})" }
+            "alvo: ${target.describe()} | app em primeiro plano: ${foregroundPackage()} | janelas: " +
+                windows.joinToString { w ->
+                    val r = Rect().also(w::getBoundsInScreen)
+                    "${w.root?.packageName}(${windowTypeName(w.type)} y=${r.top}–${r.bottom})"
+                }
         }.getOrDefault("desconhecida")
         container.diagnostics.record(pkg, source, texts, if (pkg == ocrPackage) ocrTexts else emptyList(), result)
     }
@@ -259,5 +380,6 @@ class RideReaderService : AccessibilityService() {
         const val CONTINUOUS_OCR_INTERVAL_MS = 1_200L
         const val CONTINUOUS_OCR_MAX_AGE_MS = 3_000L
         const val LOWER_SCREEN_START_RATIO = 0.4
+        const val MAX_UBER_CARD_MISSES = 4
     }
 }

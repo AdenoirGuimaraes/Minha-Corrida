@@ -24,6 +24,13 @@ Mostra, em cima do Uber Driver e do inDrive, **quanto você ganha por km rodado*
 | inDrive (detalhe) | R$ 10 | 3,3 km | 7,3 km | 10,6 km | **R$ 0,94** |
 | inDrive (lista) | R$ 10 | — | 7,0 km | 7,0 km | R$ 1,43 (só trajeto) |
 
+## Prioridade de leitura (vários apps abertos)
+1. **Cartão da Uber em sobreposição** — lido mesmo com o inDrive na frente; o OCR cobre só a área do cartão (partes de cima e de baixo).
+2. **App em primeiro plano** — ex.: oferta do inDrive aberta em tela inteira (com leitura do mapa).
+3. Nada a ler (tela inicial do inDrive, só a bolha da Uber).
+
+Quando o cartão da Uber fecha, o inDrive recomeça a leitura do mapa do zero. Uma sobreposição grande da Uber que não seja oferta é ignorada após algumas leituras sem resultado.
+
 ## Limitações conhecidas (MVP)
 - Na **lista** do inDrive não aparece a distância até o passageiro; o cálculo usa só o trajeto até você abrir a oferta.
 - Se a Uber renderizar o cartão sem texto acessível em alguma versão, será preciso um modo OCR de reserva.

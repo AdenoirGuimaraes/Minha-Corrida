@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sem filtro de pacote: precisamos saber quando o motorista sai do app para esconder o leitor.
+<!-- typeWindowsChanged: percebe o cartão da Uber abrindo por cima do inDrive.
+     Sem filtro de pacote: precisamos saber quando o motorista sai do app para esconder o leitor.
      canTakeScreenshot: lê as bolhas do mapa do inDrive (são imagem) com OCR. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagReportViewIds|flagIncludeNotImportantViews|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
