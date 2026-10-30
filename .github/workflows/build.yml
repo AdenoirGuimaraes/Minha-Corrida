@@ -49,13 +49,21 @@ jobs:
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
         run: gradle :app:assembleRelease --no-daemon
 
+      # Atualiza a release fixa "ultima-versao" (cria se não existir). Substituir o arquivo
+      # e as notas é mais robusto que apagar e recriar a release a cada versão.
       - name: Publicar APK em Releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/release/app-release.apk MinhaCorrida.apk
-          gh release delete ultima-versao -y --cleanup-tag || true
-          gh release create ultima-versao MinhaCorrida.apk \
-            --title "Minha Corrida (última versão)" \
-            --notes "APK gerado automaticamente em $(date -u '+%d/%m/%Y %H:%M') UTC
+          NOTES="APK gerado automaticamente em $(date -u '+%d/%m/%Y %H:%M') UTC
           versionCode=${VERSION_CODE}"
+          if gh release view ultima-versao >/dev/null 2>&1; then
+            git tag -f ultima-versao "$GITHUB_SHA"
+            git push -f origin refs/tags/ultima-versao
+            gh release upload ultima-versao MinhaCorrida.apk --clobber
+            gh release edit ultima-versao --title "Minha Corrida (última versão)" --notes "$NOTES"
+          else
+            gh release create ultima-versao MinhaCorrida.apk \
+              --title "Minha Corrida (última versão)" --notes "$NOTES"
+          fi
