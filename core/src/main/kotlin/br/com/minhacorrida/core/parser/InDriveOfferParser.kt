@@ -46,8 +46,12 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
         }
     }
 
-    override fun needsVisualReading(texts: List<String>): Boolean =
-        findAcceptFare(texts) != null && collectDistances(texts).count { !it.approximate } < 2
+    override fun visualReadingMode(texts: List<String>): VisualReadingMode =
+        if (findAcceptFare(texts) != null && collectDistances(texts).count { !it.approximate } < 2) {
+            VisualReadingMode.MAP_ONCE_PER_OFFER
+        } else {
+            VisualReadingMode.NONE
+        }
 
     private fun findAcceptFare(texts: List<String>): BigDecimal? =
         texts.firstNotNullOfOrNull { text ->

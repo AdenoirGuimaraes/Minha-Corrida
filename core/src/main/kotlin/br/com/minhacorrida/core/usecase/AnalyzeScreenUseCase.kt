@@ -3,6 +3,7 @@ package br.com.minhacorrida.core.usecase
 import br.com.minhacorrida.core.model.RideAnalysis
 import br.com.minhacorrida.core.model.RideRating
 import br.com.minhacorrida.core.parser.ParserRegistry
+import br.com.minhacorrida.core.parser.VisualReadingMode
 import br.com.minhacorrida.core.port.AppLogger
 import br.com.minhacorrida.core.port.SettingsRepository
 
@@ -38,14 +39,21 @@ class AnalyzeScreenUseCase(
         }
     }
 
-    /** True quando a oferta depende de dados que só existem como imagem na tela. */
-    fun needsVisualReading(packageName: String, texts: List<String>): Boolean =
+    /**
+     * @param texts textos obtidos somente pela acessibilidade.
+     * @return o tipo de leitura visual (OCR) que a tela exige.
+     */
+    fun visualReadingMode(packageName: String, texts: List<String>): VisualReadingMode =
         try {
-            registry.parserFor(packageName)?.needsVisualReading(texts) ?: false
+            registry.parserFor(packageName)?.visualReadingMode(texts) ?: VisualReadingMode.NONE
         } catch (e: Exception) {
             logger.error(TAG, "Erro ao verificar leitura visual de $packageName", e)
-            false
+            VisualReadingMode.NONE
         }
+
+    /** True quando a oferta depende de dados que só existem como imagem na tela. */
+    fun needsVisualReading(packageName: String, texts: List<String>): Boolean =
+        visualReadingMode(packageName, texts) != VisualReadingMode.NONE
 
     private companion object {
         const val TAG = "AnalyzeScreen"

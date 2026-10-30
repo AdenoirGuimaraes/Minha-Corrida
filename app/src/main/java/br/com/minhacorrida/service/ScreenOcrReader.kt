@@ -11,9 +11,9 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 /**
- * Lê texto desenhado como imagem (ex.: bolhas do mapa do inDrive):
+ * Lê texto desenhado como imagem (bolhas do mapa do inDrive, cartão da Uber):
  * print pela Acessibilidade (Android 11+, sem pedir permissão extra) + OCR
- * do ML Kit no próprio aparelho, apenas na faixa do mapa.
+ * do ML Kit no próprio aparelho, apenas na faixa da tela que interessa.
  */
 class ScreenOcrReader(
     private val service: AccessibilityService,
@@ -24,17 +24,18 @@ class ScreenOcrReader(
     val isSupported: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
     /**
-     * @param regionBottomPx limite inferior da área lida (topo do cartão da oferta).
+     * @param regionTopPx limite superior da área lida.
+     * @param regionBottomPx limite inferior da área lida.
      * @param onResult linhas reconhecidas (vazia em caso de falha); chamado uma única vez.
      */
-    fun read(regionBottomPx: Int, onResult: (List<String>) -> Unit) {
+    fun read(regionTopPx: Int, regionBottomPx: Int, onResult: (List<String>) -> Unit) {
         val once = OnceCallback(onResult)
         if (!isSupported) {
             once(emptyList())
             return
         }
         try {
-            takeScreenshot(regionBottomPx, once)
+            takeScreenshot(regionTopPx, regionBottomPx, once)
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao capturar a tela", e)
             once(emptyList())
@@ -44,13 +45,13 @@ class ScreenOcrReader(
     fun close() = runCatching { recognizer.close() }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun takeScreenshot(regionBottomPx: Int, onResult: OnceCallback) {
+    private fun takeScreenshot(regionTopPx: Int, regionBottomPx: Int, onResult: OnceCallback) {
         service.takeScreenshot(
             Display.DEFAULT_DISPLAY,
             service.mainExecutor,
             object : AccessibilityService.TakeScreenshotCallback {
                 override fun onSuccess(result: AccessibilityService.ScreenshotResult) {
-                    recognize(result, regionBottomPx, onResult)
+                    recognize(result, regionTopPx, regionBottomPx, onResult)
                 }
 
                 override fun onFailure(errorCode: Int) {
@@ -61,10 +62,11 @@ class ScreenOcrReader(
         )
     }
 
-    // Converte o buffer de hardware em bitmap comum, recorta a faixa do mapa e roda o OCR.
+    // Converte o buffer de hardware em bitmap comum, recorta a faixa pedida e roda o OCR.
     @RequiresApi(Build.VERSION_CODES.R)
     private fun recognize(
         result: AccessibilityService.ScreenshotResult,
+        regionTopPx: Int,
         regionBottomPx: Int,
         onResult: OnceCallback,
     ) {
@@ -78,13 +80,14 @@ class ScreenOcrReader(
                 return
             }
 
-            val height = regionBottomPx.coerceIn(1, full.height)
-            val region = Bitmap.createBitmap(full, 0, 0, full.width, height)
+            val top = regionTopPx.coerceIn(0, full.height - 1)
+            val bottom = regionBottomPx.coerceIn(top + 1, full.height)
+            val region = Bitmap.createBitmap(full, 0, top, full.width, bottom - top)
 
             recognizer.process(InputImage.fromBitmap(region, 0))
                 .addOnSuccessListener { text ->
                     val lines = text.textBlocks.flatMap { block -> block.lines.map { it.text } }
-                    logger.debug(TAG, "OCR do mapa: $lines")
+                    logger.debug(TAG, "OCR: $lines")
                     onResult(lines)
                 }
                 .addOnFailureListener { e ->
