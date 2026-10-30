@@ -90,7 +90,10 @@ class RideReaderService : AccessibilityService() {
             resetOcrIfNewScreen(pkg, offerKeyOf(texts))
 
             val mode = container.analyzeScreen.visualReadingMode(pkg, texts)
-            val combined = texts + freshOcrTexts(pkg, mode)
+            val ocr = freshOcrTexts(pkg, mode)
+            // Uber: o cartão vem do OCR e deve vir antes dos textos da tela inicial
+            // (ganhos do dia, ex. "R$ 13,92"), para o valor da oferta ser o lido primeiro.
+            val combined = if (mode == VisualReadingMode.LOWER_SCREEN_CONTINUOUS) ocr + texts else texts + ocr
 
             when (mode) {
                 VisualReadingMode.MAP_ONCE_PER_OFFER ->

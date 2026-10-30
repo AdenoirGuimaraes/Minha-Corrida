@@ -33,9 +33,12 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
         }
     }
 
-    /** Sem valor legível pela acessibilidade, o cartão só pode ser lido por OCR. */
+    /**
+     * Se a acessibilidade não forma uma oferta completa, o cartão só pode ser lido por OCR.
+     * (Não basta ter um "R$" na tela: a tela inicial mostra os ganhos do dia, ex. "R$ 13,92".)
+     */
     override fun visualReadingMode(texts: List<String>): VisualReadingMode =
-        if (TextPatterns.findFirstFare(texts) == null) {
+        if (parse(texts) == null) {
             VisualReadingMode.LOWER_SCREEN_CONTINUOUS
         } else {
             VisualReadingMode.NONE

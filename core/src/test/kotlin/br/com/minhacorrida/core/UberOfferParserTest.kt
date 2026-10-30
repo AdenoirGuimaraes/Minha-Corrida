@@ -54,4 +54,18 @@ class UberOfferParserTest {
         assertEquals(0, BigDecimal("6.6").compareTo(offer.pickupKm!!))
         assertEquals(0, BigDecimal("2.3").compareTo(offer.tripKm))
     }
+
+    @Test
+    fun `ganhos do dia na tela inicial nao dispensam o OCR (diagnostico de 30-10)`() {
+        val homeScreen = listOf("Página inicial", "R$ 13,92", "Hoje", "Você está online", "1-6 min")
+        assertNull(parser.parse(homeScreen))
+        assertEquals(VisualReadingMode.LOWER_SCREEN_CONTINUOUS, parser.visualReadingMode(homeScreen))
+    }
+
+    @Test
+    fun `com OCR primeiro, o valor da oferta vence os ganhos do dia`() {
+        val ocr = listOf("UberX", "R$ 8,91", "12 min (6.6 km)", "5 minutos (2.3 km)", "Aceitar")
+        val offer = parser.parse(ocr + listOf("Página inicial", "R$ 13,92", "Hoje"))!!
+        assertEquals(0, BigDecimal("8.91").compareTo(offer.fare))
+    }
 }
