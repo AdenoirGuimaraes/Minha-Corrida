@@ -7,11 +7,12 @@ import br.com.minhacorrida.core.port.NoOpLogger
 import java.math.BigDecimal
 
 /**
- * Lê ofertas do inDrive (lista "Pedidos de viagem" e tela "Pedido de viagem").
- * Exemplo: "R$ 1/km ~7,3 km" / "R$ 10" / bolha do mapa "6 min 3,3 km" / "Aceitar por R$ 10".
+ * Lê a oferta do inDrive somente na tela aberta ("Pedido de viagem").
  *
- * - Viagem: distância com "~".
- * - Busca: distância sem "~" diferente da viagem (só existe na tela de detalhe).
+ * As distâncias reais estão nas duas bolhas do mapa ("8 min 3,4 km" e "6 min 1,8 km"),
+ * que são imagem — chegam aqui via OCR. O cartão traz "~1,8 km", que identifica
+ * qual bolha é o trajeto; a outra é o deslocamento até o passageiro.
+ * A lista principal é ignorada: sem a distância de busca o R$/km fica inflado.
  */
 class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferParser {
 
@@ -19,36 +20,51 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
 
     override fun parse(texts: List<String>): RideOffer? {
         return try {
-            val fare = findAcceptFare(texts) ?: TextPatterns.findFirstFare(texts) ?: return null
-            val tripKm = findTripKm(texts) ?: return null
-            RideOffer(platform, fare, tripKm = tripKm, pickupKm = findPickupKm(texts, tripKm))
+            // "Aceitar por R$ X" só existe na oferta aberta: é o portão desta leitura.
+            val fare = findAcceptFare(texts) ?: return null
+            val distances = collectDistances(texts)
+            val mapKms = distances.filterNot { it.approximate }.map { it.km }
+            if (mapKms.size < 2) {
+                logger.debug(TAG, "Oferta aberta, mas o mapa ainda não foi lido (${mapKms.size} distância(s))")
+                return null
+            }
+
+            // Trajeto = bolha igual ao "~X km" do cartão; sem ele, a primeira bolha.
+            val approxTrip = distances.firstOrNull { it.approximate }?.km
+            val tripIndex = approxTrip
+                ?.let { trip -> mapKms.indexOfFirst { isSame(it, trip) } }
+                ?.takeIf { it >= 0 } ?: 0
+            val tripKm = mapKms[tripIndex]
+            val others = mapKms.filterIndexed { index, _ -> index != tripIndex }
+            // Evita contar a mesma bolha duas vezes (lida pela acessibilidade e pelo OCR).
+            val pickupKm = others.firstOrNull { !isSame(it, tripKm) } ?: others.first()
+
+            RideOffer(platform, fare, tripKm = tripKm, pickupKm = pickupKm)
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta do inDrive", e)
             null
         }
     }
 
-    /** "Aceitar por R$ 10" é o valor mais confiável na tela de detalhe. */
+    override fun needsVisualReading(texts: List<String>): Boolean =
+        findAcceptFare(texts) != null && collectDistances(texts).count { !it.approximate } < 2
+
     private fun findAcceptFare(texts: List<String>): BigDecimal? =
         texts.firstNotNullOfOrNull { text ->
             ACCEPT_FARE.find(text)?.let { NumberParser.parse(it.groupValues[1]) }
+        }?.takeIf { it.signum() > 0 }
+
+    private fun collectDistances(texts: List<String>): List<FoundDistance> =
+        texts.flatMap { text ->
+            TextPatterns.DISTANCE.findAll(text).mapNotNull { match ->
+                TextPatterns.toKm(match.groupValues[1], match.groupValues[2])
+                    ?.let { FoundDistance(it, TextPatterns.isApproximate(text, match)) }
+            }.toList()
         }
 
-    private fun findTripKm(texts: List<String>): BigDecimal? =
-        texts.firstNotNullOfOrNull { text ->
-            TextPatterns.APPROX_DISTANCE.find(text)
-                ?.let { TextPatterns.toKm(it.groupValues[1], it.groupValues[2]) }
-        }
+    private fun isSame(a: BigDecimal, b: BigDecimal) = (a - b).abs() <= SAME_DISTANCE_TOLERANCE_KM
 
-    // Ignora distâncias "~" e o rótulo do mapa igual ao trajeto (ex.: "7,3 km").
-    private fun findPickupKm(texts: List<String>, tripKm: BigDecimal): BigDecimal? =
-        texts.asSequence()
-            .flatMap { text ->
-                TextPatterns.DISTANCE.findAll(text)
-                    .filterNot { TextPatterns.isApproximate(text, it) }
-                    .mapNotNull { TextPatterns.toKm(it.groupValues[1], it.groupValues[2]) }
-            }
-            .firstOrNull { (it - tripKm).abs() > SAME_DISTANCE_TOLERANCE_KM }
+    private data class FoundDistance(val km: BigDecimal, val approximate: Boolean)
 
     private companion object {
         const val TAG = "InDriveOfferParser"

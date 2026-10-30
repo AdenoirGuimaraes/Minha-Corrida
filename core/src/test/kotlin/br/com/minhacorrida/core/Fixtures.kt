@@ -25,8 +25,26 @@ object Fixtures {
         "Aceitar por R$ 10", "Ofereça sua tarifa", "R$ 11,50", "R$ 12", "Fechar",
     )
 
-    class FakeSettings(private var min: BigDecimal = BigDecimal("1.50")) : SettingsRepository {
+    /** Oferta aberta do inDrive (print de 30/10): o que a acessibilidade enxerga... */
+    val INDRIVE_DETAIL_ACCESSIBILITY = listOf(
+        "Pedido de viagem", "Julie", "5.0 (31)", "Agora mesmo",
+        "R$ 1,9/km ~1,8 km", "R$ 11", "Preço justo",
+        "Rua Dalírio Alves de Souza 5 (Morro do Posto)", "Rua Agostinho Farias Neto (Passo Fundo, Lages - SC)",
+        "Aceitar por R$ 11", "Ofereça sua tarifa", "R$ 13", "R$ 13,50", "Fechar",
+    )
+
+    /** ...e o que o OCR lê no mapa (bolhas desenhadas como imagem). */
+    val INDRIVE_MAP_OCR = listOf(
+        "Pedido de viagem", "8 min", "3,4 km", "CONTA", "DINHEIRO", "282", "6 min", "1,8 km", "Google",
+    )
+
+    class FakeSettings(
+        private var min: BigDecimal = BigDecimal("1.50"),
+        private var timeout: Int = 10,
+    ) : SettingsRepository {
         override fun getMinValuePerKm() = min
         override fun setMinValuePerKm(value: BigDecimal) { min = value }
+        override fun getOverlayTimeoutSeconds() = timeout
+        override fun setOverlayTimeoutSeconds(seconds: Int) { timeout = seconds }
     }
 }

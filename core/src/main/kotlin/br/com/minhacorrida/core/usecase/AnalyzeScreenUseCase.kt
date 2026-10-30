@@ -19,7 +19,7 @@ class AnalyzeScreenUseCase(
     /**
      * @param packageName pacote do app lido (ex.: "com.ubercab.driver").
      * @param texts textos visíveis na tela, em ordem de leitura.
-     * @return análise da oferta, ou null se a tela não contiver uma oferta.
+     * @return análise da oferta, ou null se a tela não contiver uma oferta completa.
      */
     fun analyze(packageName: String, texts: List<String>): RideAnalysis? {
         return try {
@@ -37,6 +37,15 @@ class AnalyzeScreenUseCase(
             null
         }
     }
+
+    /** True quando a oferta depende de dados que só existem como imagem na tela. */
+    fun needsVisualReading(packageName: String, texts: List<String>): Boolean =
+        try {
+            registry.parserFor(packageName)?.needsVisualReading(texts) ?: false
+        } catch (e: Exception) {
+            logger.error(TAG, "Erro ao verificar leitura visual de $packageName", e)
+            false
+        }
 
     private companion object {
         const val TAG = "AnalyzeScreen"

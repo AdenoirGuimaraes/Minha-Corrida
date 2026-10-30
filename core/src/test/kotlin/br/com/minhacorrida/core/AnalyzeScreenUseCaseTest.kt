@@ -41,3 +41,23 @@ class AnalyzeScreenUseCaseTest {
     fun `app nao suportado retorna null`() =
         assertNull(useCase.analyze("com.whatsapp", Fixtures.UBER_OFFER))
 }
+
+class AnalyzeScreenInDriveMapTest {
+    private val useCase = br.com.minhacorrida.core.usecase.AnalyzeScreenUseCase(
+        br.com.minhacorrida.core.parser.ParserRegistry(
+            listOf(br.com.minhacorrida.core.parser.InDriveOfferParser()),
+        ),
+        br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase(),
+        Fixtures.FakeSettings(),
+        br.com.minhacorrida.core.port.NoOpLogger,
+    )
+
+    @Test
+    fun `print de 30-10 - R$ 11 em 3,4 + 1,8 km da R$ 2,12 por km (e nao 6,11)`() {
+        val pkg = "sinet.startup.inDriver"
+        kotlin.test.assertTrue(useCase.needsVisualReading(pkg, Fixtures.INDRIVE_DETAIL_ACCESSIBILITY))
+        val a = useCase.analyze(pkg, Fixtures.INDRIVE_DETAIL_ACCESSIBILITY + Fixtures.INDRIVE_MAP_OCR)!!
+        assertEquals("5.20", a.metrics.totalKm.toPlainString())
+        assertEquals("2.12", a.metrics.valuePerKm.toPlainString())
+    }
+}
