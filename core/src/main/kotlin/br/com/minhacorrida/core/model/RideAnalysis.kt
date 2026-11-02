@@ -49,4 +49,11 @@ data class RideAnalysis(
     val minimum: MinimumFare,
     val profit: RideProfit? = null,
     val lowPassengerRating: Boolean = false,
-)
+) {
+    /**
+     * Lucro se a corrida pagasse exatamente o valor mínimo (mínimo R$/km × km total) − gasto.
+     * null quando os custos do carro não foram informados.
+     */
+    val profitAtMinimumFare: java.math.BigDecimal?
+        get() = profit?.let { minimum.minimumFare - it.cost }
+}

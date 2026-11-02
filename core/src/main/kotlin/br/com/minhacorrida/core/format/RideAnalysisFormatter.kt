@@ -74,8 +74,19 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
             profitValue = profit?.let { money(it.netProfit.abs()) } ?: "—",
             profitDetails = profit?.let { "$fare\nGasto R$ ${money(it.cost)}" } ?: "$fare\nInforme os custos",
             minimumValue = money(analysis.minimum.minimumFare),
-            minimumLabel = "Mín. p/\nR$ ${money(analysis.minimum.minValuePerKm)}/km",
+            minimumLabel = minimumLabel(analysis),
         )
+    }
+
+    /**
+     * Texto de baixo do 3º quadrado: o lucro se a corrida pagasse o valor mínimo.
+     * Ex.: "Lucro no mínimo\nR$ 7,03". Sem custos informados: "Mín. p/\nR$ 2,00/km".
+     */
+    private fun minimumLabel(analysis: RideAnalysis): String {
+        val profit = analysis.profitAtMinimumFare
+            ?: return "Mín. p/\nR$ ${money(analysis.minimum.minValuePerKm)}/km"
+        val label = if (profit.signum() < 0) "Prejuízo no mínimo" else "Lucro no mínimo"
+        return "$label\nR$ ${money(profit.abs())}"
     }
 
     /**

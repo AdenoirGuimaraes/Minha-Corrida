@@ -47,7 +47,7 @@ Quando o cartão da Uber fecha, o inDrive recomeça a leitura do mapa do zero. U
 De um lado ao outro da tela. **Faixa do topo na cor do app** (Uber preta com letras brancas,
 inDrive verde-limão com letras pretas) e a nota do passageiro. Três quadrados:
 **R$/km** (com km total e a soma), **Lucro** (com valor da corrida e gasto; "Prejuízo" se negativo)
-e **Mínimo** (valor da corrida para atingir o mínimo de R$/km). Fundo verde = boa, vermelho = abaixo.
+e **Mínimo** (valor da corrida para atingir o mínimo de R$/km e o lucro que ela daria). Fundo verde = boa, vermelho = abaixo.
 Voz em velocidade 1,4×.
 
 ## Tela do app (tema preto e amarelo)
