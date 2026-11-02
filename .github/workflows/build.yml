@@ -61,7 +61,12 @@ jobs:
           if gh release view ultima-versao >/dev/null 2>&1; then
             git tag -f ultima-versao "$GITHUB_SHA"
             git push -f origin refs/tags/ultima-versao
-            gh release upload ultima-versao MinhaCorrida.apk --clobber
+            # O GitHub às vezes responde HTTP 500 no envio: tenta até 3 vezes.
+            for i in 1 2 3; do
+              gh release upload ultima-versao MinhaCorrida.apk --clobber && break
+              if [ "$i" = 3 ]; then exit 1; fi
+              echo "Envio falhou (tentativa $i); tentando de novo em 15 s"; sleep 15
+            done
             gh release edit ultima-versao --title "Minha Corrida (última versão)" --notes "$NOTES"
           else
             gh release create ultima-versao MinhaCorrida.apk \
