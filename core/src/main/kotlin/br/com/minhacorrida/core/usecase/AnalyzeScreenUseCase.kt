@@ -27,6 +27,11 @@ class AnalyzeScreenUseCase(
             val parser = registry.parserFor(packageName) ?: return null
             val offer = parser.parse(texts) ?: return null
             val metrics = calculateMetrics(offer)
+            // Leitura absurda (ex.: OCR trocou dígitos) não vira card: espera a próxima leitura.
+            if (metrics.valuePerKm > MAX_PLAUSIBLE_VALUE_PER_KM) {
+                logger.warn(TAG, "R$/km implausível (${metrics.valuePerKm}) em $packageName; leitura descartada")
+                return null
+            }
             val minValuePerKm = settings.getMinValuePerKm()
             val rating = if (metrics.valuePerKm >= minValuePerKm) {
                 RideRating.GOOD
@@ -67,5 +72,8 @@ class AnalyzeScreenUseCase(
 
     private companion object {
         const val TAG = "AnalyzeScreen"
+
+        /** Acima disso é erro de leitura: nenhuma corrida real paga R$ 20 por km rodado. */
+        val MAX_PLAUSIBLE_VALUE_PER_KM = java.math.BigDecimal("20")
     }
 }

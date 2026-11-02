@@ -19,7 +19,7 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
 
     override fun parse(texts: List<String>): RideOffer? {
         return try {
-            val fare = TextPatterns.findFirstFare(texts) ?: return null
+            val fare = findFare(texts) ?: return null
             val distances = findDistances(texts)
 
             // O cartão sempre traz as duas distâncias (busca e viagem). Com só uma,
@@ -54,6 +54,22 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
         }
 
     /**
+     * A Uber sempre mostra centavos ("R$ 7,04"). Se o OCR perder a vírgula ("R$ 704",
+     * log de 02/11 que deu R$ 100,57/km), os dois últimos dígitos são os centavos.
+     * Valores curtos sem vírgula ("R$ 15") ficam como estão.
+     */
+    private fun findFare(texts: List<String>): BigDecimal? {
+        val raw = TextPatterns.findFirstFareText(texts) ?: return null
+        val missingComma = raw.none { it == ',' || it == '.' } && raw.length >= MIN_DIGITS_WITHOUT_COMMA
+        return if (missingComma) {
+            logger.warn(TAG, "Valor \"R$ $raw\" sem vírgula no OCR; lido como centavos")
+            BigDecimal(raw).movePointLeft(2)
+        } else {
+            NumberParser.parse(raw)
+        }
+    }
+
+    /**
      * A Uber mostra as distâncias entre parênteses: 1ª = busca, 2ª = viagem.
      * Se o OCR perder os parênteses, usa as distâncias simples na mesma ordem.
      */
@@ -76,5 +92,6 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
 
     private companion object {
         const val TAG = "UberOfferParser"
+        const val MIN_DIGITS_WITHOUT_COMMA = 3
     }
 }

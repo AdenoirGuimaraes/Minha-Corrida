@@ -40,15 +40,21 @@ internal object TextPatterns {
      * Primeiro valor em R$ que represente o preço da corrida.
      * Ignora preço por km ("R$ 1/km") e acréscimos ("+R$ 2,00").
      */
-    fun findFirstFare(texts: List<String>): BigDecimal? {
+    fun findFirstFare(texts: List<String>): BigDecimal? =
+        findFirstFareText(texts)?.let(NumberParser::parse)
+
+    /**
+     * Mesmo critério de [findFirstFare], mas devolve o número como está na tela
+     * (ex.: "7,04" ou "704"), para o parser decidir se o OCR perdeu a vírgula.
+     */
+    fun findFirstFareText(texts: List<String>): String? {
         for (text in texts) {
             for (match in MONEY.findAll(text)) {
                 val after = text.substring(match.range.last + 1).trimStart()
                 val before = text.substring(0, match.range.first).trimEnd()
                 if (after.startsWith("/") || before.endsWith("+")) continue
-                NumberParser.parse(match.groupValues[1])
-                    ?.takeIf { it.signum() > 0 }
-                    ?.let { return it }
+                val raw = match.groupValues[1]
+                if ((NumberParser.parse(raw)?.signum() ?: 0) > 0) return raw
             }
         }
         return null

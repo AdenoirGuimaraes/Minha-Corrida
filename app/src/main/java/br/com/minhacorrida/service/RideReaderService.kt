@@ -227,7 +227,7 @@ class RideReaderService : AccessibilityService() {
             when (mode) {
                 VisualReadingMode.MAP_ONCE_PER_OFFER ->
                     if (container.analyzeScreen.needsVisualReading(pkg, combined)) {
-                        recordDiagnostics(target, texts, "aguardando leitura do mapa (tentativa ${ocrAttempts + 1})")
+                        recordDiagnostics(target, texts, mapWaitingMessage())
                         requestMapReading(mapBottomOf(screenTexts))
                         return
                     }
@@ -334,7 +334,13 @@ class RideReaderService : AccessibilityService() {
         if (ocrInFlight || ocrAttempts >= MAX_MAP_OCR_ATTEMPTS || !ocrReader.isSupported) return
         ocrAttempts++
         overlay.hideNow()
-        val delay = if (ocrAttempts == 1) MAP_SETTLE_MS else MAP_RETRY_MS
+        // 3 tentativas rápidas; depois, a cada 1,5 s enquanto a oferta estiver aberta
+        // (as bolhas podem demorar a aparecer ou surgir só depois de mexer no zoom).
+        val delay = when {
+            ocrAttempts == 1 -> MAP_SETTLE_MS
+            ocrAttempts <= MAP_FAST_ATTEMPTS -> MAP_RETRY_MS
+            else -> MAP_SLOW_RETRY_MS
+        }
         runOcr(topPx = 0, bottomPx = mapBottomPx, delayMs = delay)
     }
 
@@ -356,6 +362,13 @@ class RideReaderService : AccessibilityService() {
     /** Cartão pela metade: relê mais rápido, a parte de baixo costuma chegar logo depois. */
     private fun continuousOcrIntervalMs(): Long =
         if (uberPartialReads > 0) PARTIAL_OCR_INTERVAL_MS else CONTINUOUS_OCR_INTERVAL_MS
+
+    private fun mapWaitingMessage(): String =
+        if (ocrAttempts < MAP_FAST_ATTEMPTS) {
+            "aguardando leitura do mapa (tentativa ${ocrAttempts + 1})"
+        } else {
+            "mapa sem distâncias ainda: relendo a cada 1,5 s (tentativa ${ocrAttempts + 1})"
+        }
 
     private fun runOcr(topPx: Int, bottomPx: Int, delayMs: Long) {
         ocrInFlight = true
@@ -455,7 +468,10 @@ class RideReaderService : AccessibilityService() {
         const val DEBOUNCE_MS = 120L
         const val MAP_SETTLE_MS = 300L
         const val MAP_RETRY_MS = 500L
-        const val MAX_MAP_OCR_ATTEMPTS = 3
+        const val MAP_FAST_ATTEMPTS = 3
+        const val MAP_SLOW_RETRY_MS = 1_500L
+        /** ~60 s de oferta aberta: 3 rápidas + ~38 lentas. */
+        const val MAX_MAP_OCR_ATTEMPTS = 40
         const val MAP_FALLBACK_RATIO = 0.4
         const val CONTINUOUS_OCR_INTERVAL_MS = 1_200L
         const val CONTINUOUS_OCR_MAX_AGE_MS = 3_000L

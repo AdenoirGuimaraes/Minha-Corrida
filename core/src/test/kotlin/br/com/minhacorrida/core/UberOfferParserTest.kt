@@ -78,6 +78,18 @@ class UberOfferParserTest {
     }
 
     @Test
+    fun `OCR sem virgula le os centavos (log de 02-11, R$ 704 virou R$ 100,57 por km)`() {
+        val ocr = listOf("UberX", "R$ 704", "* 4,82 (22)", "10 min (4.0 km)", "6 minutos (3.0 km)", "Aceitar")
+        assertEquals(0, BigDecimal("7.04").compareTo(parser.parse(ocr)!!.fare))
+    }
+
+    @Test
+    fun `valor alto sem virgula tambem vira centavos e valor curto fica igual`() {
+        assertEquals(0, BigDecimal("104.50").compareTo(parser.parse(listOf("R$ 10450", "(4 km)", "(20 km)"))!!.fare))
+        assertEquals(0, BigDecimal("15").compareTo(parser.parse(listOf("R$ 15", "(1 km)", "(5 km)"))!!.fare))
+    }
+
+    @Test
     fun `com OCR primeiro, o valor da oferta vence os ganhos do dia`() {
         val ocr = listOf("UberX", "R$ 8,91", "12 min (6.6 km)", "5 minutos (2.3 km)", "Aceitar")
         val offer = parser.parse(ocr + listOf("Página inicial", "R$ 13,92", "Hoje"))!!

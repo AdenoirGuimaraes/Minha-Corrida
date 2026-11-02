@@ -38,6 +38,10 @@ class AnalyzeScreenUseCaseTest {
     }
 
     @Test
+    fun `R$ por km implausivel e descartado`() =
+        assertNull(useCase.analyze("com.ubercab.driver", listOf("R$ 704,00", "(4 km)", "(3 km)")))
+
+    @Test
     fun `app nao suportado retorna null`() =
         assertNull(useCase.analyze("com.whatsapp", Fixtures.UBER_OFFER))
 }
