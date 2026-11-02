@@ -2,19 +2,17 @@ package br.com.minhacorrida.service
 
 import android.accessibilityservice.AccessibilityService
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
 import br.com.minhacorrida.R
+import br.com.minhacorrida.ui.RideCardBinder
 import br.com.minhacorrida.core.format.RideAnalysisFormatter
 import br.com.minhacorrida.core.model.RideAnalysis
 import br.com.minhacorrida.core.model.RideOffer
-import br.com.minhacorrida.core.model.RideRating
 import br.com.minhacorrida.core.port.AppLogger
 
 /**
@@ -32,6 +30,7 @@ class RideOverlayController(
     private val logger: AppLogger,
     private val onDismissed: (RideAnalysis) -> Unit,
 ) {
+    private val cardBinder = RideCardBinder(formatter)
     private val windowManager = service.getSystemService(WindowManager::class.java)
     private val handler = Handler(Looper.getMainLooper())
     private val hideTask = Runnable { hideNow() }
@@ -101,24 +100,7 @@ class RideOverlayController(
             setOnClickListener { dismiss() }
         }
 
-    private fun bind(root: View, analysis: RideAnalysis) {
-        root.findViewById<TextView>(R.id.tvPlatform).text = analysis.offer.platform.displayName
-        root.findViewById<TextView>(R.id.tvValuePerKm).text = formatter.headline(analysis)
-        root.findViewById<TextView>(R.id.tvDetails).text = formatter.details(analysis)
-        root.findViewById<TextView>(R.id.tvMinimumFare).text = formatter.minimumFare(analysis)
-        bindOptional(root.findViewById(R.id.tvProfit), formatter.profit(analysis))
-        bindOptional(root.findViewById(R.id.tvRating), formatter.passengerRating(analysis))
-        root.background = GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
-            setColor(if (analysis.rating == RideRating.GOOD) COLOR_GOOD else COLOR_BAD)
-        }
-    }
-
-    /** Linha que só aparece quando há dado (lucro sem custos informados, nota de passageiro novo). */
-    private fun bindOptional(view: TextView, text: String?) {
-        view.text = text.orEmpty()
-        view.visibility = if (text == null) View.GONE else View.VISIBLE
-    }
+    private fun bind(root: View, analysis: RideAnalysis) = cardBinder.bind(root, analysis)
 
     // FLAG_NOT_TOUCH_MODAL: só o quadro recebe toques; o resto da tela segue para o app.
     private fun buildLayoutParams() = WindowManager.LayoutParams(
@@ -140,7 +122,5 @@ class RideOverlayController(
         const val TAG = "RideOverlay"
         const val HIDE_GRACE_MS = 1_200L
         const val TOP_OFFSET_DP = 70
-        const val COLOR_GOOD = 0xEE1B8A3A.toInt()
-        const val COLOR_BAD = 0xEEC62828.toInt()
     }
 }

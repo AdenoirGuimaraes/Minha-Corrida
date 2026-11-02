@@ -1,7 +1,6 @@
 package br.com.minhacorrida.core.usecase
 
 import br.com.minhacorrida.core.model.RideAnalysis
-import br.com.minhacorrida.core.model.RideRating
 import br.com.minhacorrida.core.parser.ParserRegistry
 import br.com.minhacorrida.core.parser.VisualReadingMode
 import br.com.minhacorrida.core.port.AppLogger
@@ -16,6 +15,7 @@ class AnalyzeScreenUseCase(
     private val settings: SettingsRepository,
     private val logger: AppLogger,
 ) {
+    private val evaluate = EvaluateRideUseCase(calculateMetrics)
 
     /**
      * @param packageName pacote do app lido (ex.: "com.ubercab.driver").
@@ -34,29 +34,18 @@ class AnalyzeScreenUseCase(
                 logger.warn(TAG, "R$/km implausível (${metrics.valuePerKm}) em $packageName; leitura descartada")
                 return null
             }
-            val minValuePerKm = settings.getMinValuePerKm()
-            val lowRating = isRatingBelowMinimum(offer.passengerRating)
-            // Verde só se atingir o R$/km mínimo E a nota do passageiro não estiver abaixo do mínimo.
-            val rating = if (metrics.valuePerKm >= minValuePerKm && !lowRating) {
-                RideRating.GOOD
-            } else {
-                RideRating.BELOW_MINIMUM
-            }
-            val profit = settings.getOperatingCost()?.let { calculateMetrics.profit(offer, metrics, it) }
-            RideAnalysis(
-                offer, metrics, rating, calculateMetrics.minimumFare(metrics, minValuePerKm),
-                profit = profit, lowPassengerRating = lowRating,
+            evaluate(
+                offer,
+                RideRules(
+                    minValuePerKm = settings.getMinValuePerKm(),
+                    minPassengerRating = settings.getMinPassengerRating(),
+                    operatingCost = settings.getOperatingCost(),
+                ),
             )
         } catch (e: Exception) {
             logger.error(TAG, "Erro ao analisar tela de $packageName", e)
             null
         }
-    }
-
-    /** Passageiro sem nota (novo) não é recusado: não há como avaliar. */
-    private fun isRatingBelowMinimum(passengerRating: java.math.BigDecimal?): Boolean {
-        val min = settings.getMinPassengerRating() ?: return false
-        return passengerRating != null && passengerRating < min
     }
 
     /**

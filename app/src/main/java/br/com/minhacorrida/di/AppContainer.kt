@@ -12,6 +12,7 @@ import br.com.minhacorrida.core.port.SettingsRepository
 import br.com.minhacorrida.core.update.CheckForUpdateUseCase
 import br.com.minhacorrida.core.usecase.AnalyzeScreenUseCase
 import br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase
+import br.com.minhacorrida.core.usecase.EvaluateRideUseCase
 import br.com.minhacorrida.infra.AndroidLogger
 import br.com.minhacorrida.infra.DiagnosticsStore
 import br.com.minhacorrida.infra.SharedPrefsReadingSession
@@ -32,6 +33,8 @@ class AppContainer(context: Context) {
     )
     val analyzeScreen = AnalyzeScreenUseCase(parserRegistry, CalculateRideMetricsUseCase(), settings, logger)
     val formatter = RideAnalysisFormatter()
+    /** Mesma regra do leitor de tela, usada pelo simulador da tela de configurações. */
+    val evaluateRide = EvaluateRideUseCase(CalculateRideMetricsUseCase())
     val checkForUpdate = CheckForUpdateUseCase(
         GitHubReleaseSource(BuildConfig.RELEASE_API_URL, logger),
         BuildConfig.VERSION_CODE,

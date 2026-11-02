@@ -43,6 +43,12 @@ Quando o cartão da Uber fecha, o inDrive recomeça a leitura do mapa do zero. U
 - **Voz**: "Aceitar corrida. 8 reais e 50 centavos. inDrive" só nas corridas verdes, uma vez por
   oferta, depois de o card aparecer. Pode ser desligada.
 
+## Tela do app (tema preto e amarelo)
+- **Simulador** fixo no topo: o mesmo card da leitura real, recalculado a cada número digitado
+  (corrida de exemplo, mínimo R$/km, nota mínima e custos), antes mesmo de salvar.
+  Usa a mesma regra do leitor (`EvaluateRideUseCase`). Botão **Testar voz** fala a corrida simulada.
+- **Checklist** de apps lidos e de "Falar corridas": verde marcado, vermelho desmarcado.
+
 ## Encerrar
 O botão **Encerrar** pausa a leitura (serviço ocioso, sem OCR nem leitor na tela) e fecha o app.
 A acessibilidade continua ativada, porque o Android não deixa o app religá-la sozinho;

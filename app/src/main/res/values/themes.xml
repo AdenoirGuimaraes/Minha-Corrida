@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fundo preto, destaques em amarelo (cursor, linha dos campos, diálogos). -->
+    <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">@color/mc_black</item>
+        <item name="android:colorPrimaryDark">@color/mc_black</item>
+        <item name="android:colorAccent">@color/mc_yellow</item>
+        <item name="android:windowBackground">@color/mc_black</item>
+        <item name="android:statusBarColor">@color/mc_black</item>
+        <item name="android:navigationBarColor">@color/mc_black</item>
+        <item name="android:textColorPrimary">@color/mc_text</item>
+        <item name="android:textColorSecondary">@color/mc_text_muted</item>
+        <item name="android:textColorHint">@color/mc_hint</item>
+    </style>
+
+    <!-- Título de cada seção. -->
+    <style name="SectionTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:textColor">@color/mc_yellow</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Rótulo de campo. -->
+    <style name="FieldLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:textColor">@color/mc_text_muted</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Campo numérico. -->
+    <style name="NumberField">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:digits">0123456789,.</item>
+        <item name="android:importantForAutofill">no</item>
+        <item name="android:inputType">numberDecimal</item>
+        <item name="android:textColor">@color/mc_text</item>
+        <item name="android:textSize">17sp</item>
+    </style>
+
+    <!-- Cartão de seção: fundo grafite com borda amarela suave. -->
+    <style name="Section">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">14dp</item>
+        <item name="android:background">@drawable/bg_section</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:padding">16dp</item>
+    </style>
+
+    <!-- Item de checklist: verde marcado, vermelho desmarcado. -->
+    <style name="CheckItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:buttonTint">@color/check_tint</item>
+        <item name="android:textColor">@color/check_tint</item>
+        <item name="android:textSize">17sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingVertical">6dp</item>
+    </style>
+
+    <!-- Botão principal amarelo com texto preto. -->
+    <style name="YellowButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:backgroundTint">@color/mc_yellow</item>
+        <item name="android:textColor">@color/mc_black</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

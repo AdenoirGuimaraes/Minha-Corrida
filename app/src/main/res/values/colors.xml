@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tema preto e amarelo do Minha Corrida (mesmo amarelo do ícone). -->
+<resources>
+    <color name="mc_black">#FF0E0E0E</color>
+    <color name="mc_surface">#FF1B1B1B</color>
+    <color name="mc_surface_border">#4DFFC107</color>
+    <color name="mc_yellow">#FFFFC107</color>
+    <color name="mc_text">#FFFFFFFF</color>
+    <color name="mc_text_muted">#B3FFFFFF</color>
+    <color name="mc_hint">#66FFFFFF</color>
+    <color name="mc_green">#FF2EAD4B</color>
+    <color name="mc_red">#FFE53935</color>
+</resources>

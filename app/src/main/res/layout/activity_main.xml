@@ -1,217 +1,340 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  Tela de configurações, tema preto e amarelo.
+  Topo fixo: título + simulador (card igual ao real, recalculado a cada número digitado).
+  Abaixo, rolando: status, corrida de exemplo, regras, custos, apps/voz e ações.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/mc_black"
+    android:orientation="vertical">
 
+    <!-- Cabeçalho -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="16dp">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="@string/app_name"
-            android:textSize="28sp"
+            android:textColor="@color/mc_yellow"
+            android:textSize="26sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvVersion"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:alpha="0.7"
+            android:textColor="@color/mc_text_muted"
             android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tvStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textSize="18sp" />
-
-        <Button
-            android:id="@+id/btnOpenSettings"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/open_settings" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/min_label"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/etMinValue"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:digits="0123456789,."
-            android:hint="1,80"
-            android:importantForAutofill="no"
-            android:inputType="numberDecimal" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/timeout_label"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/etTimeout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="10"
-            android:importantForAutofill="no"
-            android:inputType="number"
-            android:maxLength="3" />
-
-        <!-- Custos do carro: lucro real líquido = valor − km total × custo por km. -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/cost_title"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/fuel_price_label"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/etFuelPrice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:digits="0123456789,."
-            android:hint="6,30"
-            android:importantForAutofill="no"
-            android:inputType="numberDecimal" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/km_per_liter_label"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/etKmPerLiter"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:digits="0123456789,."
-            android:hint="10"
-            android:importantForAutofill="no"
-            android:inputType="numberDecimal" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/other_cost_label"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/etOtherCost"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:digits="0123456789,."
-            android:hint="0,15"
-            android:importantForAutofill="no"
-            android:inputType="numberDecimal" />
-
-        <TextView
-            android:id="@+id/tvCostSummary"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:alpha="0.85"
-            android:textSize="14sp" />
-
-        <!-- Filtro de nota do passageiro. -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/min_rating_label"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/etMinRating"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:digits="0123456789,."
-            android:hint="4,70"
-            android:importantForAutofill="no"
-            android:inputType="numberDecimal" />
-
-        <!-- Apps lidos e voz. -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/apps_title"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <CheckBox
-            android:id="@+id/cbUber"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Uber"
-            android:textSize="16sp" />
-
-        <CheckBox
-            android:id="@+id/cbInDrive"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="inDrive"
-            android:textSize="16sp" />
-
-        <Switch
-            android:id="@+id/swVoice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp"
-            android:text="@string/voice_label"
-            android:textSize="16sp" />
-
-        <Button
-            android:id="@+id/btnSave"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/save" />
-
-        <Button
-            android:id="@+id/btnDiagnostics"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/diagnostics_title" />
-
-        <!-- Encerrar: pausa a leitura e fecha o app (abrir de novo retoma). -->
-        <Button
-            android:id="@+id/btnExit"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="#C62828"
-            android:text="@string/exit"
-            android:textColor="#FFFFFFFF"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/help"
-            android:textSize="15sp" />
     </LinearLayout>
-</ScrollView>
+
+    <!-- Simulador fixo no topo: continua visível enquanto você edita os campos. -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/preview_title"
+        android:textColor="@color/mc_text_muted"
+        android:textSize="13sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:minHeight="120dp"
+        android:paddingHorizontal="20dp">
+
+        <include
+            android:id="@+id/previewCard"
+            layout="@layout/overlay_ride"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal" />
+
+        <TextView
+            android:id="@+id/tvPreviewMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:textColor="@color/mc_red"
+            android:textSize="15sp"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="24dp">
+
+            <!-- Status da leitura -->
+            <LinearLayout style="@style/Section">
+
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/mc_text"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnOpenSettings"
+                    style="@style/YellowButton"
+                    android:text="@string/open_settings" />
+            </LinearLayout>
+
+            <!-- Corrida de exemplo do simulador -->
+            <LinearLayout style="@style/Section">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="@string/sim_title" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/FieldLabel"
+                            android:text="@string/sim_fare_label" />
+
+                        <EditText
+                            android:id="@+id/etSimFare"
+                            style="@style/NumberField"
+                            android:hint="7,04" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/FieldLabel"
+                            android:text="@string/sim_rating_label" />
+
+                        <EditText
+                            android:id="@+id/etSimRating"
+                            style="@style/NumberField"
+                            android:hint="4,82" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/FieldLabel"
+                            android:text="@string/sim_pickup_label" />
+
+                        <EditText
+                            android:id="@+id/etSimPickupKm"
+                            style="@style/NumberField"
+                            android:hint="4,0" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/FieldLabel"
+                            android:text="@string/sim_trip_label" />
+
+                        <EditText
+                            android:id="@+id/etSimTripKm"
+                            style="@style/NumberField"
+                            android:hint="3,0" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnTestVoice"
+                    style="@style/YellowButton"
+                    android:text="@string/test_voice" />
+            </LinearLayout>
+
+            <!-- Regras da corrida -->
+            <LinearLayout style="@style/Section">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="@string/rules_title" />
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="@string/min_label" />
+
+                <EditText
+                    android:id="@+id/etMinValue"
+                    style="@style/NumberField"
+                    android:hint="2,00" />
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="@string/min_rating_label" />
+
+                <EditText
+                    android:id="@+id/etMinRating"
+                    style="@style/NumberField"
+                    android:hint="4,70" />
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="@string/timeout_label" />
+
+                <EditText
+                    android:id="@+id/etTimeout"
+                    style="@style/NumberField"
+                    android:digits="0123456789"
+                    android:hint="10"
+                    android:inputType="number"
+                    android:maxLength="3" />
+            </LinearLayout>
+
+            <!-- Custos do carro: lucro real líquido -->
+            <LinearLayout style="@style/Section">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="@string/cost_title" />
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="@string/fuel_price_label" />
+
+                <EditText
+                    android:id="@+id/etFuelPrice"
+                    style="@style/NumberField"
+                    android:hint="6,30" />
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="@string/km_per_liter_label" />
+
+                <EditText
+                    android:id="@+id/etKmPerLiter"
+                    style="@style/NumberField"
+                    android:hint="10" />
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="@string/other_cost_label" />
+
+                <EditText
+                    android:id="@+id/etOtherCost"
+                    style="@style/NumberField"
+                    android:hint="0,15" />
+
+                <TextView
+                    android:id="@+id/tvCostSummary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/mc_yellow"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Checklist: apps lidos e voz (verde = ligado, vermelho = desligado) -->
+            <LinearLayout style="@style/Section">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:text="@string/apps_title" />
+
+                <CheckBox
+                    android:id="@+id/cbUber"
+                    style="@style/CheckItem"
+                    android:text="@string/app_uber" />
+
+                <CheckBox
+                    android:id="@+id/cbInDrive"
+                    style="@style/CheckItem"
+                    android:text="@string/app_indrive" />
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/voice_title" />
+
+                <CheckBox
+                    android:id="@+id/cbVoice"
+                    style="@style/CheckItem"
+                    android:text="@string/voice_label" />
+            </LinearLayout>
+
+            <!-- Ações -->
+            <Button
+                android:id="@+id/btnSave"
+                style="@style/YellowButton"
+                android:layout_marginTop="18dp"
+                android:text="@string/save" />
+
+            <Button
+                android:id="@+id/btnDiagnostics"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:backgroundTint="@color/mc_surface"
+                android:text="@string/diagnostics_title"
+                android:textColor="@color/mc_yellow" />
+
+            <!-- Encerrar: pausa a leitura e fecha o app (abrir de novo retoma). -->
+            <Button
+                android:id="@+id/btnExit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:backgroundTint="#C62828"
+                android:text="@string/exit"
+                android:textColor="@color/mc_text"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/help"
+                android:textColor="@color/mc_text_muted"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
