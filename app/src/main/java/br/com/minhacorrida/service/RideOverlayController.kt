@@ -102,9 +102,10 @@ class RideOverlayController(
 
     private fun bind(root: View, analysis: RideAnalysis) = cardBinder.bind(root, analysis)
 
+    // Largura da tela menos uma margem fina de cada lado (card de um lado ao outro).
     // FLAG_NOT_TOUCH_MODAL: só o quadro recebe toques; o resto da tela segue para o app.
     private fun buildLayoutParams() = WindowManager.LayoutParams(
-        WindowManager.LayoutParams.WRAP_CONTENT,
+        service.resources.displayMetrics.widthPixels - 2 * dp(SIDE_MARGIN_DP),
         WindowManager.LayoutParams.WRAP_CONTENT,
         WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -122,5 +123,6 @@ class RideOverlayController(
         const val TAG = "RideOverlay"
         const val HIDE_GRACE_MS = 1_200L
         const val TOP_OFFSET_DP = 70
+        const val SIDE_MARGIN_DP = 8
     }
 }

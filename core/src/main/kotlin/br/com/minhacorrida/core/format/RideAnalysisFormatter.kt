@@ -8,6 +8,22 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
+/**
+ * Textos do card de 3 quadrados (R$/km | Lucro | Mínimo) com a faixa do app no topo.
+ * Os números grandes vêm sem "R$": o rótulo pequeno de cada quadrado diz o que são.
+ */
+data class RideCardText(
+    val platform: String,
+    val rating: String?,
+    val valuePerKm: String,
+    val kmDetails: String,
+    val profitLabel: String,
+    val profitValue: String,
+    val profitDetails: String,
+    val minimumValue: String,
+    val minimumLabel: String,
+)
+
 /** Formata a análise para exibição em pt-BR. */
 class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
 
@@ -30,6 +46,37 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
     /** Ex.: "Mín. p/ R$ 2,00/km: R$ 10,40". */
     fun minimumFare(analysis: RideAnalysis): String =
         "Mín. p/ R$ ${money(analysis.minimum.minValuePerKm)}/km: R$ ${money(analysis.minimum.minimumFare)}"
+
+    /**
+     * Textos do card. Ex. (Uber, R$ 7,37 em 2,8 + 3,5 km):
+     * R$/km "1,17" / "6,3 km\n(2,8 + 3,5)"; Lucro "1,62" / "Corrida R$ 7,37\nGasto R$ 5,75";
+     * Mínimo "12,60" / "Mín. p/\nR$ 2,00/km".
+     */
+    fun card(analysis: RideAnalysis): RideCardText {
+        val offer = analysis.offer
+        val fare = "Corrida R$ ${money(offer.fare)}"
+        val pickup = offer.pickupKm
+        val kmDetails = if (pickup != null) {
+            "${km(analysis.metrics.totalKm)} km\n(${km(pickup)} + ${km(offer.tripKm)})"
+        } else {
+            "${km(offer.tripKm)} km\n(só trajeto)"
+        }
+        val profit = analysis.profit
+        return RideCardText(
+            platform = offer.platform.displayName,
+            rating = offer.passengerRating?.let { rating ->
+                val text = "★ ${DecimalFormat("0.00", DecimalFormatSymbols(locale)).format(rating)}"
+                if (analysis.lowPassengerRating) "$text abaixo do mín." else text
+            },
+            valuePerKm = money(analysis.metrics.valuePerKm),
+            kmDetails = kmDetails,
+            profitLabel = if (profit != null && profit.netProfit.signum() < 0) "Prejuízo" else "Lucro",
+            profitValue = profit?.let { money(it.netProfit.abs()) } ?: "—",
+            profitDetails = profit?.let { "$fare\nGasto R$ ${money(it.cost)}" } ?: "$fare\nInforme os custos",
+            minimumValue = money(analysis.minimum.minimumFare),
+            minimumLabel = "Mín. p/\nR$ ${money(analysis.minimum.minValuePerKm)}/km",
+        )
+    }
 
     /**
      * Ex.: "Lucro: R$ 6,40 (gasto R$ 4,60)" ou "Prejuízo: R$ 1,20 (gasto R$ 9,20)".

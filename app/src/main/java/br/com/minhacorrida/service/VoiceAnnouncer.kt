@@ -48,11 +48,14 @@ class VoiceAnnouncer(context: Context, private val logger: AppLogger) {
 
     private fun configureLanguage(): Boolean {
         val result = tts.setLanguage(Locale("pt", "BR"))
+        // Mais rápido que o normal (1.0): a frase termina antes de a oferta expirar.
+        tts.setSpeechRate(SPEECH_RATE)
         return result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED
     }
 
     private companion object {
         const val TAG = "VoiceAnnouncer"
         const val UTTERANCE_ID = "minha_corrida_oferta"
+        const val SPEECH_RATE = 1.4f
     }
 }

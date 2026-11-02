@@ -15,6 +15,8 @@ import android.view.View
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -51,10 +53,16 @@ class MainActivity : Activity() {
     private var voice: VoiceAnnouncer? = null
 
     private lateinit var tvStatus: TextView
+    private lateinit var tabSettings: TextView
+    private lateinit var tabSimulator: TextView
+    private lateinit var pageSettings: View
+    private lateinit var pageSimulator: View
     private lateinit var previewCard: View
     private lateinit var tvPreviewMessage: TextView
 
     // Corrida de exemplo (só para o simulador, não é salva).
+    private lateinit var rgSimApp: RadioGroup
+    private lateinit var rbSimInDrive: RadioButton
     private lateinit var etSimFare: EditText
     private lateinit var etSimRating: EditText
     private lateinit var etSimPickupKm: EditText
@@ -108,9 +116,13 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btnDiagnostics).setOnClickListener { showDiagnostics() }
         findViewById<Button>(R.id.btnExit).setOnClickListener { exitApp() }
         findViewById<Button>(R.id.btnTestVoice).setOnClickListener { testVoice() }
+        tabSettings.setOnClickListener { selectTab(simulator = false) }
+        tabSimulator.setOnClickListener { selectTab(simulator = true) }
+        rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
 
         watchFieldsForPreview()
         updatePreview()
+        selectTab(simulator = false)
     }
 
     override fun onResume() {
@@ -139,7 +151,13 @@ class MainActivity : Activity() {
 
     private fun bindViews() {
         tvStatus = findViewById(R.id.tvStatus)
+        tabSettings = findViewById(R.id.tabSettings)
+        tabSimulator = findViewById(R.id.tabSimulator)
+        pageSettings = findViewById(R.id.pageSettings)
+        pageSimulator = findViewById(R.id.pageSimulator)
         previewCard = findViewById(R.id.previewCard)
+        rgSimApp = findViewById(R.id.rgSimApp)
+        rbSimInDrive = findViewById(R.id.rbSimInDrive)
         tvPreviewMessage = findViewById(R.id.tvPreviewMessage)
         etSimFare = findViewById(R.id.etSimFare)
         etSimRating = findViewById(R.id.etSimRating)
@@ -155,6 +173,25 @@ class MainActivity : Activity() {
         cbUber = findViewById(R.id.cbUber)
         cbInDrive = findViewById(R.id.cbInDrive)
         cbVoice = findViewById(R.id.cbVoice)
+    }
+
+    // ---- Abas ----
+
+    /**
+     * Mostra uma aba e esconde a outra. Os campos das duas continuam vivos, então o
+     * simulador usa o que foi digitado em Configurações mesmo antes de salvar.
+     */
+    private fun selectTab(simulator: Boolean) {
+        pageSettings.visibility = if (simulator) View.GONE else View.VISIBLE
+        pageSimulator.visibility = if (simulator) View.VISIBLE else View.GONE
+        styleTab(tabSettings, selected = !simulator)
+        styleTab(tabSimulator, selected = simulator)
+        if (simulator) updatePreview()
+    }
+
+    private fun styleTab(tab: TextView, selected: Boolean) {
+        tab.setBackgroundResource(if (selected) R.drawable.bg_tab_selected else R.drawable.bg_tab_unselected)
+        tab.setTextColor(getColor(if (selected) R.color.mc_black else R.color.mc_yellow))
     }
 
     // ---- Simulador ----
@@ -197,8 +234,9 @@ class MainActivity : Activity() {
                 showPreviewMessage(getString(R.string.preview_invalid))
                 return
             }
+            val platform = if (rbSimInDrive.isChecked) Platform.INDRIVE else Platform.UBER
             val offer = RideOffer(
-                Platform.UBER, fare, tripKm = tripKm, pickupKm = pickupKm,
+                platform, fare, tripKm = tripKm, pickupKm = pickupKm,
                 passengerRating = ratingOrNull(etSimRating),
             )
             val rules = RideRules(
@@ -208,7 +246,7 @@ class MainActivity : Activity() {
             )
             val analysis = container.evaluateRide(offer, rules)
             previewAnalysis = analysis
-            cardBinder.bind(previewCard, analysis, getString(R.string.preview_label), showCloseHint = false)
+            cardBinder.bind(previewCard, analysis)
             previewCard.visibility = View.VISIBLE
             tvPreviewMessage.visibility = View.GONE
         } catch (e: Exception) {

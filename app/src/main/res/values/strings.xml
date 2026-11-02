@@ -13,6 +13,8 @@
     <string name="save_error">Não foi possível salvar. Tente novamente.</string>
     <string name="invalid_value">Informe um valor maior que zero, ex.: 1,80</string>
     <string name="invalid_timeout">Informe entre %1$d e %2$d segundos</string>
+    <string name="card_label_per_km">R$/km</string>
+    <string name="card_label_minimum">Mínimo</string>
     <string name="tap_to_close">toque para fechar</string>
     <string name="version_label">Versão %1$s</string>
     <string name="help">Abra o Uber Driver ou o inDrive. Quando chegar uma oferta, o valor por km aparece no topo da tela: verde se atinge o seu mínimo, vermelho se não.\n\nNo inDrive, abra a oferta: o app lê as duas distâncias do mapa (até o passageiro + viagem).\n\nO leitor fecha com um toque ou após o tempo configurado.</string>
@@ -37,8 +39,10 @@
     <string name="voice_label">Falar \"Aceitar corrida\" nas corridas verdes</string>
     <string name="app_uber">Uber</string>
     <string name="app_indrive">inDrive</string>
-    <string name="preview_title">SIMULAÇÃO — muda conforme você altera os valores</string>
-    <string name="preview_label">Simulação</string>
+    <string name="tab_settings">Configurações</string>
+    <string name="tab_simulator">Simulador</string>
+    <string name="preview_title">O card muda conforme você altera a corrida de exemplo ou os valores da aba Configurações (mesmo antes de salvar).</string>
+    <string name="sim_app_label">App da corrida</string>
     <string name="preview_invalid">Preencha valor e distâncias da corrida de exemplo e o mínimo R$/km</string>
     <string name="sim_title">Corrida de exemplo</string>
     <string name="sim_fare_label">Valor (R$)</string>

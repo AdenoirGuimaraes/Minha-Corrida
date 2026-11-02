@@ -1,76 +1,136 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Card da corrida (de um lado ao outro da tela):
+  faixa do app no topo (Uber = preta, inDrive = verde-limão) com a nota do passageiro,
+  três quadrados (R$/km | Lucro | Mínimo) e "toque para fechar".
+  Fundo verde/vermelho definido em RideCardBinder.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/overlayRoot"
-    android:layout_width="wrap_content"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:paddingHorizontal="20dp"
-    android:paddingVertical="10dp">
+    android:padding="8dp">
 
-    <TextView
-        android:id="@+id/tvValuePerKm"
-        android:layout_width="wrap_content"
+    <!-- Faixa do app: cor da marca para reconhecer de relance. -->
+    <LinearLayout
+        android:id="@+id/platformStrip"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#FFFFFFFF"
-        android:textSize="34sp"
-        android:textStyle="bold" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp">
 
-    <!-- App de origem da leitura, logo abaixo do valor (Uber / inDrive). -->
-    <TextView
-        android:id="@+id/tvPlatform"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="2dp"
-        android:background="#33FFFFFF"
-        android:paddingHorizontal="10dp"
-        android:paddingVertical="1dp"
-        android:textColor="#FFFFFFFF"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        <TextView
+            android:id="@+id/tvPlatform"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="17sp"
+            android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/tvDetails"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="#FFFFFFFF"
-        android:textSize="15sp" />
+        <TextView
+            android:id="@+id/tvRating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
-    <!-- Lucro real líquido: valor − km total × custo por km (some se os custos não foram informados). -->
-    <TextView
-        android:id="@+id/tvProfit"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:textColor="#FFFFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:visibility="gone" />
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
 
-    <!-- Nota do passageiro (some quando a tela não mostra). -->
-    <TextView
-        android:id="@+id/tvRating"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="#FFFFFFFF"
-        android:textSize="15sp"
-        android:visibility="gone" />
+        <!-- 1) R$/km -->
+        <br.com.minhacorrida.ui.SquareLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card_box"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="4dp">
 
-    <!-- Valor da corrida que atinge o mínimo R$/km configurado. -->
-    <TextView
-        android:id="@+id/tvMinimumFare"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
-        android:textColor="#FFFFFFFF"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/card_label_per_km"
+                android:textColor="#E6FFFFFF"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvValuePerKm"
+                style="@style/CardBigNumber" />
+
+            <TextView
+                android:id="@+id/tvDetails"
+                style="@style/CardSmallText" />
+        </br.com.minhacorrida.ui.SquareLayout>
+
+        <!-- 2) Lucro -->
+        <br.com.minhacorrida.ui.SquareLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card_box"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/tvProfitLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#E6FFFFFF"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvProfit"
+                style="@style/CardBigNumber" />
+
+            <TextView
+                android:id="@+id/tvProfitDetails"
+                style="@style/CardSmallText" />
+        </br.com.minhacorrida.ui.SquareLayout>
+
+        <!-- 3) Valor mínimo da corrida para o R$/km configurado -->
+        <br.com.minhacorrida.ui.SquareLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_card_box"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/card_label_minimum"
+                android:textColor="#E6FFFFFF"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvMinimumFare"
+                style="@style/CardBigNumber" />
+
+            <TextView
+                android:id="@+id/tvMinimumLabel"
+                style="@style/CardSmallText" />
+        </br.com.minhacorrida.ui.SquareLayout>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvTapToClose"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="2dp"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
         android:text="@string/tap_to_close"
         android:textColor="#B3FFFFFF"
         android:textSize="11sp" />

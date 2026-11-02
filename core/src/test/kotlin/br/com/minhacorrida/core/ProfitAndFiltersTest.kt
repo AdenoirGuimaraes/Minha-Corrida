@@ -123,4 +123,36 @@ class ProfitAndFiltersTest {
         )
         assertTrue(formatter.costSummary(cost, BigDecimal("0.50")).contains("prejuízo"))
     }
+
+    @Test
+    fun `textos do card de 3 quadrados`() {
+        settings.cost = OperatingCost(BigDecimal("6.30"), BigDecimal("10"))
+        val card = formatter.card(useCase.analyze("com.ubercab.driver", uberCard)!!)
+        assertEquals("Uber", card.platform)
+        assertEquals("★ 4,82", card.rating)
+        assertEquals("1,01", card.valuePerKm)
+        assertEquals("7 km\n(4 + 3)", card.kmDetails)
+        assertEquals("Lucro", card.profitLabel)
+        assertEquals("2,63", card.profitValue)
+        assertEquals("Corrida R$ 7,04\nGasto R$ 4,41", card.profitDetails)
+        assertEquals("7,00", card.minimumValue)
+        assertEquals("Mín. p/\nR$ 1,00/km", card.minimumLabel)
+    }
+
+    @Test
+    fun `card sem custos e com prejuizo`() {
+        val semCusto = formatter.card(useCase.analyze("com.ubercab.driver", uberCard)!!)
+        assertEquals("—", semCusto.profitValue)
+        assertEquals("Corrida R$ 7,04\nInforme os custos", semCusto.profitDetails)
+        settings.cost = OperatingCost(BigDecimal("6.30"), BigDecimal("5"))
+        val prejuizo = formatter.card(useCase.analyze("com.ubercab.driver", uberCard)!!)
+        assertEquals("Prejuízo", prejuizo.profitLabel)
+        assertEquals("1,78", prejuizo.profitValue)
+    }
+
+    @Test
+    fun `nota abaixo do minimo aparece na faixa do topo`() {
+        settings.minRating = BigDecimal("4.90")
+        assertEquals("★ 4,82 abaixo do mín.", formatter.card(useCase.analyze("com.ubercab.driver", uberCard)!!).rating)
+    }
 }
