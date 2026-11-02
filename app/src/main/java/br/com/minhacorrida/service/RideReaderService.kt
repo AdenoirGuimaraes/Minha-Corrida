@@ -180,6 +180,7 @@ class RideReaderService : AccessibilityService() {
                 isActive = w.isActive,
                 isApplication = w.type == AccessibilityWindowInfo.TYPE_APPLICATION,
                 left = bounds.left, top = bounds.top, right = bounds.right, bottom = bounds.bottom,
+                title = runCatching { w.title?.toString() }.getOrNull(),
             )
         }
         val dm = resources.displayMetrics
@@ -423,7 +424,8 @@ class RideReaderService : AccessibilityService() {
             "alvo: ${target.describe()} | app em primeiro plano: ${foregroundPackage()} | janelas: " +
                 windows.joinToString { w ->
                     val r = Rect().also(w::getBoundsInScreen)
-                    "${w.root?.packageName}(${windowTypeName(w.type)} y=${r.top}–${r.bottom})"
+                    val title = w.title?.toString()?.takeIf { it.isNotBlank() }?.let { " \"$it\"" }.orEmpty()
+                    "${w.root?.packageName}$title(${windowTypeName(w.type)} y=${r.top}–${r.bottom})"
                 }
         }.getOrDefault("desconhecida")
         container.diagnostics.record(pkg, source, texts, if (pkg == ocrPackage) ocrTexts else emptyList(), result)

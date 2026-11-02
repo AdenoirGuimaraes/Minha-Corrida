@@ -82,6 +82,41 @@ class ReadingPriorityPolicyTest {
         assertEquals(Source.UBER_CARD_OVERLAY, t.source)
     }
 
+    // Diagnóstico de 02/11: inDrive na frente, bolha da Uber e cartão sem nome de app.
+    private val h2 = 2340
+    private val inDrive2 = WindowSnapshot("sinet.startup.inDriver", true, true, 0, 0, w, h2)
+    private val uberBubble2 = WindowSnapshot("com.ubercab.driver", false, false, 900, 542, w, 721)
+    private val anonymousCard = WindowSnapshot(null, false, false, 0, 101, w, 2205)
+
+    @Test
+    fun `cartao da Uber sem nome de app e reconhecido (log de 02-11)`() {
+        val t = policy.choose(listOf(uberBubble2, anonymousCard, inDrive2), w, h2)!!
+        assertEquals(Source.UBER_CARD_OVERLAY, t.source)
+        assertEquals("com.ubercab.driver", t.packageName)
+        assertEquals((h2 * 0.4).toInt(), t.ocrTopPx) // tela cheia: lê a metade de baixo
+        assertEquals(2205, t.ocrBottomPx)
+    }
+
+    @Test
+    fun `janela sem nome sem a Uber aberta nao e cartao`() {
+        val t = policy.choose(listOf(anonymousCard, inDrive2), w, h2)!!
+        assertEquals(Source.FOREGROUND, t.source)
+    }
+
+    @Test
+    fun `janela sem nome pequena nao e cartao`() {
+        val small = WindowSnapshot(null, false, false, 0, 1500, w, 1800)
+        val t = policy.choose(listOf(uberBubble2, small, inDrive2), w, h2)!!
+        assertEquals(Source.FOREGROUND, t.source)
+    }
+
+    @Test
+    fun `janela sem pacote mas com titulo Uber e cartao`() {
+        val titled = WindowSnapshot(null, false, false, 0, 1300, w, 2205, title = "Uber Driver")
+        val t = policy.choose(listOf(titled, inDrive2), w, h2)!!
+        assertEquals(Source.UBER_CARD_OVERLAY, t.source)
+    }
+
     @Test
     fun `sem app de corrida na tela nao le nada`() {
         assertNull(policy.choose(listOf(uberBubble, gigu, launcher), w, h))

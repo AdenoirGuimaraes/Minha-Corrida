@@ -11,6 +11,8 @@ data class WindowSnapshot(
     val top: Int,
     val right: Int,
     val bottom: Int,
+    /** Título da janela (Android 7+), quando o sistema informa. */
+    val title: String? = null,
 ) {
     val width: Int get() = right - left
     val height: Int get() = bottom - top
@@ -56,6 +58,7 @@ class ReadingPriorityPolicy(
     private val fullScreenRatio: Double = 0.85,
     private val lowerScreenStartRatio: Double = 0.4,
     private val minOcrTopRatio: Double = 0.2,
+    private val anonymousCardMinHeightRatio: Double = 0.5,
 ) {
 
     /**
@@ -78,12 +81,13 @@ class ReadingPriorityPolicy(
 
     private fun uberCard(windows: List<WindowSnapshot>, screenWidth: Int, screenHeight: Int): ReadingTarget? {
         if (screenWidth <= 0 || screenHeight <= 0) return null
+        val uberOnScreen = windows.any { platformOf(it) == Platform.UBER }
         // Janelas largas da Uber que não são a ativa: o cartão e suas faixas.
         val wide = windows.filter { w ->
-            platformOf(w) == Platform.UBER &&
-                !w.isActive &&
+            !w.isActive &&
                 w.height > 0 &&
-                w.width >= screenWidth * minCardWidthRatio
+                w.width >= screenWidth * minCardWidthRatio &&
+                (platformOf(w) == Platform.UBER || isAnonymousUberCard(w, uberOnScreen, screenHeight))
         }
         // Precisa de ao menos uma janela alta (o corpo do cartão) para ser cartão;
         // a partir dela, faixas baixas (ex.: parte de baixo com o botão Aceitar) também entram.
@@ -100,8 +104,25 @@ class ReadingPriorityPolicy(
             top.coerceAtLeast((screenHeight * minOcrTopRatio).toInt())
         }
         if (bottom <= ocrTop) return null
-        return ReadingTarget(cards.first().packageName!!, ReadingTarget.Source.UBER_CARD_OVERLAY, ocrTop, bottom)
+        return ReadingTarget(UBER_PACKAGE, ReadingTarget.Source.UBER_CARD_OVERLAY, ocrTop, bottom)
+    }
+
+    /**
+     * Cartão da Uber em tela cheia sem nome de app: a Uber bloqueia a acessibilidade e
+     * o Android entrega a janela sem pacote (diagnóstico de 02/11: "null y=101–2205").
+     * Vale como cartão se o título citar a Uber, ou se for uma sobreposição grande
+     * (≥ metade da tela) enquanto a Uber está aberta (bolha na tela). Se não for oferta,
+     * o serviço a ignora após algumas leituras sem resultado.
+     */
+    private fun isAnonymousUberCard(w: WindowSnapshot, uberOnScreen: Boolean, screenHeight: Int): Boolean {
+        if (w.packageName != null || w.isApplication) return false
+        if (w.title?.contains("uber", ignoreCase = true) == true) return true
+        return uberOnScreen && w.height >= screenHeight * anonymousCardMinHeightRatio
     }
 
     private fun platformOf(w: WindowSnapshot): Platform? = w.packageName?.let(Platform::fromPackage)
+
+    private companion object {
+        val UBER_PACKAGE: String = Platform.UBER.packageNames.first()
+    }
 }
