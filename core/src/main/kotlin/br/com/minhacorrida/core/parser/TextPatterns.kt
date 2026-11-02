@@ -21,6 +21,23 @@ internal object TextPatterns {
     /** Valor em reais: "R$ 10", "R$ 8,91", "R$ 1.234,56". */
     val MONEY = Regex("""R\$\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)""")
 
+    /**
+     * Nota do passageiro: "4,82 (22)", "* 4,82 (22) Verificado" (Uber, OCR) ou "4.92" sozinho (inDrive).
+     * Exige o número no início do texto (até 3 símbolos antes, ex. "★ ") e, depois dele,
+     * "(n)" ou fim do texto — assim não confunde com distância ("4,9 km") nem com R$/km.
+     */
+    private val PASSENGER_RATING = Regex("""^\W{0,3}([1-5][.,]\d{1,2})(?=\s*\(\d+\)|\s*$)""")
+
+    /** @return a primeira nota de passageiro encontrada (1,00 a 5,00), ou null. */
+    fun findPassengerRating(texts: List<String>): BigDecimal? =
+        texts.firstNotNullOfOrNull { text ->
+            PASSENGER_RATING.find(text.trim())?.groupValues?.get(1)
+                ?.let(NumberParser::parse)
+                ?.takeIf { it >= BigDecimal.ONE && it <= FIVE }
+        }
+
+    private val FIVE = BigDecimal(5)
+
     /** Converte número + unidade para km (escala de 3 casas). */
     fun toKm(number: String, unit: String): BigDecimal? {
         val value = NumberParser.parse(number) ?: return null

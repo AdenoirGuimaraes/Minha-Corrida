@@ -64,6 +64,7 @@ class ReadingPriorityPolicy(
     /**
      * @param windows janelas visíveis, em qualquer ordem.
      * @param ignoreUberCard true para pular o cartão (ex.: sobreposição da Uber que não é oferta).
+     * @param enabledPlatforms apps ligados nas configurações.
      * @return o alvo da leitura, ou null se nenhum app de corrida estiver visível.
      */
     fun choose(
@@ -71,11 +72,15 @@ class ReadingPriorityPolicy(
         screenWidth: Int,
         screenHeight: Int,
         ignoreUberCard: Boolean = false,
+        enabledPlatforms: Set<Platform> = Platform.entries.toSet(),
     ): ReadingTarget? {
-        if (!ignoreUberCard) uberCard(windows, screenWidth, screenHeight)?.let { return it }
+        // App desligado nas configurações não é lido (nem gasta OCR).
+        if (!ignoreUberCard && Platform.UBER in enabledPlatforms) {
+            uberCard(windows, screenWidth, screenHeight)?.let { return it }
+        }
 
         return windows
-            .firstOrNull { it.isActive && it.isApplication && platformOf(it) != null }
+            .firstOrNull { it.isActive && it.isApplication && platformOf(it)?.let { p -> p in enabledPlatforms } == true }
             ?.let { ReadingTarget(it.packageName!!, ReadingTarget.Source.FOREGROUND) }
     }
 

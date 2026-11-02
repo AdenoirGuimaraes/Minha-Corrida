@@ -118,6 +118,26 @@ class ReadingPriorityPolicyTest {
     }
 
     @Test
+    fun `Uber desligada nas configuracoes nao le o cartao`() {
+        val t = policy.choose(
+            listOf(uberBubble, uberCardTop, inDriveFront), w, h,
+            enabledPlatforms = setOf(br.com.minhacorrida.core.model.Platform.INDRIVE),
+        )!!
+        assertEquals(Source.FOREGROUND, t.source)
+        assertEquals("sinet.startup.inDriver", t.packageName)
+    }
+
+    @Test
+    fun `inDrive desligado nao e lido em primeiro plano`() {
+        assertNull(
+            policy.choose(
+                listOf(uberBubble, inDriveFront), w, h,
+                enabledPlatforms = setOf(br.com.minhacorrida.core.model.Platform.UBER),
+            ),
+        )
+    }
+
+    @Test
     fun `sem app de corrida na tela nao le nada`() {
         assertNull(policy.choose(listOf(uberBubble, gigu, launcher), w, h))
     }

@@ -25,6 +25,8 @@ class AnalyzeScreenUseCase(
     fun analyze(packageName: String, texts: List<String>): RideAnalysis? {
         return try {
             val parser = registry.parserFor(packageName) ?: return null
+            // App desligado nas configurações: não lê nem informa.
+            if (parser.platform !in settings.getEnabledPlatforms()) return null
             val offer = parser.parse(texts) ?: return null
             val metrics = calculateMetrics(offer)
             // Leitura absurda (ex.: OCR trocou dígitos) não vira card: espera a próxima leitura.
@@ -33,16 +35,28 @@ class AnalyzeScreenUseCase(
                 return null
             }
             val minValuePerKm = settings.getMinValuePerKm()
-            val rating = if (metrics.valuePerKm >= minValuePerKm) {
+            val lowRating = isRatingBelowMinimum(offer.passengerRating)
+            // Verde só se atingir o R$/km mínimo E a nota do passageiro não estiver abaixo do mínimo.
+            val rating = if (metrics.valuePerKm >= minValuePerKm && !lowRating) {
                 RideRating.GOOD
             } else {
                 RideRating.BELOW_MINIMUM
             }
-            RideAnalysis(offer, metrics, rating, calculateMetrics.minimumFare(metrics, minValuePerKm))
+            val profit = settings.getOperatingCost()?.let { calculateMetrics.profit(offer, metrics, it) }
+            RideAnalysis(
+                offer, metrics, rating, calculateMetrics.minimumFare(metrics, minValuePerKm),
+                profit = profit, lowPassengerRating = lowRating,
+            )
         } catch (e: Exception) {
             logger.error(TAG, "Erro ao analisar tela de $packageName", e)
             null
         }
+    }
+
+    /** Passageiro sem nota (novo) não é recusado: não há como avaliar. */
+    private fun isRatingBelowMinimum(passengerRating: java.math.BigDecimal?): Boolean {
+        val min = settings.getMinPassengerRating() ?: return false
+        return passengerRating != null && passengerRating < min
     }
 
     /**

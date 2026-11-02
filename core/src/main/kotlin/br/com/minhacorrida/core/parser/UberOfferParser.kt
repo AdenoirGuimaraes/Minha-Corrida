@@ -25,7 +25,10 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
             // O cartão sempre traz as duas distâncias (busca e viagem). Com só uma,
             // a parte de baixo ainda não foi lida: mostrar o R$/km agora daria um valor errado.
             if (distances.size < 2) return null
-            RideOffer(platform, fare, tripKm = distances[1], pickupKm = distances[0])
+            RideOffer(
+                platform, fare, tripKm = distances[1], pickupKm = distances[0],
+                passengerRating = TextPatterns.findPassengerRating(texts),
+            )
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta da Uber", e)
             null

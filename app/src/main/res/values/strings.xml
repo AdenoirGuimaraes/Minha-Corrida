@@ -23,6 +23,17 @@
     <string name="update_downloading">Baixando atualização… %1$d%%</string>
     <string name="update_failed">Não foi possível baixar a atualização. Tente mais tarde.</string>
     <string name="update_allow_install">Permita \"Instalar apps desconhecidos\" para o Minha Corrida e volte ao app.</string>
+    <string name="cost_title">Custos do carro (lucro real)</string>
+    <string name="fuel_price_label">Preço do combustível (R$ por litro)</string>
+    <string name="km_per_liter_label">Consumo do carro (km por litro)</string>
+    <string name="other_cost_label">Outros custos por km (opcional: manutenção, pneus)</string>
+    <string name="cost_not_set">Preencha preço e consumo para o card mostrar o lucro real de cada corrida.</string>
+    <string name="invalid_cost">Preencha preço do combustível e consumo com valores maiores que zero, ex.: 6,30 e 10</string>
+    <string name="min_rating_label">Nota mínima do passageiro (vazio = sem filtro)</string>
+    <string name="invalid_rating">A nota mínima deve ficar entre 1 e 5, ex.: 4,70</string>
+    <string name="apps_title">Apps lidos e informados</string>
+    <string name="invalid_platforms">Marque pelo menos um app</string>
+    <string name="voice_label">Falar \"Aceitar corrida\" nas corridas verdes</string>
     <string name="exit">Encerrar</string>
     <string name="exit_done">Minha Corrida encerrado. Abra o app para voltar a ler as ofertas.</string>
     <string name="diagnostics_title">Diagnóstico da leitura</string>

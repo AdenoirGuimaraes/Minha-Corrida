@@ -10,20 +10,25 @@ import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.Switch
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import br.com.minhacorrida.BuildConfig
 import br.com.minhacorrida.MinhaCorridaApp
 import br.com.minhacorrida.R
+import br.com.minhacorrida.core.model.OperatingCost
 import br.com.minhacorrida.core.model.OverlayTimeout
+import br.com.minhacorrida.core.model.Platform
 import br.com.minhacorrida.core.parser.NumberParser
 import br.com.minhacorrida.core.update.AppRelease
 import br.com.minhacorrida.di.AppContainer
 import br.com.minhacorrida.service.RideReaderService
 import br.com.minhacorrida.update.ApkUpdateInstaller
 import java.io.File
+import java.math.BigDecimal
 import java.util.concurrent.Executors
 
 /** Tela de configuração: status do serviço, mínimo por km, tempo do leitor e atualização. */
@@ -34,6 +39,14 @@ class MainActivity : Activity() {
     private lateinit var tvStatus: TextView
     private lateinit var etMinValue: EditText
     private lateinit var etTimeout: EditText
+    private lateinit var etFuelPrice: EditText
+    private lateinit var etKmPerLiter: EditText
+    private lateinit var etOtherCost: EditText
+    private lateinit var tvCostSummary: TextView
+    private lateinit var etMinRating: EditText
+    private lateinit var cbUber: CheckBox
+    private lateinit var cbInDrive: CheckBox
+    private lateinit var swVoice: Switch
 
     private val ioExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -55,11 +68,20 @@ class MainActivity : Activity() {
         tvStatus = findViewById(R.id.tvStatus)
         etMinValue = findViewById(R.id.etMinValue)
         etTimeout = findViewById(R.id.etTimeout)
+        etFuelPrice = findViewById(R.id.etFuelPrice)
+        etKmPerLiter = findViewById(R.id.etKmPerLiter)
+        etOtherCost = findViewById(R.id.etOtherCost)
+        tvCostSummary = findViewById(R.id.tvCostSummary)
+        etMinRating = findViewById(R.id.etMinRating)
+        cbUber = findViewById(R.id.cbUber)
+        cbInDrive = findViewById(R.id.cbInDrive)
+        swVoice = findViewById(R.id.swVoice)
         findViewById<TextView>(R.id.tvVersion).text = getString(R.string.version_label, BuildConfig.VERSION_NAME)
 
         val settings = container.settings
         etMinValue.setText(settings.getMinValuePerKm().toPlainString().replace('.', ','))
         etTimeout.setText(settings.getOverlayTimeoutSeconds().toString())
+        loadProfitSettings()
 
         findViewById<Button>(R.id.btnOpenSettings).setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
@@ -218,8 +240,26 @@ class MainActivity : Activity() {
                 toast(getString(R.string.invalid_timeout, OverlayTimeout.MIN_SECONDS, OverlayTimeout.MAX_SECONDS))
                 return
             }
-            container.settings.setMinValuePerKm(minValue)
-            container.settings.setOverlayTimeoutSeconds(timeout)
+            val cost = readOperatingCost() ?: return
+            val minRating = readMinRating() ?: return
+            val platforms = buildSet {
+                if (cbUber.isChecked) add(Platform.UBER)
+                if (cbInDrive.isChecked) add(Platform.INDRIVE)
+            }
+            if (platforms.isEmpty()) {
+                toast(getString(R.string.invalid_platforms))
+                return
+            }
+
+            // Tudo validado: grava de uma vez.
+            val settings = container.settings
+            settings.setMinValuePerKm(minValue)
+            settings.setOverlayTimeoutSeconds(timeout)
+            settings.setOperatingCost(cost.value)
+            settings.setMinPassengerRating(minRating.value)
+            settings.setEnabledPlatforms(platforms)
+            settings.setVoiceEnabled(swVoice.isChecked)
+            showCostSummary()
             toast(getString(R.string.saved))
         } catch (e: Exception) {
             android.util.Log.e("MC/MainActivity", "Falha ao salvar configurações", e)
@@ -231,6 +271,71 @@ class MainActivity : Activity() {
         /** Intervalo mínimo entre consultas ao GitHub (abrir e fechar o app rápido não repete). */
         const val UPDATE_CHECK_INTERVAL_MS = 60_000L
     }
+
+    // ---- Lucro, nota, apps e voz ----
+
+    /** Campo opcional já validado: [value] null significa "não informado". */
+    private class Optional<T>(val value: T?)
+
+    private fun loadProfitSettings() {
+        val settings = container.settings
+        settings.getOperatingCost()?.let { cost ->
+            etFuelPrice.setText(decimalText(cost.fuelPricePerLiter))
+            etKmPerLiter.setText(decimalText(cost.kmPerLiter))
+            if (cost.otherCostPerKm.signum() > 0) etOtherCost.setText(decimalText(cost.otherCostPerKm))
+        }
+        settings.getMinPassengerRating()?.let { etMinRating.setText(decimalText(it)) }
+        val platforms = settings.getEnabledPlatforms()
+        cbUber.isChecked = Platform.UBER in platforms
+        cbInDrive.isChecked = Platform.INDRIVE in platforms
+        swVoice.isChecked = settings.isVoiceEnabled()
+        showCostSummary()
+    }
+
+    /**
+     * Preço e consumo: os dois vazios = sem cálculo de lucro; só um preenchido = erro.
+     * @return null quando inválido (o motivo já foi mostrado).
+     */
+    private fun readOperatingCost(): Optional<OperatingCost>? {
+        val fuelText = etFuelPrice.text.toString().trim()
+        val kmText = etKmPerLiter.text.toString().trim()
+        if (fuelText.isEmpty() && kmText.isEmpty()) return Optional(null)
+
+        val fuel = NumberParser.parse(fuelText)
+        val kmPerLiter = NumberParser.parse(kmText)
+        val otherText = etOtherCost.text.toString().trim()
+        val other = if (otherText.isEmpty()) BigDecimal.ZERO else NumberParser.parse(otherText)
+        if (fuel == null || fuel.signum() <= 0 || kmPerLiter == null || kmPerLiter.signum() <= 0 ||
+            other == null || other.signum() < 0
+        ) {
+            toast(getString(R.string.invalid_cost))
+            return null
+        }
+        return Optional(OperatingCost(fuel, kmPerLiter, other))
+    }
+
+    /** Vazio = sem filtro de nota. @return null quando inválido (o motivo já foi mostrado). */
+    private fun readMinRating(): Optional<BigDecimal>? {
+        val text = etMinRating.text.toString().trim()
+        if (text.isEmpty()) return Optional(null)
+        val rating = NumberParser.parse(text)
+        if (rating == null || rating < BigDecimal.ONE || rating > BigDecimal(5)) {
+            toast(getString(R.string.invalid_rating))
+            return null
+        }
+        return Optional(rating)
+    }
+
+    private fun showCostSummary() {
+        val cost = container.settings.getOperatingCost()
+        tvCostSummary.text = if (cost == null) {
+            getString(R.string.cost_not_set)
+        } else {
+            container.formatter.costSummary(cost, container.settings.getMinValuePerKm())
+        }
+    }
+
+    private fun decimalText(value: BigDecimal) = value.stripTrailingZeros().toPlainString().replace('.', ',')
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
 

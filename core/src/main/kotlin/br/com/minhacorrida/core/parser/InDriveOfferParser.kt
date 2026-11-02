@@ -39,7 +39,10 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
             // Evita contar a mesma bolha duas vezes (lida pela acessibilidade e pelo OCR).
             val pickupKm = others.firstOrNull { !isSame(it, tripKm) } ?: others.first()
 
-            RideOffer(platform, fare, tripKm = tripKm, pickupKm = pickupKm)
+            RideOffer(
+                platform, fare, tripKm = tripKm, pickupKm = pickupKm,
+                passengerRating = TextPatterns.findPassengerRating(texts),
+            )
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta do inDrive", e)
             null

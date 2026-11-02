@@ -1,7 +1,9 @@
 package br.com.minhacorrida.core.format
 
+import br.com.minhacorrida.core.model.OperatingCost
 import br.com.minhacorrida.core.model.RideAnalysis
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
@@ -28,6 +30,59 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
     /** Ex.: "Mín. p/ R$ 2,00/km: R$ 10,40". */
     fun minimumFare(analysis: RideAnalysis): String =
         "Mín. p/ R$ ${money(analysis.minimum.minValuePerKm)}/km: R$ ${money(analysis.minimum.minimumFare)}"
+
+    /**
+     * Ex.: "Lucro: R$ 6,40 (gasto R$ 4,60)" ou "Prejuízo: R$ 1,20 (gasto R$ 9,20)".
+     * @return null quando os custos do carro não foram informados.
+     */
+    fun profit(analysis: RideAnalysis): String? {
+        val profit = analysis.profit ?: return null
+        val label = if (profit.netProfit.signum() < 0) "Prejuízo" else "Lucro"
+        return "$label: R$ ${money(profit.netProfit.abs())} (gasto R$ ${money(profit.cost)})"
+    }
+
+    /**
+     * Ex.: "Nota 4,82" ou "Nota 4,50 — abaixo do mínimo".
+     * @return null quando a tela não mostra a nota (passageiro novo).
+     */
+    fun passengerRating(analysis: RideAnalysis): String? {
+        val rating = analysis.offer.passengerRating ?: return null
+        val text = "Nota ${DecimalFormat("0.00", DecimalFormatSymbols(locale)).format(rating)}"
+        return if (analysis.lowPassengerRating) "$text — abaixo do mínimo" else text
+    }
+
+    /**
+     * Resumo da tela de configurações: custo por km e quanto sobra com o mínimo escolhido.
+     * Ex.: "Seu custo: R$ 0,63/km. Com o mínimo de R$ 2,00/km, sobram R$ 1,37 de lucro por km."
+     */
+    fun costSummary(cost: OperatingCost, minValuePerKm: BigDecimal): String {
+        val costPerKm = cost.costPerKm.setScale(2, RoundingMode.HALF_UP)
+        val margin = minValuePerKm - costPerKm
+        val base = "Seu custo: R$ ${money(costPerKm)}/km."
+        return if (margin.signum() > 0) {
+            "$base Com o mínimo de R$ ${money(minValuePerKm)}/km, sobram R$ ${money(margin)} de lucro por km."
+        } else {
+            "$base Atenção: o mínimo de R$ ${money(minValuePerKm)}/km não cobre o custo — dá prejuízo."
+        }
+    }
+
+    /** Frase falada nas corridas verdes. Ex.: "Aceitar corrida. 8 reais e 50 centavos. inDrive". */
+    fun speech(analysis: RideAnalysis): String =
+        "Aceitar corrida. ${spokenMoney(analysis.offer.fare)}. ${analysis.offer.platform.displayName}"
+
+    /** "1 real", "11 reais", "8 reais e 50 centavos", "70 centavos". */
+    internal fun spokenMoney(value: BigDecimal): String {
+        val cents = value.setScale(2, RoundingMode.HALF_UP).movePointRight(2).toBigInteger().toLong()
+        val reais = cents / 100
+        val centavos = cents % 100
+        val reaisText = if (reais == 1L) "1 real" else "$reais reais"
+        val centavosText = if (centavos == 1L) "1 centavo" else "$centavos centavos"
+        return when {
+            centavos == 0L -> reaisText
+            reais == 0L -> centavosText
+            else -> "$reaisText e $centavosText"
+        }
+    }
 
     // DecimalFormat não é thread-safe: cria uma instância por chamada.
     private fun money(value: BigDecimal) = DecimalFormat("#,##0.00", DecimalFormatSymbols(locale)).format(value)

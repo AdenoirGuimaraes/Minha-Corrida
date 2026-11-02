@@ -1,5 +1,7 @@
 package br.com.minhacorrida.core
 
+import br.com.minhacorrida.core.model.OperatingCost
+import br.com.minhacorrida.core.model.Platform
 import br.com.minhacorrida.core.port.SettingsRepository
 import java.math.BigDecimal
 
@@ -41,10 +43,22 @@ object Fixtures {
     class FakeSettings(
         private var min: BigDecimal = BigDecimal("1.50"),
         private var timeout: Int = 10,
+        var cost: OperatingCost? = null,
+        var minRating: BigDecimal? = null,
+        var platforms: Set<Platform> = Platform.entries.toSet(),
+        var voice: Boolean = true,
     ) : SettingsRepository {
         override fun getMinValuePerKm() = min
         override fun setMinValuePerKm(value: BigDecimal) { min = value }
         override fun getOverlayTimeoutSeconds() = timeout
         override fun setOverlayTimeoutSeconds(seconds: Int) { timeout = seconds }
+        override fun getOperatingCost() = cost
+        override fun setOperatingCost(cost: OperatingCost?) { this.cost = cost }
+        override fun getMinPassengerRating() = minRating
+        override fun setMinPassengerRating(rating: BigDecimal?) { minRating = rating }
+        override fun getEnabledPlatforms() = platforms
+        override fun setEnabledPlatforms(platforms: Set<Platform>) { this.platforms = platforms }
+        override fun isVoiceEnabled() = voice
+        override fun setVoiceEnabled(enabled: Boolean) { voice = enabled }
     }
 }

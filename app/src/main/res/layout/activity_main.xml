@@ -69,6 +69,120 @@
             android:inputType="number"
             android:maxLength="3" />
 
+        <!-- Custos do carro: lucro real líquido = valor − km total × custo por km. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/cost_title"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/fuel_price_label"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/etFuelPrice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:digits="0123456789,."
+            android:hint="6,30"
+            android:importantForAutofill="no"
+            android:inputType="numberDecimal" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/km_per_liter_label"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/etKmPerLiter"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:digits="0123456789,."
+            android:hint="10"
+            android:importantForAutofill="no"
+            android:inputType="numberDecimal" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/other_cost_label"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/etOtherCost"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:digits="0123456789,."
+            android:hint="0,15"
+            android:importantForAutofill="no"
+            android:inputType="numberDecimal" />
+
+        <TextView
+            android:id="@+id/tvCostSummary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:alpha="0.85"
+            android:textSize="14sp" />
+
+        <!-- Filtro de nota do passageiro. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/min_rating_label"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/etMinRating"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:digits="0123456789,."
+            android:hint="4,70"
+            android:importantForAutofill="no"
+            android:inputType="numberDecimal" />
+
+        <!-- Apps lidos e voz. -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/apps_title"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <CheckBox
+            android:id="@+id/cbUber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Uber"
+            android:textSize="16sp" />
+
+        <CheckBox
+            android:id="@+id/cbInDrive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="inDrive"
+            android:textSize="16sp" />
+
+        <Switch
+            android:id="@+id/swVoice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/voice_label"
+            android:textSize="16sp" />
+
         <Button
             android:id="@+id/btnSave"
             android:layout_width="match_parent"

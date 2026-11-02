@@ -53,7 +53,7 @@ class RideOverlayController(
             }
             handler.removeCallbacks(hideTask)
 
-            if (analysis.offer != shownOffer) {
+            if (!analysis.offer.sameRideAs(shownOffer)) {
                 shownOffer = analysis.offer
                 handler.removeCallbacks(autoCloseTask)
                 handler.postDelayed(autoCloseTask, autoCloseSeconds * 1_000L)
@@ -106,10 +106,18 @@ class RideOverlayController(
         root.findViewById<TextView>(R.id.tvValuePerKm).text = formatter.headline(analysis)
         root.findViewById<TextView>(R.id.tvDetails).text = formatter.details(analysis)
         root.findViewById<TextView>(R.id.tvMinimumFare).text = formatter.minimumFare(analysis)
+        bindOptional(root.findViewById(R.id.tvProfit), formatter.profit(analysis))
+        bindOptional(root.findViewById(R.id.tvRating), formatter.passengerRating(analysis))
         root.background = GradientDrawable().apply {
             cornerRadius = dp(18).toFloat()
             setColor(if (analysis.rating == RideRating.GOOD) COLOR_GOOD else COLOR_BAD)
         }
+    }
+
+    /** Linha que só aparece quando há dado (lucro sem custos informados, nota de passageiro novo). */
+    private fun bindOptional(view: TextView, text: String?) {
+        view.text = text.orEmpty()
+        view.visibility = if (text == null) View.GONE else View.VISIBLE
     }
 
     // FLAG_NOT_TOUCH_MODAL: só o quadro recebe toques; o resto da tela segue para o app.

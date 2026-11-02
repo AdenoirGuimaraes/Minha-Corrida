@@ -33,6 +33,16 @@ O cartão da Uber só é mostrado **completo** (valor + distância até o passag
 
 Quando o cartão da Uber fecha, o inDrive recomeça a leitura do mapa do zero. Uma sobreposição grande da Uber que não seja oferta é ignorada após algumas leituras sem resultado.
 
+## Lucro, nota, apps e voz
+- **Lucro real líquido**: informe preço do combustível (R$/l), consumo (km/l) e, se quiser, outros
+  custos por km. O card mostra `valor − km total × custo por km` ("Lucro" ou "Prejuízo"). A tela de
+  configurações mostra o custo por km e quanto o mínimo de R$/km deixa de lucro por km.
+- **Nota mínima do passageiro**: abaixo dela a corrida fica vermelha, mesmo com bom R$/km.
+  Passageiro sem nota (novo) não é recusado. O app não toca em "Recusar": só avisa.
+- **Apps lidos**: Uber e inDrive podem ser ligados/desligados; app desligado nem é lido.
+- **Voz**: "Aceitar corrida. 8 reais e 50 centavos. inDrive" só nas corridas verdes, uma vez por
+  oferta, depois de o card aparecer. Pode ser desligada.
+
 ## Encerrar
 O botão **Encerrar** pausa a leitura (serviço ocioso, sem OCR nem leitor na tela) e fecha o app.
 A acessibilidade continua ativada, porque o Android não deixa o app religá-la sozinho;

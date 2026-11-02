@@ -39,6 +39,10 @@ class RideReaderService : AccessibilityService() {
     private lateinit var extractor: ScreenTextExtractor
     private lateinit var ocrReader: ScreenOcrReader
     private lateinit var overlay: RideOverlayController
+    private var voice: VoiceAnnouncer? = null
+
+    /** Última corrida anunciada por voz: a mesma oferta não é falada duas vezes. */
+    private var lastSpokenOffer: br.com.minhacorrida.core.model.RideOffer? = null
 
     private var currentTarget: ReadingTarget? = null
     private var paused = false
@@ -76,6 +80,10 @@ class RideReaderService : AccessibilityService() {
             overlay = RideOverlayController(this, container.formatter, container.logger) { dismissed ->
                 visibility.onDismissed(dismissed.offer)
             }
+            // Motor de voz preparado já na conexão, para não atrasar o primeiro card.
+            voice = runCatching { VoiceAnnouncer(this, container.logger) }
+                .onFailure { container.logger.error(TAG, "Voz indisponível", it) }
+                .getOrNull()
             container.logger.debug(TAG, "Serviço conectado")
         } catch (e: Exception) {
             android.util.Log.e("MC/$TAG", "Falha ao iniciar o serviço", e)
@@ -116,6 +124,7 @@ class RideReaderService : AccessibilityService() {
         try {
             handler.removeCallbacksAndMessages(null)
             overlay.hideNow()
+            voice?.stop()
             currentTarget = null
             lastAnalysis = null
             ocrPackage = null
@@ -184,7 +193,8 @@ class RideReaderService : AccessibilityService() {
             )
         }
         val dm = resources.displayMetrics
-        val withCard = priority.choose(snapshots, dm.widthPixels, dm.heightPixels)
+        val enabled = container.settings.getEnabledPlatforms()
+        val withCard = priority.choose(snapshots, dm.widthPixels, dm.heightPixels, enabledPlatforms = enabled)
         val cardKey = withCard?.takeIf { it.source == ReadingTarget.Source.UBER_CARD_OVERLAY }
             ?.let { "${it.ocrTopPx}-${it.ocrBottomPx}" }
 
@@ -198,7 +208,7 @@ class RideReaderService : AccessibilityService() {
             uberPartialCountedOcrAt = 0L
         }
         return if (cardKey != null && cardKey == ignoredUberCardKey) {
-            priority.choose(snapshots, dm.widthPixels, dm.heightPixels, ignoreUberCard = true)
+            priority.choose(snapshots, dm.widthPixels, dm.heightPixels, ignoreUberCard = true, enabledPlatforms = enabled)
         } else {
             withCard
         }
@@ -304,6 +314,23 @@ class RideReaderService : AccessibilityService() {
         // Oferta já fechada (toque ou tempo) não reabre até surgir outra.
         if (visibility.shouldShow(analysis.offer)) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
+            announceIfGood(analysis)
+        }
+    }
+
+    /**
+     * Voz só para corrida verde, uma vez por oferta e sempre DEPOIS do card na tela.
+     * A fala é assíncrona: não segura a leitura das próximas telas.
+     */
+    private fun announceIfGood(analysis: RideAnalysis) {
+        try {
+            if (analysis.rating != br.com.minhacorrida.core.model.RideRating.GOOD) return
+            if (!container.settings.isVoiceEnabled()) return
+            if (analysis.offer.sameRideAs(lastSpokenOffer)) return
+            lastSpokenOffer = analysis.offer
+            voice?.speak(container.formatter.speech(analysis))
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao anunciar a corrida", e)
         }
     }
 
@@ -460,6 +487,7 @@ class RideReaderService : AccessibilityService() {
         handler.removeCallbacksAndMessages(null)
         if (::overlay.isInitialized) overlay.hideNow()
         if (::ocrReader.isInitialized) ocrReader.close()
+        voice?.shutdown()
         super.onDestroy()
     }
 

@@ -12,7 +12,7 @@ class OverlayVisibilityPolicy {
     private var dismissedOffer: RideOffer? = null
 
     /** @return true se a oferta ainda não foi fechada pelo motorista ou pelo tempo. */
-    fun shouldShow(offer: RideOffer): Boolean = offer != dismissedOffer
+    fun shouldShow(offer: RideOffer): Boolean = !offer.sameRideAs(dismissedOffer)
 
     /** Registra que esta oferta foi fechada. */
     fun onDismissed(offer: RideOffer) {
