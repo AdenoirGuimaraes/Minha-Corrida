@@ -17,17 +17,21 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
 
     override val platform = Platform.UBER
 
+    /**
+     * Lê o cartão ancorado nas distâncias "(x km)": o valor da corrida é o ÚLTIMO "R$" antes
+     * delas e a nota fica entre o valor e as distâncias. Assim, textos de outro app que
+     * aparecem acima do cartão no OCR (ex.: lista do inDrive com "R$ 10" e "5.0(24)",
+     * prints de 03/11) não são confundidos com a oferta da Uber.
+     */
     override fun parse(texts: List<String>): RideOffer? {
         return try {
-            val fare = findFare(texts) ?: return null
-            val distances = findDistances(texts)
-
+            val reading = readCard(texts) ?: return null
             // O cartão sempre traz as duas distâncias (busca e viagem). Com só uma,
             // a parte de baixo ainda não foi lida: mostrar o R$/km agora daria um valor errado.
-            if (distances.size < 2) return null
+            if (reading.distances.size < 2) return null
             RideOffer(
-                platform, fare, tripKm = distances[1], pickupKm = distances[0],
-                passengerRating = TextPatterns.findPassengerRating(texts),
+                platform, reading.fare, tripKm = reading.distances[1], pickupKm = reading.distances[0],
+                passengerRating = reading.rating,
             )
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta da Uber", e)
@@ -40,9 +44,55 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
      * (parte de cima lida, parte de baixo não). O serviço insiste em vez de desistir.
      */
     override fun isPartialOffer(texts: List<String>): Boolean = try {
-        TextPatterns.findFirstFare(texts) != null && findDistances(texts).size == 1
+        readCard(texts)?.distances?.size == 1
     } catch (e: Exception) {
         false
+    }
+
+    /** Valor, distâncias (só as que vêm depois do valor) e nota de um cartão. */
+    private data class CardReading(val fare: BigDecimal, val distances: List<BigDecimal>, val rating: BigDecimal?)
+
+    private fun readCard(texts: List<String>): CardReading? {
+        val anchor = distanceAnchor(texts)
+        val fareHit = pickFare(texts, anchor) ?: return null
+        val fare = fareValue(fareHit.value) ?: return null
+        val afterFare = texts.subList(fareHit.index, texts.size)
+        val ratingEnd = (anchor ?: texts.size).coerceAtLeast(fareHit.index)
+        return CardReading(
+            fare = fare,
+            distances = findDistances(afterFare),
+            rating = TextPatterns.findPassengerRating(texts.subList(fareHit.index, ratingEnd)),
+        )
+    }
+
+    /** Índice do primeiro texto com distância do cartão: "(6.6 km)"; sem parênteses, "6.6 km". */
+    private fun distanceAnchor(texts: List<String>): Int? {
+        texts.indexOfFirst { TextPatterns.PAREN_DISTANCE.containsMatchIn(it) }.takeIf { it >= 0 }?.let { return it }
+        return texts.indexOfFirst { text ->
+            TextPatterns.DISTANCE.findAll(text).any { !TextPatterns.isApproximate(text, it) }
+        }.takeIf { it >= 0 }
+    }
+
+    /** Último valor antes das distâncias; sem âncora (ou nada antes dela), o primeiro valor da tela. */
+    private fun pickFare(texts: List<String>, anchor: Int?): IndexedValue<String>? {
+        val fares = TextPatterns.fareTexts(texts)
+        if (anchor == null) return fares.firstOrNull()
+        return fares.lastOrNull { it.index <= anchor } ?: fares.firstOrNull()
+    }
+
+    /**
+     * A Uber sempre mostra centavos ("R$ 7,04"). Se o OCR perder a vírgula ("R$ 704",
+     * log de 02/11 que deu R$ 100,57/km), os dois últimos dígitos são os centavos.
+     * Valores curtos sem vírgula ("R$ 15") ficam como estão.
+     */
+    private fun fareValue(raw: String): BigDecimal? {
+        val missingComma = raw.none { it == ',' || it == '.' } && raw.length >= MIN_DIGITS_WITHOUT_COMMA
+        return if (missingComma) {
+            logger.warn(TAG, "Valor \"R$ $raw\" sem vírgula no OCR; lido como centavos")
+            BigDecimal(raw).movePointLeft(2)
+        } else {
+            NumberParser.parse(raw)
+        }
     }
 
     /**
@@ -57,44 +107,49 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
         }
 
     /**
-     * A Uber sempre mostra centavos ("R$ 7,04"). Se o OCR perder a vírgula ("R$ 704",
-     * log de 02/11 que deu R$ 100,57/km), os dois últimos dígitos são os centavos.
-     * Valores curtos sem vírgula ("R$ 15") ficam como estão.
-     */
-    private fun findFare(texts: List<String>): BigDecimal? {
-        val raw = TextPatterns.findFirstFareText(texts) ?: return null
-        val missingComma = raw.none { it == ',' || it == '.' } && raw.length >= MIN_DIGITS_WITHOUT_COMMA
-        return if (missingComma) {
-            logger.warn(TAG, "Valor \"R$ $raw\" sem vírgula no OCR; lido como centavos")
-            BigDecimal(raw).movePointLeft(2)
-        } else {
-            NumberParser.parse(raw)
-        }
-    }
-
-    /**
      * A Uber mostra as distâncias entre parênteses: 1ª = busca, 2ª = viagem.
      * Se o OCR perder os parênteses, usa as distâncias simples na mesma ordem.
      */
     private fun findDistances(texts: List<String>): List<BigDecimal> {
         val inParentheses = texts.flatMap { text ->
-            TextPatterns.PAREN_DISTANCE.findAll(text)
-                .mapNotNull { TextPatterns.toKm(it.groupValues[1], it.groupValues[2]) }
-                .toList()
+            TextPatterns.PAREN_DISTANCE.findAll(text).mapNotNull { distanceKm(text, it) }.toList()
         }
         if (inParentheses.size >= 2) return inParentheses
 
         val plain = texts.flatMap { text ->
             TextPatterns.DISTANCE.findAll(text)
                 .filterNot { TextPatterns.isApproximate(text, it) }
-                .mapNotNull { TextPatterns.toKm(it.groupValues[1], it.groupValues[2]) }
+                .mapNotNull { distanceKm(text, it) }
                 .toList()
         }
         return if (plain.size > inParentheses.size) plain else inParentheses
     }
 
+    /**
+     * Converte a distância e corrige o ponto perdido pelo OCR: "12 min (74 km)" seria
+     * 370 km/h — impossível —, então é 7,4 km (print de 03/11). Usa os minutos do
+     * mesmo texto; sem minutos, ou com número que já tem separador, fica como está.
+     */
+    private fun distanceKm(text: String, match: MatchResult): BigDecimal? {
+        val number = match.groupValues[1]
+        val km = TextPatterns.toKm(number, match.groupValues[2]) ?: return null
+        val inKm = match.groupValues[2].equals("km", ignoreCase = true)
+        if (!inKm || number.any { it == ',' || it == '.' }) return km
+        val minutes = MINUTES.findAll(text.substring(0, match.range.first)).lastOrNull()
+            ?.groupValues?.get(1)?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 } ?: return km
+        val kmPerMinute = km.divide(minutes, 3, java.math.RoundingMode.HALF_UP)
+        if (kmPerMinute <= MAX_KM_PER_MINUTE) return km
+        val fixed = km.movePointLeft(1)
+        logger.warn(TAG, "Distância \"$number km\" em $minutes min é impossível; lida como $fixed km")
+        return fixed
+    }
+
     private companion object {
         const val TAG = "UberOfferParser"
         const val MIN_DIGITS_WITHOUT_COMMA = 3
+
+        /** 1,5 km/min = 90 km/h: acima disso, distância urbana lida pelo OCR perdeu o ponto. */
+        val MAX_KM_PER_MINUTE = BigDecimal("1.5")
+        val MINUTES = Regex("""(\d+)\s*min""", RegexOption.IGNORE_CASE)
     }
 }

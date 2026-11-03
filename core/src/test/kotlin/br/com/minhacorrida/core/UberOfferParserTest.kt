@@ -95,4 +95,41 @@ class UberOfferParserTest {
         val offer = parser.parse(ocr + listOf("Página inicial", "R$ 13,92", "Hoje"))!!
         assertEquals(0, BigDecimal("8.91").compareTo(offer.fare))
     }
+
+    // Prints de 03/11: inDrive na frente; o OCR da metade de baixo pega um pedaço da
+    // lista do inDrive ACIMA do cartão da Uber.
+    private val print1 = listOf(
+        "R$ 10", "Preço justo", "Diego", "5.0(24)", "Mercearia Lk (Rua João Lemos",
+        "UberX", "R$ 7,80", "* 4,95 (176)", "9 min (2.2 km)", "Rua Frei Gabriel, Universitário, Lages",
+        "6 minutos (1.9 km)", "Rua Juvelina Ribeiro Antunes, 146,", "Caravágio, Lages", "Aceitar",
+    )
+    private val print2 = listOf(
+        "R$ 11", "Preço justo", "Evelin", "5.0(61)", "Rua Prudente de Morais 887 (Conta",
+        "UberX", "R$ 16,99", "* 5,00 (52)", "12 min (74 km)", "Santa Monica, Lages",
+        "16 minutos (8.6 km)", "Rua Dom Joaquim do Arco Verde, 195,", "Santa Rita, Lages", "Aceitar",
+    )
+
+    @Test
+    fun `valor e nota da Uber nao sao confundidos com a lista do inDrive acima (print 1 de 03-11)`() {
+        val offer = parser.parse(print1)!!
+        assertEquals(0, BigDecimal("7.80").compareTo(offer.fare))
+        assertEquals(0, BigDecimal("4.95").compareTo(offer.passengerRating!!))
+        assertEquals(0, BigDecimal("2.2").compareTo(offer.pickupKm!!))
+        assertEquals(0, BigDecimal("1.9").compareTo(offer.tripKm))
+    }
+
+    @Test
+    fun `distancia sem ponto e corrigida pelos minutos (print 2 de 03-11, 74 km em 12 min)`() {
+        val offer = parser.parse(print2)!!
+        assertEquals(0, BigDecimal("16.99").compareTo(offer.fare))
+        assertEquals(0, BigDecimal("7.4").compareTo(offer.pickupKm!!))
+        assertEquals(0, BigDecimal("8.6").compareTo(offer.tripKm))
+    }
+
+    @Test
+    fun `distancia longa possivel nao e alterada`() {
+        val offer = parser.parse(listOf("R$ 45,00", "25 min (30 km)", "40 minutos (42 km)"))!!
+        assertEquals(0, BigDecimal("30").compareTo(offer.pickupKm!!))
+        assertEquals(0, BigDecimal("42").compareTo(offer.tripKm))
+    }
 }
