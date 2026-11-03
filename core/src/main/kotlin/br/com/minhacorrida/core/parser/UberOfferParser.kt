@@ -69,9 +69,18 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
     private fun distanceAnchor(texts: List<String>): Int? {
         texts.indexOfFirst { TextPatterns.PAREN_DISTANCE.containsMatchIn(it) }.takeIf { it >= 0 }?.let { return it }
         return texts.indexOfFirst { text ->
-            TextPatterns.DISTANCE.findAll(text).any { !TextPatterns.isApproximate(text, it) }
+            TextPatterns.DISTANCE.findAll(text).any { isCardPlainDistance(text, it) }
         }.takeIf { it >= 0 }
     }
+
+    /**
+     * Distância sem parênteses só vale se vier depois dos minutos no MESMO texto
+     * ("12 min 6.6 km", OCR que perdeu os parênteses). Textos soltos como "50 m" ou
+     * "2,5 km" são da navegação durante a corrida (log de 03/11, que gerou o card em loop).
+     */
+    private fun isCardPlainDistance(text: String, match: MatchResult): Boolean =
+        !TextPatterns.isApproximate(text, match) &&
+            MINUTES.containsMatchIn(text.substring(0, match.range.first))
 
     /** Último valor antes das distâncias; sem âncora (ou nada antes dela), o primeiro valor da tela. */
     private fun pickFare(texts: List<String>, anchor: Int?): IndexedValue<String>? {
@@ -118,7 +127,7 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
 
         val plain = texts.flatMap { text ->
             TextPatterns.DISTANCE.findAll(text)
-                .filterNot { TextPatterns.isApproximate(text, it) }
+                .filter { isCardPlainDistance(text, it) }
                 .mapNotNull { distanceKm(text, it) }
                 .toList()
         }

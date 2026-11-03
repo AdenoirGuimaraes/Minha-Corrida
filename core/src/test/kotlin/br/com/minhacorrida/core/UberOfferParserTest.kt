@@ -132,4 +132,29 @@ class UberOfferParserTest {
         assertEquals(0, BigDecimal("30").compareTo(offer.pickupKm!!))
         assertEquals(0, BigDecimal("42").compareTo(offer.tripKm))
     }
+
+    // Log de 03/11 19:14:57: tela de navegação durante a corrida virou "oferta" de
+    // R$ 4,42/km (ganhos do dia + distância da próxima curva + distância até o destino)
+    // e, como "50 m" mudava a cada segundo, o card reabria sem parar.
+    private val navegacaoDuranteCorrida = listOf(
+        "Página inicial", "R$ 11,28", "Pesquisar locais", "30", "LIMITE", "Recursos de segurança",
+        "Reporte um problema no mapa", "Rua Sen Salgado Filho", "50 m", "Rua Prudente de Moraes",
+        "Não é possível ficar offline", "Preferências", "Agenda de viagens", "6 min", "2,5 km",
+        "Destino de Elto", "Conteúdo", "Contato", "Elto", "Ícone", "Coletar pagamento", "Registro de viagens",
+    )
+
+    @Test
+    fun `tela de navegacao durante a corrida nao e oferta (loop de 03-11)`() {
+        assertNull(parser.parse(navegacaoDuranteCorrida))
+        assertFalse(parser.isPartialOffer(navegacaoDuranteCorrida))
+    }
+
+    @Test
+    fun `card novo durante a corrida continua sendo lido`() {
+        val cardNaParteDeBaixo = listOf("UberX", "R$ 9,40", "* 4,90 (88)", "5 min (1.8 km)", "11 minutos (4.2 km)", "Aceitar")
+        val offer = parser.parse(cardNaParteDeBaixo + listOf("6 min", "2,5 km", "Coletar pagamento"))!!
+        assertEquals(0, BigDecimal("9.40").compareTo(offer.fare))
+        assertEquals(0, BigDecimal("1.8").compareTo(offer.pickupKm!!))
+        assertEquals(0, BigDecimal("4.2").compareTo(offer.tripKm))
+    }
 }

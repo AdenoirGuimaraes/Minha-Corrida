@@ -63,7 +63,7 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
         }
         val profit = analysis.profit
         return RideCardText(
-            platform = offer.platform.displayName,
+            platform = "${offer.platform.displayName} — R$ ${money(offer.fare)}",
             rating = offer.passengerRating?.let { rating ->
                 val text = "★ ${DecimalFormat("0.00", DecimalFormatSymbols(locale)).format(rating)}"
                 if (analysis.lowPassengerRating) "$text abaixo do mín." else text

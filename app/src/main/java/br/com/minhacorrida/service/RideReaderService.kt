@@ -223,7 +223,7 @@ class RideReaderService : AccessibilityService() {
             val screenTexts = if (isCard) {
                 uberCardTexts()
             } else {
-                extractor.extract(foregroundRootOf(pkg) ?: return)
+                onlyCardArea(pkg, extractor.extract(foregroundRootOf(pkg) ?: return))
             }
             val texts = screenTexts.map { it.text }
             resetOcrIfNewScreen(pkg, target.source.name + "|" + offerKeyOf(texts))
@@ -411,6 +411,18 @@ class RideReaderService : AccessibilityService() {
                 handler.post(analyzeTask)
             }
         }, delayMs)
+    }
+
+    /**
+     * Uber em primeiro plano: o cartão de oferta sempre aparece da metade da tela para
+     * baixo, inclusive durante uma corrida. O topo (ganhos do dia, navegação) é descartado
+     * para não virar "oferta" falsa (log de 03/11: card em loop durante a corrida).
+     * inDrive não precisa: a leitura dele exige o botão "Aceitar por R$", que só existe no pedido.
+     */
+    private fun onlyCardArea(pkg: String, texts: List<ScreenText>): List<ScreenText> {
+        if (Platform.fromPackage(pkg) != Platform.UBER) return texts
+        val top = (resources.displayMetrics.heightPixels * LOWER_SCREEN_START_RATIO).toInt()
+        return texts.filter { it.topPx >= top }
     }
 
     /** Identifica a oferta pelos textos de valor e distância do cartão. */

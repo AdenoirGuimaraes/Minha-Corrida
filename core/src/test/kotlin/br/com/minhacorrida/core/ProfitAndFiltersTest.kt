@@ -128,7 +128,7 @@ class ProfitAndFiltersTest {
     fun `textos do card de 3 quadrados`() {
         settings.cost = OperatingCost(BigDecimal("6.30"), BigDecimal("10"))
         val card = formatter.card(useCase.analyze("com.ubercab.driver", uberCard)!!)
-        assertEquals("Uber", card.platform)
+        assertEquals("Uber — R$ 7,04", card.platform)
         assertEquals("★ 4,82", card.rating)
         assertEquals("1,01", card.valuePerKm)
         assertEquals("7 km\n(4 + 3)", card.kmDetails)
