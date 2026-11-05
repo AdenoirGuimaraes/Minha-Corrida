@@ -1,6 +1,11 @@
 package br.com.minhacorrida.ui
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.text.InputType
+import android.widget.EditText
+import android.widget.Toast
+import br.com.minhacorrida.core.parser.NumberParser
 import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
@@ -104,6 +109,39 @@ class RideHistoryScreen(
         val pad = (6 * resources.displayMetrics.density).toInt()
         setPadding(paddingLeft, pad, paddingRight, pad)
         setOnCheckedChangeListener { _, checked -> onDoneChanged(record.id, checked) }
+        setOnLongClickListener { askNewFare(record); true }
+    }
+
+    /** Toque longo: corrigir o valor (contraproposta aceita, valor digitado no lápis etc.). */
+    private fun askNewFare(record: RideRecord) {
+        val input = EditText(activity).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText(record.fare.toPlainString().replace('.', ','))
+            setSelectAllOnFocus(true)
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.hist_edit_title)
+            .setMessage(activity.getString(R.string.hist_edit_message, record.platform.displayName))
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ -> saveNewFare(record.id, input.text.toString()) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    private fun saveNewFare(id: String, text: String) {
+        val fare = NumberParser.parse(text)
+        if (fare == null || fare.signum() <= 0) {
+            Toast.makeText(activity, R.string.invalid_value, Toast.LENGTH_LONG).show()
+            return
+        }
+        try {
+            io.execute {
+                history.changeFare(id, fare)
+                main.post { refresh() }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao corrigir valor", e)
+        }
     }
 
     /** Atualiza o resumo na hora e grava a marcação em segundo plano. */

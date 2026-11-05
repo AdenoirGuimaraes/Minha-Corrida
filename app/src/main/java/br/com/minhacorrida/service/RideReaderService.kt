@@ -106,6 +106,12 @@ class RideReaderService : AccessibilityService() {
         }
         paused = false
 
+        // Toque do motorista num botão (contraproposta do inDrive): não é mudança de tela.
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            if (pkg != null && Platform.fromPackage(pkg) == Platform.INDRIVE) onInDriveButtonTapped(event, pkg)
+            return
+        }
+
         // Abertura/fechamento de janelas (ex.: cartão da Uber surgindo sobre o inDrive).
         val windowsChanged = event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
         if (pkg != null && !windowsChanged && !container.parserRegistry.supports(pkg)) {
@@ -141,6 +147,31 @@ class RideReaderService : AccessibilityService() {
             container.logger.debug(TAG, "Leitura encerrada pelo motorista")
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao pausar a leitura", e)
+        }
+    }
+
+    /**
+     * Botão de valor do pedido do inDrive ("R$ 17,50", "Aceitar por R$ 15"): o valor vai para
+     * a corrida guardada na aba Corridas (contraproposta). Todo toque fica no diagnóstico,
+     * para conferir o que o Android informou (ex.: valor digitado no lápis).
+     */
+    private fun onInDriveButtonTapped(event: AccessibilityEvent, pkg: String) {
+        try {
+            val text = (event.text.joinToString(" ").ifBlank { null }
+                ?: event.contentDescription?.toString()
+                ?: runCatching { event.source?.text?.toString() }.getOrNull()).orEmpty().trim()
+            if (text.isEmpty()) return
+            historyExecutor.execute {
+                val updated = container.rideHistory.applyInDriveFareTap(text)
+                val result = if (updated != null) {
+                    "contraproposta: corrida passou para R$ ${updated.fare.toPlainString()}"
+                } else {
+                    "toque sem mudança no histórico"
+                }
+                container.diagnostics.record(pkg, "toque no inDrive", listOf(text), emptyList(), result)
+            }
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao tratar toque no inDrive", e)
         }
     }
 
@@ -319,20 +350,22 @@ class RideReaderService : AccessibilityService() {
         if (visibility.shouldShow(analysis.offer)) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
             announceIfGood(analysis)
-            recordIfGood(analysis)
+            recordRide(analysis)
         }
     }
 
     /**
-     * Guarda a corrida verde no histórico (aba Corridas), DEPOIS do card na tela e fora
-     * da thread principal: gravar o arquivo não atrasa o card nem a voz.
+     * Guarda a corrida no histórico (aba Corridas): verdes da Uber e todos os pedidos do
+     * inDrive (podem virar bons com contraproposta). DEPOIS do card na tela e fora da
+     * thread principal: gravar o arquivo não atrasa o card nem a voz.
      */
-    private fun recordIfGood(analysis: RideAnalysis) {
-        if (analysis.rating != br.com.minhacorrida.core.model.RideRating.GOOD) return
+    private fun recordRide(analysis: RideAnalysis) {
+        val good = analysis.rating == br.com.minhacorrida.core.model.RideRating.GOOD
+        if (!good && analysis.offer.platform != Platform.INDRIVE) return
         if (analysis.offer.sameRideAs(lastRecordedOffer)) return
         lastRecordedOffer = analysis.offer
         try {
-            historyExecutor.execute { container.recordGoodRide(analysis) }
+            historyExecutor.execute { container.recordRide(analysis) }
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao agendar gravação no histórico", e)
         }

@@ -47,8 +47,10 @@
     <string name="period_month">Mês</string>
     <string name="hist_profit">Lucro</string>
     <string name="hist_cost">Separar p/ abastecer</string>
-    <string name="hist_hint">Corridas verdes do período. Marque as que você realizou:</string>
-    <string name="hist_empty">Nenhuma corrida verde neste período.</string>
+    <string name="hist_hint">🟢 verdes e 🔴 pedidos do inDrive abertos. Marque as que você realizou. Toque longo corrige o valor (contraproposta).</string>
+    <string name="hist_empty">Nenhuma corrida neste período.</string>
+    <string name="hist_edit_title">Corrigir valor da corrida</string>
+    <string name="hist_edit_message">Valor final da corrida (%1$s), em R$:</string>
     <string name="preview_title">O card muda conforme você altera a corrida de exemplo ou os valores da aba Configurações (mesmo antes de salvar).</string>
     <string name="sim_app_label">App da corrida</string>
     <string name="preview_invalid">Preencha valor e distâncias da corrida de exemplo e o mínimo R$/km</string>

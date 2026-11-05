@@ -57,8 +57,12 @@ Voz em velocidade 1,4×.
 - **Checklist** de apps lidos e de "Falar corridas": verde marcado, vermelho desmarcado.
 
 ## Aba Corridas (histórico)
-- Toda corrida **verde** mostrada no card é guardada sozinha (data, hora, app, valor, km e gastos
-  com os custos do carro daquele momento), sem atrasar o card.
+- Guardadas sozinhas, sem atrasar o card (data, hora, app, valor, km e gastos com os custos do
+  carro daquele momento): **verdes da Uber** e **todos os pedidos do inDrive** abertos (🟢/🔴),
+  porque no inDrive a contraproposta pode transformar uma corrida vermelha em boa.
+- **Contraproposta do inDrive**: ao tocar num botão de valor ("R$ 17,50"), o valor vai para a
+  corrida guardada (fica "era R$ 15,00"). **Toque longo** na corrida corrige o valor à mão
+  (ex.: valor digitado no lápis). Km e gastos não mudam; R$/km, lucro e cor são recalculados.
 - Na aba **Corridas**: filtro **Dia / Semana / Mês** com ◀ ▶; marque com o check as que você realizou.
 - Resumo das realizadas: corridas e **km rodados**, **lucro** e **separar p/ abastecer**
   (combustível + manutenção).

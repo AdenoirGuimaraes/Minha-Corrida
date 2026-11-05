@@ -40,6 +40,17 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         }
     }
 
+    override fun findById(id: String): RideRecord? = synchronized(lock) { records().firstOrNull { it.id == id } }
+
+    override fun replace(record: RideRecord) = synchronized(lock) {
+        val list = records()
+        val i = list.indexOfFirst { it.id == record.id }
+        if (i >= 0) {
+            list[i] = record
+            save()
+        }
+    }
+
     override fun deleteOlderThan(cutoffMillis: Long): Int = synchronized(lock) {
         val list = records()
         val before = list.size
@@ -89,6 +100,8 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         r.fuelCost?.let { put("fuel", it.toPlainString()) }
         r.maintenanceCost?.let { put("maintenance", it.toPlainString()) }
         put("done", r.done)
+        put("good", r.good)
+        r.originalFare?.let { put("originalFare", it.toPlainString()) }
     }
 
     private fun fromJson(o: JSONObject) = RideRecord(
@@ -103,6 +116,8 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         fuelCost = o.optString("fuel").takeIf { it.isNotEmpty() }?.let(::BigDecimal),
         maintenanceCost = o.optString("maintenance").takeIf { it.isNotEmpty() }?.let(::BigDecimal),
         done = o.optBoolean("done", false),
+        good = o.optBoolean("good", true),
+        originalFare = o.optString("originalFare").takeIf { it.isNotEmpty() }?.let(::BigDecimal),
     )
 
     private companion object {

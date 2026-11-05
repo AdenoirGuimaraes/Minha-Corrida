@@ -62,12 +62,18 @@ class RideHistoryFormatter(
         }
     }
 
-    /** "18:24 · Uber · R$ 10,00 · 4,1 km · lucro R$ 6,26" (mês/semana mostram a data). */
+    /**
+     * "🟢 18:24 · Uber · R$ 10,00 · 4,1 km · lucro R$ 6,26" (mês/semana mostram a data).
+     * 🔴 = pedido do inDrive que estava abaixo do mínimo; "(era R$ 15,00)" = valor trocado.
+     */
     fun row(record: RideRecord, period: HistoryPeriod): String {
         val at = Instant.ofEpochMilli(record.timestampMillis).atZone(zone)
         val whenText = if (period == HistoryPeriod.DAY) at.format(time) else "${at.format(dayMonth)} ${at.format(time)}"
         val profit = if (record.totalCost == null) "sem custos" else "lucro R$ ${money(record.netProfit)}"
-        return "$whenText · ${record.platform.displayName} · R$ ${money(record.fare)} · ${km(record.totalKm)} km · $profit"
+        val color = if (record.good) "🟢" else "🔴"
+        val original = record.originalFare?.let { " (era R$ ${money(it)})" }.orEmpty()
+        return "$color $whenText · ${record.platform.displayName} · R$ ${money(record.fare)}$original" +
+            " · ${km(record.totalKm)} km · $profit"
     }
 
     private fun money(value: BigDecimal) = DecimalFormat("#,##0.00", DecimalFormatSymbols(locale)).format(value)

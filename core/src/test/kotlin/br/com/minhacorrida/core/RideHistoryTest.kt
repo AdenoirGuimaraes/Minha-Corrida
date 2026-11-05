@@ -3,7 +3,7 @@ package br.com.minhacorrida.core
 import br.com.minhacorrida.core.format.RideHistoryFormatter
 import br.com.minhacorrida.core.history.HistoryPeriod
 import br.com.minhacorrida.core.history.InMemoryRideHistoryRepository
-import br.com.minhacorrida.core.history.RecordGoodRideUseCase
+import br.com.minhacorrida.core.history.RecordRideUseCase
 import br.com.minhacorrida.core.history.RideHistoryUseCase
 import br.com.minhacorrida.core.history.rangeOf
 import br.com.minhacorrida.core.model.OperatingCost
@@ -28,13 +28,18 @@ class RideHistoryTest {
     private var now = today.atTime(15, 0).atZone(zone).toInstant().toEpochMilli()
     private val repo = InMemoryRideHistoryRepository()
     // Versa: gasolina R$ 6,30 a 10,5 km/l e R$ 0,25/km de manutenção.
-    private val settings = Fixtures.FakeSettings(cost = OperatingCost(BigDecimal("6.30"), BigDecimal("10.5"), BigDecimal("0.25")))
-    private val record = RecordGoodRideUseCase(repo, settings, NoOpLogger) { now }
-    private val history = RideHistoryUseCase(repo, NoOpLogger, zone) { today }
+    private val settings = Fixtures.FakeSettings(
+        min = BigDecimal("2.00"),
+        cost = OperatingCost(BigDecimal("6.30"), BigDecimal("10.5"), BigDecimal("0.25")),
+    )
+    private val record = RecordRideUseCase(repo, settings, NoOpLogger) { now }
+    private val history = RideHistoryUseCase(repo, settings, NoOpLogger, zone, today = { today }, nowMillis = { now })
     private val evaluate = EvaluateRideUseCase(CalculateRideMetricsUseCase())
 
-    private fun analysis(fare: String, pickup: String, trip: String, min: String = "2.00") = evaluate(
-        RideOffer(Platform.UBER, BigDecimal(fare), tripKm = BigDecimal(trip), pickupKm = BigDecimal(pickup)),
+    private fun analysis(
+        fare: String, pickup: String, trip: String, min: String = "2.00", platform: Platform = Platform.UBER,
+    ) = evaluate(
+        RideOffer(platform, BigDecimal(fare), tripKm = BigDecimal(trip), pickupKm = BigDecimal(pickup)),
         RideRules(BigDecimal(min), operatingCost = settings.cost),
     )
 
@@ -114,8 +119,55 @@ class RideHistoryTest {
         assertEquals("1 corrida realizada · 4,1 km", f.countAndKm(done))
         assertEquals("R$ 6,51", f.profit(done))
         assertEquals("R$ 3,49", f.cost(done))
-        assertEquals("15:00 · Uber · R$ 10,00 · 4,1 km · lucro R$ 6,51", f.row(done.rides.single(), HistoryPeriod.DAY))
+        assertEquals("🟢 15:00 · Uber · R$ 10,00 · 4,1 km · lucro R$ 6,51", f.row(done.rides.single(), HistoryPeriod.DAY))
         assertEquals("02/11 a 08/11", f.periodLabel(history.page(HistoryPeriod.WEEK, today), today))
         assertEquals("Novembro de 2026", f.periodLabel(history.page(HistoryPeriod.MONTH, today), today))
+    }
+
+    // Pedido do inDrive do log de 02/11: R$ 15 em 5,2 + 2,7 km = R$ 1,90/km (vermelho).
+    private fun inDriveRed() = analysis("15.00", "5.2", "2.7", platform = Platform.INDRIVE)
+
+    @Test
+    fun `pedido do inDrive vermelho tambem e guardado, Uber vermelha nao`() {
+        assertTrue(record(inDriveRed()))
+        assertFalse(record(analysis("7.37", "2.8", "3.5")))
+        val ride = history.page(HistoryPeriod.DAY, today).rides.single()
+        assertFalse(ride.good)
+    }
+
+    @Test
+    fun `toque na contraproposta do inDrive troca o valor e a corrida fica verde`() {
+        record(inDriveRed())
+        val updated = history.applyInDriveFareTap("R$ 17,50")!!
+        assertEquals("17.50", updated.fare.toPlainString())
+        assertEquals("15.00", updated.originalFare!!.toPlainString())
+        assertEquals("2.22", updated.valuePerKm.toPlainString())   // 17,50 ÷ 7,9 km
+        assertTrue(updated.good)
+        assertEquals(updated, history.page(HistoryPeriod.DAY, today).rides.single())
+    }
+
+    @Test
+    fun `toques que nao sao valor sao ignorados`() {
+        record(inDriveRed())
+        assertEquals(null, history.applyInDriveFareTap("Ofereça sua tarifa"))
+        assertEquals(null, history.applyInDriveFareTap("Fechar"))
+        assertEquals(null, history.applyInDriveFareTap("Aceitar por R$ 15"))   // mesmo valor: nada muda
+    }
+
+    @Test
+    fun `contraproposta sem pedido do inDrive recente nao muda nada`() {
+        record(analysis("10.00", "2.2", "1.9"))                    // só Uber
+        assertEquals(null, history.applyInDriveFareTap("R$ 18"))
+    }
+
+    @Test
+    fun `correcao do valor a mao recalcula o lucro e guarda o valor original`() {
+        record(analysis("10.00", "2.2", "1.9"))
+        val id = history.page(HistoryPeriod.DAY, today).rides.single().id
+        val fixed = history.changeFare(id, BigDecimal("20"))!!
+        assertEquals("16.51", fixed.netProfit.toPlainString())      // 20,00 − 3,49 de gasto
+        assertEquals("🟢 15:00 · Uber · R$ 20,00 (era R$ 10,00) · 4,1 km · lucro R$ 16,51",
+            RideHistoryFormatter(zone).row(fixed, HistoryPeriod.DAY))
+        assertEquals(null, history.changeFare(id, BigDecimal.ZERO))
     }
 }
