@@ -47,7 +47,7 @@
     <string name="period_month">Mês</string>
     <string name="hist_profit">Lucro</string>
     <string name="hist_cost">Separar p/ abastecer</string>
-    <string name="hist_hint">🟢 verdes e 🔴 pedidos do inDrive abertos. Marque as que você realizou. Toque longo corrige o valor (contraproposta).</string>
+    <string name="hist_hint">Corridas verdes (inDrive: só as que você aceitou ou fez contraproposta). Marque as que realizou. Toque longo corrige o valor.</string>
     <string name="hist_empty">Nenhuma corrida neste período.</string>
     <string name="hist_edit_title">Corrigir valor da corrida</string>
     <string name="hist_edit_message">Valor final da corrida (%1$s), em R$:</string>

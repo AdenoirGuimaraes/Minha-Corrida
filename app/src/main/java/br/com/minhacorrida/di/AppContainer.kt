@@ -43,6 +43,10 @@ class AppContainer(context: Context) {
     /** Histórico de corridas verdes (uma instância para serviço e tela). */
     val rideHistoryRepository: RideHistoryRepository = JsonFileRideHistoryRepository(context, logger)
     val recordRide = RecordRideUseCase(rideHistoryRepository, settings, logger)
+    /** Botão tocado no pedido do inDrive: refaz o card e decide se guarda (só verde) ou descarta (Pular). */
+    val inDriveTap = br.com.minhacorrida.core.usecase.InDriveTapUseCase(
+        evaluateRide, settings, recordRide, rideHistoryRepository, logger,
+    )
     val rideHistory = RideHistoryUseCase(rideHistoryRepository, settings, logger)
     val historyFormatter = RideHistoryFormatter()
     val checkForUpdate = CheckForUpdateUseCase(

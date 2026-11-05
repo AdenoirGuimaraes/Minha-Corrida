@@ -51,6 +51,10 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         }
     }
 
+    override fun delete(id: String) = synchronized(lock) {
+        if (records().removeAll { it.id == id }) save()
+    }
+
     override fun deleteOlderThan(cutoffMillis: Long): Int = synchronized(lock) {
         val list = records()
         val before = list.size

@@ -14,6 +14,9 @@ interface RideHistoryRepository {
     /** Substitui a corrida de mesmo id (ex.: valor corrigido). */
     fun replace(record: RideRecord)
 
+    /** Apaga uma corrida (ex.: pedido do inDrive recusado com "Pular"). */
+    fun delete(id: String)
+
     /** Apaga as corridas anteriores a [cutoffMillis]. @return quantas foram apagadas. */
     fun deleteOlderThan(cutoffMillis: Long): Int
 }
@@ -39,6 +42,10 @@ class InMemoryRideHistoryRepository : RideHistoryRepository {
     override fun replace(record: RideRecord) {
         val i = records.indexOfFirst { it.id == record.id }
         if (i >= 0) records[i] = record
+    }
+
+    override fun delete(id: String) {
+        records.removeAll { it.id == id }
     }
 
     override fun deleteOlderThan(cutoffMillis: Long): Int {

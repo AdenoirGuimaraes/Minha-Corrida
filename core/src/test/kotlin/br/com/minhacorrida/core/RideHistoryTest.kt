@@ -18,8 +18,8 @@ import java.time.LocalDate
 import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 /** Histórico: guarda só corridas verdes, soma as realizadas, filtra por período e apaga após 60 dias. */
 class RideHistoryTest {
@@ -33,7 +33,7 @@ class RideHistoryTest {
         cost = OperatingCost(BigDecimal("6.30"), BigDecimal("10.5"), BigDecimal("0.25")),
     )
     private val record = RecordRideUseCase(repo, settings, NoOpLogger) { now }
-    private val history = RideHistoryUseCase(repo, settings, NoOpLogger, zone, today = { today }, nowMillis = { now })
+    private val history = RideHistoryUseCase(repo, settings, NoOpLogger, zone, today = { today })
     private val evaluate = EvaluateRideUseCase(CalculateRideMetricsUseCase())
 
     private fun analysis(
@@ -45,9 +45,9 @@ class RideHistoryTest {
 
     @Test
     fun `guarda so corrida verde e nao duplica a mesma`() {
-        assertTrue(record(analysis("10.00", "2.2", "1.9")))       // R$ 2,44/km: verde
-        assertFalse(record(analysis("10.00", "2.2", "1.9")))      // mesma corrida de novo
-        assertFalse(record(analysis("7.37", "2.8", "3.5")))       // R$ 1,17/km: vermelha
+        assertNotNull(record(analysis("10.00", "2.2", "1.9")))    // R$ 2,44/km: verde
+        assertNull(record(analysis("10.00", "2.2", "1.9")))       // mesma corrida de novo
+        assertNull(record(analysis("7.37", "2.8", "3.5")))        // R$ 1,17/km: vermelha
         assertEquals(1, history.page(HistoryPeriod.DAY, today).rides.size)
     }
 
@@ -122,42 +122,6 @@ class RideHistoryTest {
         assertEquals("🟢 15:00 · Uber · R$ 10,00 · 4,1 km · lucro R$ 6,51", f.row(done.rides.single(), HistoryPeriod.DAY))
         assertEquals("02/11 a 08/11", f.periodLabel(history.page(HistoryPeriod.WEEK, today), today))
         assertEquals("Novembro de 2026", f.periodLabel(history.page(HistoryPeriod.MONTH, today), today))
-    }
-
-    // Pedido do inDrive do log de 02/11: R$ 15 em 5,2 + 2,7 km = R$ 1,90/km (vermelho).
-    private fun inDriveRed() = analysis("15.00", "5.2", "2.7", platform = Platform.INDRIVE)
-
-    @Test
-    fun `pedido do inDrive vermelho tambem e guardado, Uber vermelha nao`() {
-        assertTrue(record(inDriveRed()))
-        assertFalse(record(analysis("7.37", "2.8", "3.5")))
-        val ride = history.page(HistoryPeriod.DAY, today).rides.single()
-        assertFalse(ride.good)
-    }
-
-    @Test
-    fun `toque na contraproposta do inDrive troca o valor e a corrida fica verde`() {
-        record(inDriveRed())
-        val updated = history.applyInDriveFareTap("R$ 17,50")!!
-        assertEquals("17.50", updated.fare.toPlainString())
-        assertEquals("15.00", updated.originalFare!!.toPlainString())
-        assertEquals("2.22", updated.valuePerKm.toPlainString())   // 17,50 ÷ 7,9 km
-        assertTrue(updated.good)
-        assertEquals(updated, history.page(HistoryPeriod.DAY, today).rides.single())
-    }
-
-    @Test
-    fun `toques que nao sao valor sao ignorados`() {
-        record(inDriveRed())
-        assertEquals(null, history.applyInDriveFareTap("Ofereça sua tarifa"))
-        assertEquals(null, history.applyInDriveFareTap("Fechar"))
-        assertEquals(null, history.applyInDriveFareTap("Aceitar por R$ 15"))   // mesmo valor: nada muda
-    }
-
-    @Test
-    fun `contraproposta sem pedido do inDrive recente nao muda nada`() {
-        record(analysis("10.00", "2.2", "1.9"))                    // só Uber
-        assertEquals(null, history.applyInDriveFareTap("R$ 18"))
     }
 
     @Test

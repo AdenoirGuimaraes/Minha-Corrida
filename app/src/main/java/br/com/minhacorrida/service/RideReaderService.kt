@@ -43,6 +43,13 @@ class RideReaderService : AccessibilityService() {
 
     /** Última corrida guardada no histórico e a thread que grava o arquivo. */
     private var lastRecordedOffer: br.com.minhacorrida.core.model.RideOffer? = null
+
+    // Pedido do inDrive na tela (para a contraproposta) e o que ele já guardou no histórico.
+    private var pendingInDrive: RideAnalysis? = null
+    private var pendingInDriveSavedId: String? = null
+
+    /** Até quando o card refeito pela contraproposta fica na tela, sem ser trocado pela leitura da tela. */
+    private var counterOfferHoldUntil = 0L
     private val historyExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     /** Última corrida anunciada por voz: a mesma oferta não é falada duas vezes. */
@@ -151,9 +158,11 @@ class RideReaderService : AccessibilityService() {
     }
 
     /**
-     * Botão de valor do pedido do inDrive ("R$ 17,50", "Aceitar por R$ 15"): o valor vai para
-     * a corrida guardada na aba Corridas (contraproposta). Todo toque fica no diagnóstico,
-     * para conferir o que o Android informou (ex.: valor digitado no lápis).
+     * Toque do motorista no pedido do inDrive (o app confia no botão tocado):
+     * - valor ("Aceitar por R$ 15", contraproposta "R$ 17,50") → card refeito com esse valor,
+     *   voz se verde, e guardado no histórico só se verde;
+     * - "Pular"/"Fechar" → pedido recusado: nada fica guardado e o card some.
+     * Todo toque fica no diagnóstico ("toque no inDrive").
      */
     private fun onInDriveButtonTapped(event: AccessibilityEvent, pkg: String) {
         try {
@@ -161,17 +170,51 @@ class RideReaderService : AccessibilityService() {
                 ?: event.contentDescription?.toString()
                 ?: runCatching { event.source?.text?.toString() }.getOrNull()).orEmpty().trim()
             if (text.isEmpty()) return
+            val pending = pendingInDrive
+            val savedId = pendingInDriveSavedId
             historyExecutor.execute {
-                val updated = container.rideHistory.applyInDriveFareTap(text)
-                val result = if (updated != null) {
-                    "contraproposta: corrida passou para R$ ${updated.fare.toPlainString()}"
-                } else {
-                    "toque sem mudança no histórico"
-                }
-                container.diagnostics.record(pkg, "toque no inDrive", listOf(text), emptyList(), result)
+                val result = container.inDriveTap.onTap(text, pending, savedId)
+                container.diagnostics.record(pkg, "toque no inDrive", listOf(text), emptyList(), describe(result), force = true)
+                handler.post { applyInDriveTap(result) }
             }
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao tratar toque no inDrive", e)
+        }
+    }
+
+    private fun describe(result: br.com.minhacorrida.core.usecase.InDriveTap): String = when (result) {
+        is br.com.minhacorrida.core.usecase.InDriveTap.NewFare ->
+            "card refeito: ${container.formatter.headline(result.analysis)}" +
+                if (result.saved != null) " (verde: guardada na aba Corridas)" else " (vermelha: não guardada)"
+        is br.com.minhacorrida.core.usecase.InDriveTap.Skipped ->
+            "pedido recusado" + if (result.removedId != null) " (removido da aba Corridas)" else ""
+        br.com.minhacorrida.core.usecase.InDriveTap.Ignored -> "toque ignorado"
+    }
+
+    /** Aplica na tela o resultado do toque (thread principal). */
+    private fun applyInDriveTap(result: br.com.minhacorrida.core.usecase.InDriveTap) {
+        try {
+            when (result) {
+                is br.com.minhacorrida.core.usecase.InDriveTap.NewFare -> {
+                    pendingInDriveSavedId = result.saved?.id
+                    val seconds = container.settings.getOverlayTimeoutSeconds()
+                    counterOfferHoldUntil = SystemClock.elapsedRealtime() + seconds * 1_000L
+                    lastAnalysis = result.analysis
+                    overlay.show(result.analysis, seconds)
+                    announceIfGood(result.analysis)
+                }
+                is br.com.minhacorrida.core.usecase.InDriveTap.Skipped -> {
+                    pendingInDrive = null
+                    pendingInDriveSavedId = null
+                    counterOfferHoldUntil = 0L
+                    lastAnalysis = null
+                    overlay.hideNow()
+                    voice?.stop()
+                }
+                br.com.minhacorrida.core.usecase.InDriveTap.Ignored -> Unit
+            }
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao aplicar toque no inDrive", e)
         }
     }
 
@@ -337,6 +380,18 @@ class RideReaderService : AccessibilityService() {
     }
 
     private fun showOrHide(analysis: RideAnalysis?) {
+        // Card refeito pela contraproposta: a tela do inDrive muda (aguardando o passageiro)
+        // ou ainda mostra o valor antigo; nenhuma das duas deve apagar/trocar o card novo.
+        if (SystemClock.elapsedRealtime() < counterOfferHoldUntil &&
+            (analysis == null || analysis.offer.platform == Platform.INDRIVE)
+        ) return
+        if (analysis != null && analysis.offer.platform == Platform.INDRIVE &&
+            !analysis.offer.sameRideAs(pendingInDrive?.offer)
+        ) {
+            // Pedido novo do inDrive na tela: é ele que recebe os toques a partir de agora.
+            pendingInDrive = analysis
+            pendingInDriveSavedId = null
+        }
         if (analysis == null) {
             lastAnalysis = null
             overlay.scheduleHide()
@@ -360,8 +415,9 @@ class RideReaderService : AccessibilityService() {
      * thread principal: gravar o arquivo não atrasa o card nem a voz.
      */
     private fun recordRide(analysis: RideAnalysis) {
-        val good = analysis.rating == br.com.minhacorrida.core.model.RideRating.GOOD
-        if (!good && analysis.offer.platform != Platform.INDRIVE) return
+        // inDrive só é guardado pelo botão que o motorista tocar (ver onInDriveButtonTapped).
+        if (analysis.offer.platform == Platform.INDRIVE) return
+        if (analysis.rating != br.com.minhacorrida.core.model.RideRating.GOOD) return
         if (analysis.offer.sameRideAs(lastRecordedOffer)) return
         lastRecordedOffer = analysis.offer
         try {

@@ -1,8 +1,6 @@
 package br.com.minhacorrida.core.history
 
-import br.com.minhacorrida.core.model.Platform
 import br.com.minhacorrida.core.model.RideAnalysis
-import br.com.minhacorrida.core.parser.NumberParser
 import br.com.minhacorrida.core.model.RideRating
 import br.com.minhacorrida.core.port.AppLogger
 import br.com.minhacorrida.core.port.SettingsRepository
@@ -12,10 +10,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Guarda no histórico as corridas mostradas no card (uma vez por corrida):
- * - Uber: só as VERDES;
- * - inDrive: TODOS os pedidos abertos em tela cheia, verdes e vermelhos — o motorista pode
- *   fazer contraproposta e o passageiro aceitar um valor maior (a vermelha vira boa).
+ * Guarda no histórico uma corrida VERDE (uma vez por corrida). Quem chama decide quando:
+ * Uber ao mostrar o card; inDrive só quando o motorista toca em "Aceitar por" ou numa
+ * contraproposta (ver [InDriveTapUseCase]).
  * A mesma corrida lida de novo em poucos minutos (eventos repetidos da tela) não duplica.
  */
 class RecordRideUseCase(
@@ -24,24 +21,25 @@ class RecordRideUseCase(
     private val logger: AppLogger,
     private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
-    /** @return true se a corrida foi guardada agora. */
-    operator fun invoke(analysis: RideAnalysis): Boolean {
+    /**
+     * @param originalFare valor oferecido pelo passageiro, quando o valor guardado é de contraproposta.
+     * @return a corrida guardada agora, ou null (vermelha, repetida ou erro).
+     */
+    operator fun invoke(analysis: RideAnalysis, originalFare: BigDecimal? = null): RideRecord? {
         return try {
             val offer = analysis.offer
-            val good = analysis.rating == RideRating.GOOD
-            if (!good && offer.platform != Platform.INDRIVE) return false
+            if (analysis.rating != RideRating.GOOD) return null
             val now = nowMillis()
             val recent = repository.between(now - DUPLICATE_WINDOW_MS, now + 1)
             if (recent.any { it.platform == offer.platform && it.fare.compareTo(offer.fare) == 0 &&
                     it.totalKm.compareTo(analysis.metrics.totalKm) == 0 }
-            ) return false
+            ) return null
 
             val totalKm = analysis.metrics.totalKm
             val cost = settings.getOperatingCost()
             val fuel = cost?.let { (totalKm * it.fuelPricePerLiter).divide(it.kmPerLiter, 2, RoundingMode.HALF_UP) }
             val maintenance = cost?.let { (totalKm * it.otherCostPerKm).setScale(2, RoundingMode.HALF_UP) }
-            repository.add(
-                RideRecord(
+            val saved = RideRecord(
                     id = "$now-${offer.platform.name}-${offer.fare.toPlainString()}",
                     timestampMillis = now,
                     platform = offer.platform,
@@ -52,13 +50,16 @@ class RecordRideUseCase(
                     valuePerKm = analysis.metrics.valuePerKm,
                     fuelCost = fuel,
                     maintenanceCost = maintenance,
-                    good = good,
-                ),
-            )
-            true
+                    good = true,
+                    originalFare = originalFare
+                        ?.setScale(2, RoundingMode.HALF_UP)
+                        ?.takeIf { it.compareTo(offer.fare) != 0 },
+                )
+            repository.add(saved)
+            saved
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao guardar corrida no histórico", e)
-            false
+            null
         }
     }
 
@@ -105,7 +106,6 @@ class RideHistoryUseCase(
     private val logger: AppLogger,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val today: () -> LocalDate = { LocalDate.now(zone) },
-    private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
     fun page(period: HistoryPeriod, reference: LocalDate): RideHistoryPage {
         val range = period.rangeOf(reference)
@@ -142,31 +142,6 @@ class RideHistoryUseCase(
         null
     }
 
-    /**
-     * Toque num botão de valor do pedido do inDrive ("R$ 17,50", "Aceitar por R$ 15"):
-     * aplica o valor ao pedido do inDrive guardado mais recentemente (últimos minutos).
-     * Textos que não são um valor ("Ofereça sua tarifa", "Fechar") são ignorados.
-     * @return a corrida atualizada, ou null se nada mudou.
-     */
-    fun applyInDriveFareTap(buttonText: String): RideRecord? = try {
-        val fare = COUNTER_OFFER.matchEntire(buttonText.trim())?.groupValues?.get(1)?.let(NumberParser::parse)
-        if (fare == null || fare.signum() <= 0) {
-            null
-        } else {
-            val now = nowMillis()
-            val latest = repository.between(now - COUNTER_OFFER_WINDOW_MS, now + 1)
-                .firstOrNull { it.platform == Platform.INDRIVE }
-            if (latest == null || latest.fare.compareTo(fare) == 0) {
-                null
-            } else {
-                latest.withFare(fare, settings.getMinValuePerKm()).also(repository::replace)
-            }
-        }
-    } catch (e: Exception) {
-        logger.error(TAG, "Falha ao aplicar contraproposta", e)
-        null
-    }
-
     /** Apaga o que for mais antigo que [RETENTION_DAYS] dias. */
     fun purgeOld(): Int = try {
         repository.deleteOlderThan(today().minusDays(RETENTION_DAYS).atStartOfDay(zone).toInstant().toEpochMilli())
@@ -178,12 +153,6 @@ class RideHistoryUseCase(
     companion object {
         private const val TAG = "RideHistory"
         const val RETENTION_DAYS = 60L
-
-        /** Pedido do inDrive fica "aberto" para contraproposta por até 5 minutos. */
-        private const val COUNTER_OFFER_WINDOW_MS = 5 * 60 * 1000L
-
-        /** "R$ 17,50" ou "Aceitar por R$ 15" (botões de valor do pedido do inDrive). */
-        private val COUNTER_OFFER = Regex("""(?:Aceitar\s+por\s+)?R\$\s*(\d+(?:[.,]\d{1,2})?)""", RegexOption.IGNORE_CASE)
 
         /** Soma só as corridas marcadas como realizadas. */
         fun summarize(rides: List<RideRecord>): RideHistorySummary {

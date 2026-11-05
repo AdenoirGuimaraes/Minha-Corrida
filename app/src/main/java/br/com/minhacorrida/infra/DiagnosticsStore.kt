@@ -28,11 +28,13 @@ class DiagnosticsStore(context: Context, private val logger: AppLogger) {
         texts: List<String>,
         ocrLines: List<String>,
         result: String,
+        force: Boolean = false,
     ) {
         try {
             val hash = (listOf(packageName, result) + texts + ocrLines).hashCode()
             val now = System.currentTimeMillis()
-            if (hash == lastHash || now - lastWriteMs < MIN_INTERVAL_MS) return
+            // force: toques do motorista sempre ficam registrados (não podem cair no limite de 1 por segundo).
+            if (!force && (hash == lastHash || now - lastWriteMs < MIN_INTERVAL_MS)) return
             lastHash = hash
             lastWriteMs = now
 
