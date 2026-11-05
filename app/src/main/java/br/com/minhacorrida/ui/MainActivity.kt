@@ -55,6 +55,12 @@ class MainActivity : Activity() {
     private lateinit var tvStatus: TextView
     private lateinit var tabSettings: TextView
     private lateinit var tabSimulator: TextView
+    private lateinit var tabHistory: TextView
+    private lateinit var pageHistory: View
+    private lateinit var historyScreen: RideHistoryScreen
+
+    private enum class Tab { SETTINGS, SIMULATOR, HISTORY }
+    private var currentTab = Tab.SETTINGS
     private lateinit var pageSettings: View
     private lateinit var pageSimulator: View
     private lateinit var previewCard: View
@@ -116,19 +122,24 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btnDiagnostics).setOnClickListener { showDiagnostics() }
         findViewById<Button>(R.id.btnExit).setOnClickListener { exitApp() }
         findViewById<Button>(R.id.btnTestVoice).setOnClickListener { testVoice() }
-        tabSettings.setOnClickListener { selectTab(simulator = false) }
-        tabSimulator.setOnClickListener { selectTab(simulator = true) }
+        tabSettings.setOnClickListener { selectTab(Tab.SETTINGS) }
+        tabSimulator.setOnClickListener { selectTab(Tab.SIMULATOR) }
+        tabHistory.setOnClickListener { selectTab(Tab.HISTORY) }
+        historyScreen = RideHistoryScreen(this, container.rideHistory, container.historyFormatter, ioExecutor)
+        historyScreen.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
 
         watchFieldsForPreview()
         updatePreview()
-        selectTab(simulator = false)
+        selectTab(Tab.SETTINGS)
     }
 
     override fun onResume() {
         super.onResume()
         // Abrir o app = voltar a trabalhar: retoma a leitura se tinha sido encerrada.
         container.readingSession.start()
+        // Voltando ao app na aba Corridas: mostra as corridas verdes que chegaram nesse meio-tempo.
+        if (::historyScreen.isInitialized && currentTab == Tab.HISTORY) historyScreen.refresh()
         tvStatus.setText(if (isServiceEnabled()) R.string.status_on else R.string.status_off)
 
         // Voltou da tela de permissão: instala o APK que já estava baixado.
@@ -155,6 +166,8 @@ class MainActivity : Activity() {
         tabSimulator = findViewById(R.id.tabSimulator)
         pageSettings = findViewById(R.id.pageSettings)
         pageSimulator = findViewById(R.id.pageSimulator)
+        tabHistory = findViewById(R.id.tabHistory)
+        pageHistory = findViewById(R.id.pageHistory)
         previewCard = findViewById(R.id.previewCard)
         rgSimApp = findViewById(R.id.rgSimApp)
         rbSimInDrive = findViewById(R.id.rbSimInDrive)
@@ -178,15 +191,22 @@ class MainActivity : Activity() {
     // ---- Abas ----
 
     /**
-     * Mostra uma aba e esconde a outra. Os campos das duas continuam vivos, então o
-     * simulador usa o que foi digitado em Configurações mesmo antes de salvar.
+     * Mostra uma aba e esconde as outras. Os campos continuam vivos, então o simulador
+     * usa o que foi digitado em Configurações mesmo antes de salvar.
      */
-    private fun selectTab(simulator: Boolean) {
-        pageSettings.visibility = if (simulator) View.GONE else View.VISIBLE
-        pageSimulator.visibility = if (simulator) View.VISIBLE else View.GONE
-        styleTab(tabSettings, selected = !simulator)
-        styleTab(tabSimulator, selected = simulator)
-        if (simulator) updatePreview()
+    private fun selectTab(tab: Tab) {
+        currentTab = tab
+        pageSettings.visibility = if (tab == Tab.SETTINGS) View.VISIBLE else View.GONE
+        pageSimulator.visibility = if (tab == Tab.SIMULATOR) View.VISIBLE else View.GONE
+        pageHistory.visibility = if (tab == Tab.HISTORY) View.VISIBLE else View.GONE
+        styleTab(tabSettings, selected = tab == Tab.SETTINGS)
+        styleTab(tabSimulator, selected = tab == Tab.SIMULATOR)
+        styleTab(tabHistory, selected = tab == Tab.HISTORY)
+        when (tab) {
+            Tab.SIMULATOR -> updatePreview()
+            Tab.HISTORY -> historyScreen.refresh()
+            Tab.SETTINGS -> Unit
+        }
     }
 
     private fun styleTab(tab: TextView, selected: Boolean) {

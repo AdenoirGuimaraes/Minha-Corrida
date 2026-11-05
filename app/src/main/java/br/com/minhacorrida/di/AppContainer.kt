@@ -13,7 +13,12 @@ import br.com.minhacorrida.core.update.CheckForUpdateUseCase
 import br.com.minhacorrida.core.usecase.AnalyzeScreenUseCase
 import br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase
 import br.com.minhacorrida.core.usecase.EvaluateRideUseCase
+import br.com.minhacorrida.core.format.RideHistoryFormatter
+import br.com.minhacorrida.core.history.RecordGoodRideUseCase
+import br.com.minhacorrida.core.history.RideHistoryRepository
+import br.com.minhacorrida.core.history.RideHistoryUseCase
 import br.com.minhacorrida.infra.AndroidLogger
+import br.com.minhacorrida.infra.JsonFileRideHistoryRepository
 import br.com.minhacorrida.infra.DiagnosticsStore
 import br.com.minhacorrida.infra.SharedPrefsReadingSession
 import br.com.minhacorrida.infra.SharedPrefsSettingsRepository
@@ -35,6 +40,11 @@ class AppContainer(context: Context) {
     val formatter = RideAnalysisFormatter()
     /** Mesma regra do leitor de tela, usada pelo simulador da tela de configurações. */
     val evaluateRide = EvaluateRideUseCase(CalculateRideMetricsUseCase())
+    /** Histórico de corridas verdes (uma instância para serviço e tela). */
+    val rideHistoryRepository: RideHistoryRepository = JsonFileRideHistoryRepository(context, logger)
+    val recordGoodRide = RecordGoodRideUseCase(rideHistoryRepository, settings, logger)
+    val rideHistory = RideHistoryUseCase(rideHistoryRepository, logger)
+    val historyFormatter = RideHistoryFormatter()
     val checkForUpdate = CheckForUpdateUseCase(
         GitHubReleaseSource(BuildConfig.RELEASE_API_URL, logger),
         BuildConfig.VERSION_CODE,

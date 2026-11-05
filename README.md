@@ -56,6 +56,14 @@ Voz em velocidade 1,4×.
   Usa a mesma regra do leitor (`EvaluateRideUseCase`). Botão **Testar voz** fala a corrida simulada.
 - **Checklist** de apps lidos e de "Falar corridas": verde marcado, vermelho desmarcado.
 
+## Aba Corridas (histórico)
+- Toda corrida **verde** mostrada no card é guardada sozinha (data, hora, app, valor, km e gastos
+  com os custos do carro daquele momento), sem atrasar o card.
+- Na aba **Corridas**: filtro **Dia / Semana / Mês** com ◀ ▶; marque com o check as que você realizou.
+- Resumo das realizadas: corridas e **km rodados**, **lucro** e **separar p/ abastecer**
+  (combustível + manutenção).
+- Corridas com mais de **60 dias** são apagadas automaticamente.
+
 ## Encerrar
 O botão **Encerrar** pausa a leitura (serviço ocioso, sem OCR nem leitor na tela) e fecha o app.
 A acessibilidade continua ativada, porque o Android não deixa o app religá-la sozinho;

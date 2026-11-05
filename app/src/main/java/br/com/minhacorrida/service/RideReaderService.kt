@@ -41,6 +41,10 @@ class RideReaderService : AccessibilityService() {
     private lateinit var overlay: RideOverlayController
     private var voice: VoiceAnnouncer? = null
 
+    /** Última corrida guardada no histórico e a thread que grava o arquivo. */
+    private var lastRecordedOffer: br.com.minhacorrida.core.model.RideOffer? = null
+    private val historyExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
     /** Última corrida anunciada por voz: a mesma oferta não é falada duas vezes. */
     private var lastSpokenOffer: br.com.minhacorrida.core.model.RideOffer? = null
 
@@ -315,6 +319,22 @@ class RideReaderService : AccessibilityService() {
         if (visibility.shouldShow(analysis.offer)) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
             announceIfGood(analysis)
+            recordIfGood(analysis)
+        }
+    }
+
+    /**
+     * Guarda a corrida verde no histórico (aba Corridas), DEPOIS do card na tela e fora
+     * da thread principal: gravar o arquivo não atrasa o card nem a voz.
+     */
+    private fun recordIfGood(analysis: RideAnalysis) {
+        if (analysis.rating != br.com.minhacorrida.core.model.RideRating.GOOD) return
+        if (analysis.offer.sameRideAs(lastRecordedOffer)) return
+        lastRecordedOffer = analysis.offer
+        try {
+            historyExecutor.execute { container.recordGoodRide(analysis) }
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao agendar gravação no histórico", e)
         }
     }
 
@@ -500,6 +520,7 @@ class RideReaderService : AccessibilityService() {
         if (::overlay.isInitialized) overlay.hideNow()
         if (::ocrReader.isInitialized) ocrReader.close()
         voice?.shutdown()
+        historyExecutor.shutdown()
         super.onDestroy()
     }
 
