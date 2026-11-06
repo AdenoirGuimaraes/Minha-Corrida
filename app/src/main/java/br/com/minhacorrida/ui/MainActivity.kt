@@ -77,6 +77,7 @@ class MainActivity : Activity() {
     // Regras e custos.
     private lateinit var etMinValue: EditText
     private lateinit var etMinRating: EditText
+    private lateinit var etInDriveFee: EditText
     private lateinit var etTimeout: EditText
     private lateinit var etFuelPrice: EditText
     private lateinit var etKmPerLiter: EditText
@@ -181,6 +182,7 @@ class MainActivity : Activity() {
         etSimTripKm = findViewById(R.id.etSimTripKm)
         etMinValue = findViewById(R.id.etMinValue)
         etMinRating = findViewById(R.id.etMinRating)
+        etInDriveFee = findViewById(R.id.etInDriveFee)
         etTimeout = findViewById(R.id.etTimeout)
         etFuelPrice = findViewById(R.id.etFuelPrice)
         etKmPerLiter = findViewById(R.id.etKmPerLiter)
@@ -236,7 +238,7 @@ class MainActivity : Activity() {
         }
         listOf(
             etSimFare, etSimRating, etSimPickupKm, etSimTripKm,
-            etMinValue, etMinRating, etFuelPrice, etKmPerLiter, etOtherCost,
+            etMinValue, etMinRating, etInDriveFee, etFuelPrice, etKmPerLiter, etOtherCost,
         ).forEach { it.addTextChangedListener(watcher) }
     }
 
@@ -266,6 +268,7 @@ class MainActivity : Activity() {
                 minValuePerKm = minValue,
                 minPassengerRating = ratingOrNull(etMinRating),
                 operatingCost = cost,
+                inDriveFeePercent = feeOrNull(etInDriveFee) ?: BigDecimal.ZERO,
             )
             val analysis = container.evaluateRide(offer, rules)
             previewAnalysis = analysis
@@ -317,6 +320,10 @@ class MainActivity : Activity() {
 
     private fun nonNegativeOrNull(field: EditText): BigDecimal? = number(field)?.takeIf { it.signum() >= 0 }
 
+    /** Taxa entre 0 e 50%; vazio/inválido = null. */
+    private fun feeOrNull(field: EditText): BigDecimal? =
+        number(field)?.takeIf { it.signum() >= 0 && it <= BigDecimal(50) }
+
     private fun ratingOrNull(field: EditText): BigDecimal? =
         number(field)?.takeIf { it >= BigDecimal.ONE && it <= BigDecimal(5) }
 
@@ -332,6 +339,7 @@ class MainActivity : Activity() {
             if (cost.otherCostPerKm.signum() > 0) etOtherCost.setText(decimalText(cost.otherCostPerKm))
         }
         settings.getMinPassengerRating()?.let { etMinRating.setText(decimalText(it)) }
+        etInDriveFee.setText(decimalText(settings.getInDriveFeePercent()))
         val platforms = settings.getEnabledPlatforms()
         cbUber.isChecked = Platform.UBER in platforms
         cbInDrive.isChecked = Platform.INDRIVE in platforms
@@ -353,6 +361,11 @@ class MainActivity : Activity() {
             }
             val cost = readOperatingCost() ?: return
             val minRating = readMinRating() ?: return
+            val inDriveFee = if (etInDriveFee.text.isBlank()) BigDecimal.ZERO else feeOrNull(etInDriveFee)
+            if (inDriveFee == null) {
+                toast(getString(R.string.invalid_fee))
+                return
+            }
             val platforms = buildSet {
                 if (cbUber.isChecked) add(Platform.UBER)
                 if (cbInDrive.isChecked) add(Platform.INDRIVE)
@@ -368,6 +381,7 @@ class MainActivity : Activity() {
             settings.setOverlayTimeoutSeconds(timeout)
             settings.setOperatingCost(cost.value)
             settings.setMinPassengerRating(minRating.value)
+            settings.setInDriveFeePercent(inDriveFee)
             settings.setEnabledPlatforms(platforms)
             settings.setVoiceEnabled(cbVoice.isChecked)
             toast(getString(R.string.saved))

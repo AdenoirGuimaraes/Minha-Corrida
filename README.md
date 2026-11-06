@@ -74,6 +74,13 @@ Voz em velocidade 1,4×.
   (combustível + manutenção).
 - Corridas com mais de **60 dias** são apagadas automaticamente.
 
+## Taxas das plataformas
+- **Uber**: o valor do card **já é o ganho do motorista** (taxa da Uber descontada). Conferido em
+  05/11: a soma dos cards do dia (R$ 86,18) bate com os ganhos da Uber na quinta (R$ 86,19).
+- **inDrive**: o card mostra o valor que o passageiro paga; a taxa (padrão **10%**, ajustável em
+  Configurações) sai depois. O app desconta essa taxa no R$/km, no lucro ("Líquido R$ x") e no
+  histórico, e o **Mínimo** do card passa a ser o valor que o passageiro precisa pagar já com a taxa.
+
 ## Encerrar
 O botão **Encerrar** pausa a leitura (serviço ocioso, sem OCR nem leitor na tela) e fecha o app.
 A acessibilidade continua ativada, porque o Android não deixa o app religá-la sozinho;

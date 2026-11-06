@@ -125,6 +125,15 @@
 
                     <TextView
                         style="@style/FieldLabel"
+                        android:text="@string/indrive_fee_label" />
+
+                    <EditText
+                        android:id="@+id/etInDriveFee"
+                        style="@style/NumberField"
+                        android:hint="10" />
+
+                    <TextView
+                        style="@style/FieldLabel"
                         android:text="@string/timeout_label" />
 
                     <EditText

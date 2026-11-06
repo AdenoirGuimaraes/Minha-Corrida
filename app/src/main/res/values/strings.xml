@@ -32,6 +32,8 @@
     <string name="cost_not_set">Preencha preço e consumo para o card mostrar o lucro real de cada corrida.</string>
     <string name="invalid_cost">Preencha preço do combustível e consumo com valores maiores que zero, ex.: 6,30 e 10</string>
     <string name="min_rating_label">Nota mínima do passageiro (vazio = sem filtro)</string>
+    <string name="indrive_fee_label">Taxa do inDrive descontada depois da corrida (%). A Uber já mostra o seu ganho.</string>
+    <string name="invalid_fee">A taxa do inDrive deve ficar entre 0 e 50%, ex.: 10</string>
     <string name="invalid_rating">A nota mínima deve ficar entre 1 e 5, ex.: 4,70</string>
     <string name="apps_title">Apps lidos e informados</string>
     <string name="invalid_platforms">Marque pelo menos um app</string>
