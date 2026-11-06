@@ -72,6 +72,14 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         prefs.edit().putStringSet(KEY_PLATFORMS, platforms.map { it.name }.toSet()).apply()
     }
 
+    override fun getInDriveFeePercent(): BigDecimal =
+        prefs.getString(KEY_INDRIVE_FEE, null)?.toBigDecimalOrNull() ?: DEFAULT_INDRIVE_FEE
+
+    override fun setInDriveFeePercent(percent: BigDecimal) {
+        require(percent.signum() >= 0 && percent <= MAX_FEE) { "Taxa do inDrive deve ficar entre 0 e 50%" }
+        prefs.edit().putString(KEY_INDRIVE_FEE, percent.toPlainString()).apply()
+    }
+
     override fun isVoiceEnabled(): Boolean = prefs.getBoolean(KEY_VOICE, true)
 
     override fun setVoiceEnabled(enabled: Boolean) {
@@ -88,6 +96,9 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         const val KEY_MIN_RATING = "min_passenger_rating"
         const val KEY_PLATFORMS = "enabled_platforms"
         const val KEY_VOICE = "voice_enabled"
+        const val KEY_INDRIVE_FEE = "indrive_fee_percent"
+        val DEFAULT_INDRIVE_FEE = BigDecimal("10")
+        val MAX_FEE = BigDecimal("50")
         val DEFAULT_MIN_VALUE_PER_KM = BigDecimal("1.80")
     }
 }

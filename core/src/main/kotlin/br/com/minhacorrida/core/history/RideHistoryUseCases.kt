@@ -50,6 +50,7 @@ class RecordRideUseCase(
                     fuelCost = fuel,
                     maintenanceCost = maintenance,
                     good = true,
+                    feePercent = analysis.metrics.feePercent,
                     originalFare = originalFare
                         ?.setScale(2, RoundingMode.HALF_UP)
                         ?.takeIf { it.compareTo(offer.fare) != 0 },
@@ -81,6 +82,7 @@ internal object RideCosts {
 /**
  * Soma das corridas REALIZADAS (marcadas) de um período.
  *
+ * @property totalFare o que ficou com o motorista (valores já sem a taxa do inDrive).
  * @property ridesWithoutCost corridas guardadas antes de o motorista informar os custos
  *   (entram no km e no valor, mas sem gasto).
  */
@@ -223,7 +225,7 @@ class RideHistoryUseCase(
             return RideHistorySummary(
                 doneCount = done.size,
                 totalKm = sum(done.map { it.totalKm }),
-                totalFare = sum(done.map { it.fare }),
+                totalFare = sum(done.map { it.netFare }),
                 fuelCost = sum(done.mapNotNull { it.fuelCost }),
                 maintenanceCost = sum(done.mapNotNull { it.maintenanceCost }),
                 netProfit = sum(done.map { it.netProfit }),

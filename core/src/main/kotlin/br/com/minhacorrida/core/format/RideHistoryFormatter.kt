@@ -54,7 +54,7 @@ class RideHistoryFormatter(
     fun costDetails(page: RideHistoryPage): String {
         val s = page.summary
         val base = "Combustível R$ ${money(s.fuelCost)} + manutenção R$ ${money(s.maintenanceCost)}" +
-            " · corridas R$ ${money(s.totalFare)}"
+            " · recebido R$ ${money(s.totalFare)}"
         return if (s.ridesWithoutCost > 0) {
             "$base\n${s.ridesWithoutCost} corrida(s) sem gasto: os custos do carro não estavam preenchidos"
         } else {

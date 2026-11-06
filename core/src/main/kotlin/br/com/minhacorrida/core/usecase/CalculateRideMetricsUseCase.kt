@@ -14,23 +14,27 @@ import java.math.RoundingMode
  */
 class CalculateRideMetricsUseCase {
 
-    operator fun invoke(offer: RideOffer): RideMetrics {
+    /**
+     * @param feePercent taxa que a plataforma desconta DEPOIS (inDrive ~10%); 0 quando o
+     *   valor mostrado já é o ganho do motorista (Uber, corrida particular).
+     */
+    operator fun invoke(offer: RideOffer, feePercent: BigDecimal = BigDecimal.ZERO): RideMetrics {
         val totalKm = (offer.tripKm + (offer.pickupKm ?: BigDecimal.ZERO))
             .setScale(2, RoundingMode.HALF_UP)
-        val valuePerKm = offer.fare.divide(totalKm, 2, RoundingMode.HALF_UP)
+        val gross = offer.fare.setScale(2, RoundingMode.HALF_UP)
+        val net = netOf(gross, feePercent)
         return RideMetrics(
             totalKm = totalKm,
-            valuePerKm = valuePerKm,
+            valuePerKm = net.divide(totalKm, 2, RoundingMode.HALF_UP),
             includesPickup = offer.pickupKm != null,
+            grossFare = gross,
+            netFare = net,
+            feePercent = feePercent,
         )
     }
 
     /**
-     * Valor da corrida que atinge o mínimo: mínimo R$/km × km total,
-     * arredondado PARA CIMA no centavo (para nunca ficar abaixo do mínimo).
-     */
-    /**
-     * Lucro real líquido: valor da corrida − (km total × custo por km).
+     * Lucro real líquido: o que fica com o motorista − (km total × custo por km).
      * O km total inclui o deslocamento até o passageiro, que também gasta combustível.
      */
     fun profit(offer: RideOffer, metrics: RideMetrics, cost: OperatingCost): RideProfit {
@@ -39,13 +43,33 @@ class CalculateRideMetricsUseCase {
         return RideProfit(
             costPerKm = costPerKm.setScale(2, RoundingMode.HALF_UP),
             cost = rideCost,
-            netProfit = offer.fare.setScale(2, RoundingMode.HALF_UP) - rideCost,
+            netProfit = metrics.netFare - rideCost,
         )
     }
 
-    fun minimumFare(metrics: RideMetrics, minValuePerKm: BigDecimal): MinimumFare =
-        MinimumFare(
+    /**
+     * Valor da corrida (o que o passageiro paga, no app) que atinge o mínimo R$/km depois
+     * da taxa: mínimo × km ÷ (1 − taxa), arredondado PARA CIMA no centavo.
+     * Ex.: inDrive 10%, 8,6 km, mínimo R$ 2,00 → R$ 19,12 (não R$ 17,20).
+     */
+    fun minimumFare(metrics: RideMetrics, minValuePerKm: BigDecimal): MinimumFare {
+        val net = minValuePerKm * metrics.totalKm
+        val keep = (HUNDRED - metrics.feePercent).divide(HUNDRED, 6, RoundingMode.HALF_UP)
+        return MinimumFare(
             minValuePerKm = minValuePerKm,
-            minimumFare = (minValuePerKm * metrics.totalKm).setScale(2, RoundingMode.CEILING),
+            minimumFare = net.divide(keep, 2, RoundingMode.CEILING),
         )
+    }
+
+    companion object {
+        private val HUNDRED = BigDecimal(100)
+
+        /** Valor que fica com o motorista depois da taxa da plataforma (2 casas). */
+        fun netOf(gross: BigDecimal, feePercent: BigDecimal): BigDecimal =
+            if (feePercent.signum() == 0) {
+                gross.setScale(2, RoundingMode.HALF_UP)
+            } else {
+                (gross - gross * feePercent / HUNDRED).setScale(2, RoundingMode.HALF_UP)
+            }
+    }
 }

@@ -2,12 +2,26 @@ package br.com.minhacorrida.core.model
 
 import java.math.BigDecimal
 
-/** Resultado do cálculo: km total rodado e quanto se ganha por km. */
+/**
+ * Resultado do cálculo: km total rodado e quanto se ganha por km.
+ *
+ * @property grossFare valor da corrida mostrado no app de corrida.
+ * @property netFare o que fica com o motorista: valor − taxa da plataforma
+ *   (o inDrive cobra a taxa depois; na Uber o valor do card já vem descontado, taxa 0).
+ * @property feePercent taxa da plataforma aplicada (%).
+ * @property valuePerKm R$/km calculado sobre o [netFare].
+ */
 data class RideMetrics(
     val totalKm: BigDecimal,
     val valuePerKm: BigDecimal,
     val includesPickup: Boolean,
-)
+    val grossFare: BigDecimal,
+    val netFare: BigDecimal,
+    val feePercent: BigDecimal,
+) {
+    /** Valor da taxa da plataforma nesta corrida (R$). */
+    val platformFee: BigDecimal get() = grossFare - netFare
+}
 
 /** Classificação da corrida frente ao mínimo configurado pelo motorista. */
 enum class RideRating { GOOD, BELOW_MINIMUM }
@@ -55,5 +69,8 @@ data class RideAnalysis(
      * null quando os custos do carro não foram informados.
      */
     val profitAtMinimumFare: java.math.BigDecimal?
-        get() = profit?.let { minimum.minimumFare - it.cost }
+        get() = profit?.let {
+            // O que ficaria com o motorista no valor mínimo (mínimo R$/km × km) − gasto.
+            (minimum.minValuePerKm * metrics.totalKm).setScale(2, java.math.RoundingMode.CEILING) - it.cost
+        }
 }

@@ -12,12 +12,18 @@ import java.math.BigDecimal
  * @property minValuePerKm mínimo aceitável (R$/km).
  * @property minPassengerRating nota mínima do passageiro; null = sem filtro.
  * @property operatingCost custos do carro; null = sem cálculo de lucro.
+ * @property inDriveFeePercent taxa que o inDrive desconta depois de cada corrida (%).
  */
 data class RideRules(
     val minValuePerKm: BigDecimal,
     val minPassengerRating: BigDecimal? = null,
     val operatingCost: OperatingCost? = null,
-)
+    val inDriveFeePercent: BigDecimal = BigDecimal.ZERO,
+) {
+    /** Taxa descontada depois da corrida: só no inDrive (Uber já mostra o ganho do motorista). */
+    fun feeFor(platform: br.com.minhacorrida.core.model.Platform): BigDecimal =
+        if (platform == br.com.minhacorrida.core.model.Platform.INDRIVE) inDriveFeePercent else BigDecimal.ZERO
+}
 
 /**
  * Avalia uma oferta já lida: R$/km, verde/vermelho, valor mínimo e lucro real líquido.
@@ -26,7 +32,7 @@ data class RideRules(
 class EvaluateRideUseCase(private val calculateMetrics: CalculateRideMetricsUseCase) {
 
     operator fun invoke(offer: RideOffer, rules: RideRules): RideAnalysis {
-        val metrics = calculateMetrics(offer)
+        val metrics = calculateMetrics(offer, rules.feeFor(offer.platform))
         val lowRating = isRatingBelowMinimum(offer.passengerRating, rules.minPassengerRating)
         // Verde só se atingir o R$/km mínimo E a nota do passageiro não estiver abaixo do mínimo.
         val rating = if (metrics.valuePerKm >= rules.minValuePerKm && !lowRating) {

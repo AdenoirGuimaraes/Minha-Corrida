@@ -59,6 +59,7 @@ class InDriveTapUseCase(
             minValuePerKm = settings.getMinValuePerKm(),
             minPassengerRating = settings.getMinPassengerRating(),
             operatingCost = settings.getOperatingCost(),
+            inDriveFeePercent = settings.getInDriveFeePercent(),
         )
         val analysis = evaluate(pending.offer.copy(fare = fare), rules)
         // Trocou de ideia (ex.: R$ 17,50 e depois R$ 18): a escolha anterior sai do histórico.

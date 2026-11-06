@@ -54,7 +54,12 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
      */
     fun card(analysis: RideAnalysis): RideCardText {
         val offer = analysis.offer
-        val fare = "Corrida R$ ${money(offer.fare)}"
+        // inDrive: mostra o que fica com o motorista depois da taxa ("Líquido R$ 13,50").
+        val fare = if (analysis.metrics.feePercent.signum() > 0) {
+            "Líquido R$ ${money(analysis.metrics.netFare)}"
+        } else {
+            "Corrida R$ ${money(offer.fare)}"
+        }
         val pickup = offer.pickupKm
         val kmDetails = if (pickup != null) {
             "${km(analysis.metrics.totalKm)} km\n(${km(pickup)} + ${km(offer.tripKm)})"

@@ -40,6 +40,7 @@ class AnalyzeScreenUseCase(
                     minValuePerKm = settings.getMinValuePerKm(),
                     minPassengerRating = settings.getMinPassengerRating(),
                     operatingCost = settings.getOperatingCost(),
+                    inDriveFeePercent = settings.getInDriveFeePercent(),
                 ),
             )
         } catch (e: Exception) {

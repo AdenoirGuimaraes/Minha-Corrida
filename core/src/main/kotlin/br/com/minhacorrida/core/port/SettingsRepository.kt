@@ -34,6 +34,12 @@ interface SettingsRepository {
 
     fun setEnabledPlatforms(platforms: Set<Platform>)
 
+    /** Taxa que o inDrive desconta depois de cada corrida (%, padrão 10). */
+    fun getInDriveFeePercent(): BigDecimal
+
+    /** @throws IllegalArgumentException fora de 0 a 50. */
+    fun setInDriveFeePercent(percent: BigDecimal)
+
     /** Voz "Aceitar corrida…" para corridas verdes (padrão: ligada). */
     fun isVoiceEnabled(): Boolean
 

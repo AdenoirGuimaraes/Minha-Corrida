@@ -47,6 +47,7 @@ object Fixtures {
         var minRating: BigDecimal? = null,
         var platforms: Set<Platform> = Platform.entries.toSet(),
         var voice: Boolean = true,
+        var inDriveFee: BigDecimal = BigDecimal.ZERO,
     ) : SettingsRepository {
         override fun getMinValuePerKm() = min
         override fun setMinValuePerKm(value: BigDecimal) { min = value }
@@ -58,6 +59,8 @@ object Fixtures {
         override fun setMinPassengerRating(rating: BigDecimal?) { minRating = rating }
         override fun getEnabledPlatforms() = platforms
         override fun setEnabledPlatforms(platforms: Set<Platform>) { this.platforms = platforms }
+        override fun getInDriveFeePercent() = inDriveFee
+        override fun setInDriveFeePercent(percent: BigDecimal) { inDriveFee = percent }
         override fun isVoiceEnabled() = voice
         override fun setVoiceEnabled(enabled: Boolean) { voice = enabled }
     }
