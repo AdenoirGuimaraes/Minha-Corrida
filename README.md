@@ -63,6 +63,10 @@ Voz em velocidade 1,4×.
   - **inDrive**: pelo **botão que você tocar** — "Aceitar por R$ x" ou uma contraproposta ("R$ 17,50").
     O card é **refeito com o valor tocado** (verde/vermelho, voz se verde) e só é guardado se ficar
     verde. **Pular/Fechar** recusa: nada fica guardado.
+- **Registrar Corrida Manual**: corrida fora dos apps (particular) — valor, km até o passageiro
+  (opcional), km da viagem e hora; mostra o cálculo do card enquanto digita e entra já realizada.
+- **Corridas Selecionadas**: depois de marcar as realizadas, apaga as não marcadas do período na
+  tela (com confirmação); as marcadas ficam com os cálculos no resumo.
 - **Toque longo** na corrida corrige o valor à mão (ex.: valor digitado no lápis). Km e gastos não
   mudam; R$/km, lucro e cor são recalculados.
 - Na aba **Corridas**: filtro **Dia / Semana / Mês** com ◀ ▶; marque com o check as que você realizou.

@@ -1,5 +1,6 @@
 package br.com.minhacorrida.core.history
 
+import br.com.minhacorrida.core.model.Platform
 import br.com.minhacorrida.core.model.RideAnalysis
 import br.com.minhacorrida.core.model.RideRating
 import br.com.minhacorrida.core.port.AppLogger
@@ -36,9 +37,7 @@ class RecordRideUseCase(
             ) return null
 
             val totalKm = analysis.metrics.totalKm
-            val cost = settings.getOperatingCost()
-            val fuel = cost?.let { (totalKm * it.fuelPricePerLiter).divide(it.kmPerLiter, 2, RoundingMode.HALF_UP) }
-            val maintenance = cost?.let { (totalKm * it.otherCostPerKm).setScale(2, RoundingMode.HALF_UP) }
+            val (fuel, maintenance) = RideCosts.of(totalKm, settings.getOperatingCost())
             val saved = RideRecord(
                     id = "$now-${offer.platform.name}-${offer.fare.toPlainString()}",
                     timestampMillis = now,
@@ -66,6 +65,16 @@ class RecordRideUseCase(
     private companion object {
         const val TAG = "RecordRide"
         const val DUPLICATE_WINDOW_MS = 10 * 60 * 1000L
+    }
+}
+
+/** Gasto de uma corrida pelo km total: combustível e manutenção (null se os custos não foram informados). */
+internal object RideCosts {
+    fun of(totalKm: BigDecimal, cost: br.com.minhacorrida.core.model.OperatingCost?): Pair<BigDecimal?, BigDecimal?> {
+        if (cost == null) return null to null
+        val fuel = (totalKm * cost.fuelPricePerLiter).divide(cost.kmPerLiter, 2, RoundingMode.HALF_UP)
+        val maintenance = (totalKm * cost.otherCostPerKm).setScale(2, RoundingMode.HALF_UP)
+        return fuel to maintenance
     }
 }
 
@@ -139,6 +148,59 @@ class RideHistoryUseCase(
         }
     } catch (e: Exception) {
         logger.error(TAG, "Falha ao corrigir o valor", e)
+        null
+    }
+
+    /**
+     * Botão "Corridas Selecionadas": apaga as corridas NÃO marcadas do período na tela;
+     * as marcadas (realizadas) ficam. @return quantas foram apagadas.
+     */
+    fun keepOnlyDone(period: HistoryPeriod, reference: LocalDate): Int = try {
+        val toDelete = page(period, reference).rides.filterNot { it.done }
+        toDelete.forEach { repository.delete(it.id) }
+        toDelete.size
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao apagar corridas não marcadas", e)
+        0
+    }
+
+    /**
+     * Botão "Registrar Corrida Manual": corrida fora dos apps (particular), já marcada como
+     * realizada. Gastos com os custos do carro de agora; cor pelo mínimo R$/km de agora.
+     *
+     * @param pickupKm km até o passageiro (null/zero se saiu do lugar dele).
+     * @return a corrida guardada, ou null se os valores forem inválidos.
+     */
+    fun registerManual(
+        fare: BigDecimal,
+        pickupKm: BigDecimal?,
+        tripKm: BigDecimal,
+        timestampMillis: Long,
+    ): RideRecord? = try {
+        if (fare.signum() <= 0 || tripKm.signum() <= 0 || (pickupKm != null && pickupKm.signum() < 0)) {
+            null
+        } else {
+            val totalKm = (tripKm + (pickupKm ?: BigDecimal.ZERO)).setScale(2, RoundingMode.HALF_UP)
+            val roundedFare = fare.setScale(2, RoundingMode.HALF_UP)
+            val perKm = roundedFare.divide(totalKm, 2, RoundingMode.HALF_UP)
+            val (fuel, maintenance) = RideCosts.of(totalKm, settings.getOperatingCost())
+            RideRecord(
+                id = "$timestampMillis-${Platform.PARTICULAR.name}-${roundedFare.toPlainString()}",
+                timestampMillis = timestampMillis,
+                platform = Platform.PARTICULAR,
+                fare = roundedFare,
+                pickupKm = pickupKm,
+                tripKm = tripKm,
+                totalKm = totalKm,
+                valuePerKm = perKm,
+                fuelCost = fuel,
+                maintenanceCost = maintenance,
+                done = true,
+                good = perKm >= settings.getMinValuePerKm(),
+            ).also(repository::add)
+        }
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao registrar corrida manual", e)
         null
     }
 

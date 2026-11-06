@@ -562,6 +562,23 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
+            <!-- Ações do histórico -->
+            <Button
+                android:id="@+id/btnManualRide"
+                style="@style/YellowButton"
+                android:layout_marginTop="10dp"
+                android:text="@string/hist_manual_button" />
+
+            <Button
+                android:id="@+id/btnKeepSelected"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:backgroundTint="@color/mc_green"
+                android:text="@string/hist_keep_button"
+                android:textColor="@color/mc_text"
+                android:textStyle="bold" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

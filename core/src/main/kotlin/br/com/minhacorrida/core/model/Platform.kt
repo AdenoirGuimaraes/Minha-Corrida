@@ -6,7 +6,10 @@ package br.com.minhacorrida.core.model
  */
 enum class Platform(val displayName: String, val packageNames: Set<String>) {
     UBER("Uber", setOf("com.ubercab.driver")),
-    INDRIVE("inDrive", setOf("sinet.startup.inDriver"));
+    INDRIVE("inDrive", setOf("sinet.startup.inDriver")),
+
+    /** Corrida fora dos apps (registrada à mão na aba Corridas); não tem tela para ler. */
+    PARTICULAR("Particular", emptySet());
 
     companion object {
         /** Retorna a plataforma dona do pacote, ou null se não for suportado. */

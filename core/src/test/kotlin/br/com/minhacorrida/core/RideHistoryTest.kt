@@ -20,6 +20,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** Histórico: guarda só corridas verdes, soma as realizadas, filtra por período e apaga após 60 dias. */
 class RideHistoryTest {
@@ -133,5 +134,44 @@ class RideHistoryTest {
         assertEquals("🟢 15:00 · Uber · R$ 20,00 (era R$ 10,00) · 4,1 km · lucro R$ 16,51",
             RideHistoryFormatter(zone).row(fixed, HistoryPeriod.DAY))
         assertEquals(null, history.changeFare(id, BigDecimal.ZERO))
+    }
+
+    @Test
+    fun `corridas selecionadas apaga so as nao marcadas do periodo na tela`() {
+        record(analysis("10.00", "2.2", "1.9"))
+        now += 60_000
+        record(analysis("20.00", "1.0", "7.0"))
+        now = today.minusDays(1).atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+        record(analysis("15.00", "1.0", "5.0"))                       // ontem: fora do período
+        val hoje = history.page(HistoryPeriod.DAY, today)
+        history.setDone(hoje.rides.first().id, true)
+
+        assertEquals(1, history.keepOnlyDone(HistoryPeriod.DAY, today))
+        val depois = history.page(HistoryPeriod.DAY, today)
+        assertEquals(1, depois.rides.size)
+        assertTrue(depois.rides.single().done)
+        assertEquals(1, history.page(HistoryPeriod.DAY, today.minusDays(1)).rides.size)
+    }
+
+    @Test
+    fun `corrida manual particular entra realizada e com os gastos`() {
+        val r = history.registerManual(BigDecimal("25"), BigDecimal("2"), BigDecimal("8"), now)!!
+        assertEquals(Platform.PARTICULAR, r.platform)
+        assertTrue(r.done)
+        assertTrue(r.good)                                             // 25 ÷ 10 km = R$ 2,50/km
+        assertEquals("6.00", r.fuelCost!!.toPlainString())             // 10 km × 6,30 ÷ 10,5
+        assertEquals("2.50", r.maintenanceCost!!.toPlainString())      // 10 km × 0,25
+        assertEquals("16.50", r.netProfit.toPlainString())
+        val page = history.page(HistoryPeriod.DAY, today)
+        assertEquals(1, page.summary.doneCount)
+        assertEquals("🟢 15:00 · Particular · R$ 25,00 · 10 km · lucro R$ 16,50",
+            RideHistoryFormatter(zone).row(r, HistoryPeriod.DAY))
+    }
+
+    @Test
+    fun `corrida manual sem km ate o passageiro e com valores invalidos`() {
+        assertEquals("8.00", history.registerManual(BigDecimal("20"), null, BigDecimal("8"), now)!!.totalKm.toPlainString())
+        assertNull(history.registerManual(BigDecimal.ZERO, null, BigDecimal("8"), now))
+        assertNull(history.registerManual(BigDecimal("20"), null, BigDecimal.ZERO, now))
     }
 }

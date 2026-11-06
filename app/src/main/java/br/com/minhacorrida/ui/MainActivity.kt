@@ -125,7 +125,10 @@ class MainActivity : Activity() {
         tabSettings.setOnClickListener { selectTab(Tab.SETTINGS) }
         tabSimulator.setOnClickListener { selectTab(Tab.SIMULATOR) }
         tabHistory.setOnClickListener { selectTab(Tab.HISTORY) }
-        historyScreen = RideHistoryScreen(this, container.rideHistory, container.historyFormatter, ioExecutor)
+        historyScreen = RideHistoryScreen(
+            this, container.rideHistory, container.historyFormatter, ioExecutor,
+            container.evaluateRide, container.settings, container.formatter,
+        )
         historyScreen.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
 

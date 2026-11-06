@@ -5,7 +5,19 @@ import android.app.AlertDialog
 import android.text.InputType
 import android.widget.EditText
 import android.widget.Toast
+import android.text.Editable
+import android.text.TextWatcher
+import br.com.minhacorrida.core.format.RideAnalysisFormatter
+import br.com.minhacorrida.core.model.Platform
+import br.com.minhacorrida.core.model.RideOffer
 import br.com.minhacorrida.core.parser.NumberParser
+import br.com.minhacorrida.core.port.SettingsRepository
+import br.com.minhacorrida.core.usecase.EvaluateRideUseCase
+import br.com.minhacorrida.core.usecase.RideRules
+import java.math.BigDecimal
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
@@ -33,6 +45,9 @@ class RideHistoryScreen(
     private val history: RideHistoryUseCase,
     private val formatter: RideHistoryFormatter,
     private val io: ExecutorService,
+    private val evaluate: EvaluateRideUseCase,
+    private val settings: SettingsRepository,
+    private val cardFormatter: RideAnalysisFormatter,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val periodTabs: Map<HistoryPeriod, TextView> = mapOf(
@@ -59,7 +74,156 @@ class RideHistoryScreen(
         periodTabs.forEach { (p, tab) -> tab.setOnClickListener { period = p; refresh() } }
         activity.findViewById<View>(R.id.btnPeriodPrev).setOnClickListener { move(-1) }
         activity.findViewById<View>(R.id.btnPeriodNext).setOnClickListener { move(+1) }
+        activity.findViewById<View>(R.id.btnManualRide).setOnClickListener { openManualRide() }
+        activity.findViewById<View>(R.id.btnKeepSelected).setOnClickListener { confirmKeepSelected() }
     }
+
+    // ---- Corridas Selecionadas ----
+
+    /** Confirma antes de apagar: mostra quantas saem, quantas ficam e de qual período. */
+    private fun confirmKeepSelected() {
+        val page = current ?: return
+        val notDone = page.rides.count { !it.done }
+        if (notDone == 0) {
+            toast(activity.getString(R.string.hist_keep_none))
+            return
+        }
+        val done = page.rides.size - notDone
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.hist_keep_title)
+            .setMessage(
+                activity.getString(R.string.hist_keep_message, notDone, formatter.periodLabel(page, LocalDate.now()), done),
+            )
+            .setPositiveButton(R.string.hist_keep_confirm) { _, _ -> keepSelected(page.period, reference) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    private fun keepSelected(period: HistoryPeriod, ref: LocalDate) {
+        try {
+            io.execute {
+                val removed = history.keepOnlyDone(period, ref)
+                main.post {
+                    toast(activity.getString(R.string.hist_keep_done, removed))
+                    refresh()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao apagar não marcadas", e)
+        }
+    }
+
+    // ---- Registrar Corrida Manual ----
+
+    /**
+     * Formulário da corrida particular: valor, km até o passageiro (opcional), km da viagem
+     * e hora. O cálculo do card (R$/km, lucro, mínimo) aparece enquanto digita.
+     * Data: o dia na tela (filtro Dia) ou hoje (Semana/Mês).
+     */
+    private fun openManualRide() {
+        val day = if (period == HistoryPeriod.DAY) reference else LocalDate.now()
+        val density = activity.resources.displayMetrics.density
+        val pad = (20 * density).toInt()
+        fun label(res: Int) = TextView(activity).apply {
+            setText(res)
+            setTextColor(activity.getColor(R.color.mc_text_muted))
+            setPadding(0, (10 * density).toInt(), 0, 0)
+        }
+        fun number(hint: String) = EditText(activity).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            this.hint = hint
+        }
+        val etFare = number("25,00")
+        val etPickup = number("2,0")
+        val etTrip = number("8,0")
+        val etTime = EditText(activity).apply {
+            inputType = InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
+            setText(LocalTime.now().format(TIME))
+        }
+        val tvPreview = TextView(activity).apply {
+            setTextColor(activity.getColor(R.color.mc_yellow))
+            setPadding(0, (12 * density).toInt(), 0, 0)
+            textSize = 15f
+        }
+        val form = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, 0, pad, 0)
+            addView(label(R.string.hist_manual_fare)); addView(etFare)
+            addView(label(R.string.hist_manual_pickup)); addView(etPickup)
+            addView(label(R.string.hist_manual_trip)); addView(etTrip)
+            addView(label(R.string.hist_manual_time)); addView(etTime)
+            addView(tvPreview)
+        }
+        val updatePreview = {
+            tvPreview.text = manualPreview(
+                NumberParser.parse(etFare.text.toString()),
+                NumberParser.parse(etPickup.text.toString()),
+                NumberParser.parse(etTrip.text.toString()),
+            )
+        }
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) = updatePreview()
+        }
+        listOf(etFare, etPickup, etTrip).forEach { it.addTextChangedListener(watcher) }
+        updatePreview()
+
+        AlertDialog.Builder(activity)
+            .setTitle(activity.getString(R.string.hist_manual_title, day.format(DAY)))
+            .setView(android.widget.ScrollView(activity).apply { addView(form) })
+            .setPositiveButton(R.string.save) { _, _ ->
+                saveManualRide(day, etFare.text.toString(), etPickup.text.toString(), etTrip.text.toString(), etTime.text.toString())
+            }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    /** Mesmo cálculo do card, com as regras e custos de agora. */
+    private fun manualPreview(fare: BigDecimal?, pickup: BigDecimal?, trip: BigDecimal?): String {
+        if (fare == null || fare.signum() <= 0 || trip == null || trip.signum() <= 0) {
+            return activity.getString(R.string.hist_manual_preview_empty)
+        }
+        return try {
+            val analysis = evaluate(
+                RideOffer(Platform.PARTICULAR, fare, tripKm = trip, pickupKm = pickup?.takeIf { it.signum() > 0 }),
+                RideRules(settings.getMinValuePerKm(), operatingCost = settings.getOperatingCost()),
+            )
+            val card = cardFormatter.card(analysis)
+            val color = if (analysis.rating == br.com.minhacorrida.core.model.RideRating.GOOD) "🟢" else "🔴"
+            "$color R$/km ${card.valuePerKm} · ${card.profitLabel} R$ ${card.profitValue}\n" +
+                "${card.kmDetails.replace('\n', ' ')} · ${card.profitDetails.substringAfter('\n')}"
+        } catch (e: Exception) {
+            activity.getString(R.string.hist_manual_preview_empty)
+        }
+    }
+
+    private fun saveManualRide(day: LocalDate, fareText: String, pickupText: String, tripText: String, timeText: String) {
+        val fare = NumberParser.parse(fareText)
+        val trip = NumberParser.parse(tripText)
+        val pickup = if (pickupText.isBlank()) null else NumberParser.parse(pickupText)
+        val time = runCatching { LocalTime.parse(timeText.trim(), TIME) }.getOrNull()
+        if (fare == null || fare.signum() <= 0 || trip == null || trip.signum() <= 0 || time == null ||
+            (pickupText.isNotBlank() && (pickup == null || pickup.signum() < 0))
+        ) {
+            toast(activity.getString(R.string.hist_manual_invalid))
+            return
+        }
+        val millis = day.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        try {
+            io.execute {
+                val saved = history.registerManual(fare, pickup?.takeIf { it.signum() > 0 }, trip, millis)
+                main.post {
+                    toast(activity.getString(if (saved != null) R.string.hist_manual_saved else R.string.hist_manual_invalid))
+                    refresh()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao registrar corrida manual", e)
+        }
+    }
+
+    private fun toast(message: String) = Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
 
     /** Recarrega o período atual (na 1ª vez, apaga também o que passou de 60 dias). */
     fun refresh() {
@@ -156,6 +320,11 @@ class RideHistoryScreen(
         } catch (e: Exception) {
             android.util.Log.e("MC/RideHistoryScreen", "Falha ao gravar marcação", e)
         }
+    }
+
+    private companion object {
+        val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
+        val DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM")
     }
 
     private fun styleTabs() {

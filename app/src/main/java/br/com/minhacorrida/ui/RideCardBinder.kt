@@ -58,6 +58,7 @@ class RideCardBinder(private val formatter: RideAnalysisFormatter) {
     private fun brandColors(platform: Platform): BrandColors = when (platform) {
         Platform.UBER -> BrandColors(background = UBER_BLACK, text = WHITE)
         Platform.INDRIVE -> BrandColors(background = INDRIVE_LIME, text = BLACK)
+        Platform.PARTICULAR -> BrandColors(background = PARTICULAR_YELLOW, text = BLACK)
     }
 
     private companion object {
@@ -65,6 +66,7 @@ class RideCardBinder(private val formatter: RideAnalysisFormatter) {
         const val COLOR_BAD = 0xF0C62828.toInt()
         const val UBER_BLACK = 0xFF000000.toInt()
         const val INDRIVE_LIME = 0xFFC1F11D.toInt()
+        const val PARTICULAR_YELLOW = 0xFFFFC107.toInt()
         const val WHITE = 0xFFFFFFFF.toInt()
         const val BLACK = 0xFF000000.toInt()
     }
