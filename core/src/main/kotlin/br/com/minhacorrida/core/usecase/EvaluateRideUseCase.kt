@@ -42,7 +42,7 @@ class EvaluateRideUseCase(private val calculateMetrics: CalculateRideMetricsUseC
             offer = offer,
             metrics = metrics,
             rating = rating,
-            minimum = calculateMetrics.minimumFare(metrics, rules.minValuePerKm),
+            minimum = calculateMetrics.minimumFare(metrics, rules.minValuePerKm, profit, rules.minNetProfit),
             profit = profit,
             lowPassengerRating = lowRating,
         )

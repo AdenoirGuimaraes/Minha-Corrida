@@ -61,4 +61,37 @@ class EvaluateRideUseCaseTest {
     @Test
     fun `sem custos informados o lucro minimo nao se aplica`() =
         assertEquals(RideRating.GOOD, evaluate(offer, RideRules(BigDecimal("1.00"), minNetProfit = BigDecimal("50"))).rating)
+
+    // 3º quadrado "Mín. verde": o maior entre o valor do R$/km mínimo e o do lucro mínimo.
+    @Test
+    fun `minimo verde usa o lucro minimo quando ele exige mais`() {
+        val m = evaluate(offer, RideRules(BigDecimal("1.00"), operatingCost = cost, minNetProfit = BigDecimal("3.00"))).minimum
+        assertEquals("7.00", m.minimumFare.toPlainString())
+        assertEquals("7.41", m.greenFare.toPlainString()) // gasto 4,41 + lucro 3,00
+        val card = br.com.minhacorrida.core.format.RideAnalysisFormatter()
+            .card(evaluate(offer, RideRules(BigDecimal("1.00"), operatingCost = cost, minNetProfit = BigDecimal("3.00"))))
+        assertEquals("7,41", card.minimumValue)
+        assertEquals("R$ 1,00/km\nLucro R$ 3,00", card.minimumLabel)
+    }
+
+    @Test
+    fun `minimo verde usa o R$ por km quando ele exige mais`() {
+        val m = evaluate(offer, RideRules(BigDecimal("1.00"), operatingCost = cost, minNetProfit = BigDecimal("1.00"))).minimum
+        assertEquals("7.00", m.greenFare.toPlainString()) // 4,41 + 1,00 = 5,41 < 7,00
+    }
+
+    @Test
+    fun `corrida no valor do minimo verde fica verde`() {
+        val rules = RideRules(BigDecimal("1.00"), operatingCost = cost, minNetProfit = BigDecimal("3.00"))
+        val green = evaluate(offer, rules).minimum.greenFare
+        assertEquals(RideRating.GOOD, evaluate(offer.copy(fare = green), rules).rating)
+        assertEquals(RideRating.LOW_PROFIT, evaluate(offer.copy(fare = green - BigDecimal("0.01")), rules).rating)
+    }
+
+    @Test
+    fun `sem custos o minimo verde e so o do R$ por km`() {
+        val m = evaluate(offer, RideRules(BigDecimal("1.00"), minNetProfit = BigDecimal("3.00"))).minimum
+        assertNull(m.minNetProfit)
+        assertEquals("7.00", m.greenFare.toPlainString())
+    }
 }

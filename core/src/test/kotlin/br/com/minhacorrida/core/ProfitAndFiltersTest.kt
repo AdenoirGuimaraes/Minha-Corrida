@@ -136,8 +136,8 @@ class ProfitAndFiltersTest {
         assertEquals("2,63", card.profitValue)
         assertEquals("Corrida R$ 7,04\nGasto R$ 4,41", card.profitDetails)
         assertEquals("7,00", card.minimumValue)
-        // Mínimo R$ 7,00 − gasto R$ 4,41 = R$ 2,59 de lucro se a corrida pagasse o mínimo.
-        assertEquals("Lucro no mínimo\nR$ 2,59", card.minimumLabel)
+        // Sem lucro mínimo configurado, o verde depende só do R$/km.
+        assertEquals("R$ 1,00/km", card.minimumLabel)
     }
 
     @Test
@@ -145,7 +145,7 @@ class ProfitAndFiltersTest {
         val semCusto = formatter.card(useCase.analyze("com.ubercab.driver", uberCard)!!)
         assertEquals("—", semCusto.profitValue)
         assertEquals("Corrida R$ 7,04\nInforme os custos", semCusto.profitDetails)
-        assertEquals("Mín. p/\nR$ 1,00/km", semCusto.minimumLabel)
+        assertEquals("R$ 1,00/km", semCusto.minimumLabel)
         settings.cost = OperatingCost(BigDecimal("6.30"), BigDecimal("5"))
         val prejuizo = formatter.card(useCase.analyze("com.ubercab.driver", uberCard)!!)
         assertEquals("Prejuízo", prejuizo.profitLabel)

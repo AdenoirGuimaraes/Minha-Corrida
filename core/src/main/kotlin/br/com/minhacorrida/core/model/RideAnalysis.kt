@@ -39,14 +39,20 @@ enum class RideRating {
 }
 
 /**
- * Valor mínimo da corrida para atingir o R$/km desejado.
+ * Valores mínimos da corrida (o que o passageiro paga, no app).
  *
  * @property minValuePerKm mínimo configurado pelo motorista (R$/km).
  * @property minimumFare valor da corrida que atinge esse mínimo no km total.
+ * @property minNetProfit lucro líquido mínimo usado no [greenFare]; null quando não entra
+ *   (filtro desligado ou custos do carro não informados).
+ * @property greenFare menor valor que deixa o card VERDE: atinge o mínimo R$/km E o lucro
+ *   líquido mínimo (o maior dos dois valores). Sem lucro mínimo, é igual ao [minimumFare].
  */
 data class MinimumFare(
     val minValuePerKm: BigDecimal,
     val minimumFare: BigDecimal,
+    val minNetProfit: BigDecimal? = null,
+    val greenFare: BigDecimal = minimumFare,
 )
 
 /**

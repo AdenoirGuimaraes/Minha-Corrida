@@ -48,6 +48,15 @@ class InDriveFeeTest {
     }
 
     @Test
+    fun `minimo verde do inDrive com lucro minimo inclui a taxa`() {
+        val a = evaluate(offer(Platform.INDRIVE), rules.copy(minNetProfit = BigDecimal("12.00")))
+        // (gasto 7,31 + lucro 12,00) ÷ 0,90 = 21,46 > 19,12 do R$/km.
+        assertEquals("21.46", a.minimum.greenFare.toPlainString())
+        val atGreen = evaluate(offer(Platform.INDRIVE, "21.46"), rules.copy(minNetProfit = BigDecimal("12.00")))
+        assertEquals(RideRating.GOOD, atGreen.rating)
+    }
+
+    @Test
     fun `Uber nao tem taxa descontada depois`() {
         val a = evaluate(offer(Platform.UBER), rules)
         assertEquals("15.00", a.metrics.netFare.toPlainString())

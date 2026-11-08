@@ -52,13 +52,35 @@ class CalculateRideMetricsUseCase {
      * da taxa: mínimo × km ÷ (1 − taxa), arredondado PARA CIMA no centavo.
      * Ex.: inDrive 10%, 8,6 km, mínimo R$ 2,00 → R$ 19,12 (não R$ 17,20).
      */
-    fun minimumFare(metrics: RideMetrics, minValuePerKm: BigDecimal): MinimumFare {
-        val net = minValuePerKm * metrics.totalKm
-        val keep = (HUNDRED - metrics.feePercent).divide(HUNDRED, 6, RoundingMode.HALF_UP)
-        return MinimumFare(
+    fun minimumFare(metrics: RideMetrics, minValuePerKm: BigDecimal): MinimumFare =
+        MinimumFare(
             minValuePerKm = minValuePerKm,
-            minimumFare = net.divide(keep, 2, RoundingMode.CEILING),
+            minimumFare = grossFor(minValuePerKm * metrics.totalKm, metrics.feePercent),
         )
+
+    /**
+     * Mínimos para o card ficar VERDE: o valor do R$/km mínimo e o valor que deixa
+     * [minNetProfit] de lucro (gasto + lucro mínimo, já com a taxa) — vale o MAIOR.
+     * Ex.: Uber 7 km, R$ 1,00/km (R$ 7,00), gasto R$ 4,41, lucro mín. R$ 3,00 → R$ 7,41.
+     *
+     * @param profit lucro da corrida; null (sem custos) ou [minNetProfit] null = só o R$/km.
+     */
+    fun minimumFare(
+        metrics: RideMetrics,
+        minValuePerKm: BigDecimal,
+        profit: RideProfit?,
+        minNetProfit: BigDecimal?,
+    ): MinimumFare {
+        val byKm = minimumFare(metrics, minValuePerKm)
+        if (profit == null || minNetProfit == null) return byKm
+        val byProfit = grossFor(profit.cost + minNetProfit, metrics.feePercent)
+        return byKm.copy(minNetProfit = minNetProfit, greenFare = byKm.minimumFare.max(byProfit))
+    }
+
+    /** Valor cobrado no app que deixa [net] com o motorista: net ÷ (1 − taxa), para cima. */
+    private fun grossFor(net: BigDecimal, feePercent: BigDecimal): BigDecimal {
+        val keep = (HUNDRED - feePercent).divide(HUNDRED, 6, RoundingMode.HALF_UP)
+        return net.divide(keep, 2, RoundingMode.CEILING)
     }
 
     companion object {

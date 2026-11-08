@@ -9,7 +9,7 @@ import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 /**
- * Textos do card de 3 quadrados (R$/km | Lucro | Mínimo) com a faixa do app no topo.
+ * Textos do card de 3 quadrados (R$/km | Lucro | Mín. verde) com a faixa do app no topo.
  * Os números grandes vêm sem "R$": o rótulo pequeno de cada quadrado diz o que são.
  */
 data class RideCardText(
@@ -50,7 +50,7 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
     /**
      * Textos do card. Ex. (Uber, R$ 7,37 em 2,8 + 3,5 km):
      * R$/km "1,17" / "6,3 km\n(2,8 + 3,5)"; Lucro "1,62" / "Corrida R$ 7,37\nGasto R$ 5,75";
-     * Mínimo "12,60" / "Mín. p/\nR$ 2,00/km".
+     * Mín. verde "12,60" / "R$ 2,00/km\nLucro R$ 6,00".
      */
     fun card(analysis: RideAnalysis): RideCardText {
         val offer = analysis.offer
@@ -78,20 +78,19 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
             profitLabel = if (profit != null && profit.netProfit.signum() < 0) "Prejuízo" else "Lucro",
             profitValue = profit?.let { money(it.netProfit.abs()) } ?: "—",
             profitDetails = profit?.let { "$fare\nGasto R$ ${money(it.cost)}" } ?: "$fare\nInforme os custos",
-            minimumValue = money(analysis.minimum.minimumFare),
+            minimumValue = money(analysis.minimum.greenFare),
             minimumLabel = minimumLabel(analysis),
         )
     }
 
     /**
-     * Texto de baixo do 3º quadrado: o lucro se a corrida pagasse o valor mínimo.
-     * Ex.: "Lucro no mínimo\nR$ 7,03". Sem custos informados: "Mín. p/\nR$ 2,00/km".
+     * Texto de baixo do 3º quadrado ("Mín. verde"): os mínimos que o valor de cima atende.
+     * Ex.: "R$ 2,00/km\nLucro R$ 6,00". Sem lucro mínimo (ou sem custos): "R$ 2,00/km".
      */
     private fun minimumLabel(analysis: RideAnalysis): String {
-        val profit = analysis.profitAtMinimumFare
-            ?: return "Mín. p/\nR$ ${money(analysis.minimum.minValuePerKm)}/km"
-        val label = if (profit.signum() < 0) "Prejuízo no mínimo" else "Lucro no mínimo"
-        return "$label\nR$ ${money(profit.abs())}"
+        val perKm = "R$ ${money(analysis.minimum.minValuePerKm)}/km"
+        val minProfit = analysis.minimum.minNetProfit ?: return perKm
+        return "$perKm\nLucro R$ ${money(minProfit)}"
     }
 
     /**

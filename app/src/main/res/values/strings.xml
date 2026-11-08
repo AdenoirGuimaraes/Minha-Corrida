@@ -14,7 +14,7 @@
     <string name="invalid_value">Informe um valor maior que zero, ex.: 1,80</string>
     <string name="invalid_timeout">Informe entre %1$d e %2$d segundos</string>
     <string name="card_label_per_km">R$/km</string>
-    <string name="card_label_minimum">Mínimo</string>
+    <string name="card_label_minimum">Mín. verde</string>
     <string name="tap_to_close">toque para fechar</string>
     <string name="version_label">Versão %1$s</string>
     <string name="help">Abra o Uber Driver ou o inDrive. Quando chegar uma oferta, o valor por km aparece no topo da tela: verde se atinge o seu mínimo, vermelho se não.\n\nNo inDrive, abra a oferta: o app lê as duas distâncias do mapa (até o passageiro + viagem).\n\nO leitor fecha com um toque ou após o tempo configurado.</string>
