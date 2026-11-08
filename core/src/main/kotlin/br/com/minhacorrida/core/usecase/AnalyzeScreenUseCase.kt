@@ -41,6 +41,7 @@ class AnalyzeScreenUseCase(
                     minPassengerRating = settings.getMinPassengerRating(),
                     operatingCost = settings.getOperatingCost(),
                     inDriveFeePercent = settings.getInDriveFeePercent(),
+                    minNetProfit = settings.getMinNetProfit(),
                 ),
             )
         } catch (e: Exception) {

@@ -32,6 +32,8 @@
     <string name="cost_not_set">Preencha preço e consumo para o card mostrar o lucro real de cada corrida.</string>
     <string name="invalid_cost">Preencha preço do combustível e consumo com valores maiores que zero, ex.: 6,30 e 10</string>
     <string name="min_rating_label">Nota mínima do passageiro (vazio = sem filtro)</string>
+    <string name="min_profit_label">Lucro líquido mínimo por corrida (R$). Abaixo dele, com R$/km ok, o card fica amarelo. Vazio = sem filtro.</string>
+    <string name="invalid_min_profit">O lucro mínimo não pode ser negativo, ex.: 6,00</string>
     <string name="indrive_fee_label">Taxa do inDrive descontada depois da corrida (%). A Uber já mostra o seu ganho.</string>
     <string name="invalid_fee">A taxa do inDrive deve ficar entre 0 e 50%, ex.: 10</string>
     <string name="invalid_rating">A nota mínima deve ficar entre 1 e 5, ex.: 4,70</string>
@@ -49,7 +51,7 @@
     <string name="period_month">Mês</string>
     <string name="hist_profit">Lucro</string>
     <string name="hist_cost">Separar p/ abastecer</string>
-    <string name="hist_hint">Corridas verdes (inDrive: só as que você aceitou ou fez contraproposta). Marque as que realizou. Toque longo corrige o valor.</string>
+    <string name="hist_hint">🟢 verdes e 🟡 amarelas (inDrive: só as que você aceitou ou fez contraproposta). Marque as que realizou. Toque longo corrige o valor.</string>
     <string name="hist_empty">Nenhuma corrida neste período.</string>
     <string name="hist_edit_title">Corrigir valor da corrida</string>
     <string name="hist_manual_button">Registrar Corrida Manual</string>
@@ -77,7 +79,7 @@
     <string name="sim_pickup_label">Km até o passageiro</string>
     <string name="sim_trip_label">Km da viagem</string>
     <string name="test_voice">▶ Testar voz</string>
-    <string name="test_voice_red">Corrida vermelha: a voz só fala nas verdes</string>
+    <string name="test_voice_red">Corrida amarela ou vermelha: a voz só fala nas verdes</string>
     <string name="test_voice_off">A voz está desmarcada em \"Falar corridas\"</string>
     <string name="rules_title">Regras da corrida</string>
     <string name="exit">Encerrar</string>

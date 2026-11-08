@@ -27,7 +27,7 @@ sealed class InDriveTap {
 /**
  * Decide pelo botão que o motorista tocou no pedido do inDrive (o app confia no toque):
  * - valor ("Aceitar por R$ 15" ou contraproposta "R$ 17,50") → refaz o card com esse valor
- *   e guarda no histórico SÓ se ficar verde; um toque em outro valor troca a corrida guardada;
+ *   e guarda no histórico se ficar verde ou amarelo; um toque em outro valor troca a corrida guardada;
  * - "Pular"/"Fechar"/"Recusar" → nada fica guardado (apaga o que esse pedido tinha guardado).
  */
 class InDriveTapUseCase(
@@ -60,6 +60,7 @@ class InDriveTapUseCase(
             minPassengerRating = settings.getMinPassengerRating(),
             operatingCost = settings.getOperatingCost(),
             inDriveFeePercent = settings.getInDriveFeePercent(),
+            minNetProfit = settings.getMinNetProfit(),
         )
         val analysis = evaluate(pending.offer.copy(fare = fare), rules)
         // Trocou de ideia (ex.: R$ 17,50 e depois R$ 18): a escolha anterior sai do histórico.

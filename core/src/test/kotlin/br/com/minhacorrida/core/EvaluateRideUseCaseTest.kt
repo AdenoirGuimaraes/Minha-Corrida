@@ -38,4 +38,27 @@ class EvaluateRideUseCaseTest {
         val a = evaluate(offer, RideRules(BigDecimal("1.00"), minPassengerRating = BigDecimal("4.90")))
         assertEquals(RideRating.BELOW_MINIMUM, a.rating)
     }
+
+    // Lucro líquido mínimo: R$ 7,04 em 7 km com custo R$ 0,63/km = lucro R$ 2,63.
+    private val cost = OperatingCost(BigDecimal("6.30"), BigDecimal("10"))
+
+    @Test
+    fun `verde com R$ por km e lucro acima dos minimos`() =
+        assertEquals(RideRating.GOOD, evaluate(offer, RideRules(BigDecimal("1.00"), operatingCost = cost, minNetProfit = BigDecimal("2.00"))).rating)
+
+    @Test
+    fun `amarelo com R$ por km ok mas lucro abaixo do minimo`() =
+        assertEquals(RideRating.LOW_PROFIT, evaluate(offer, RideRules(BigDecimal("1.00"), operatingCost = cost, minNetProfit = BigDecimal("3.00"))).rating)
+
+    @Test
+    fun `vermelho continua vermelho mesmo com lucro minimo`() =
+        assertEquals(RideRating.BELOW_MINIMUM, evaluate(offer, RideRules(BigDecimal("2.00"), operatingCost = cost, minNetProfit = BigDecimal("1.00"))).rating)
+
+    @Test
+    fun `nota ruim fica vermelha antes do amarelo`() =
+        assertEquals(RideRating.BELOW_MINIMUM, evaluate(offer, RideRules(BigDecimal("1.00"), BigDecimal("4.90"), cost, minNetProfit = BigDecimal("3.00"))).rating)
+
+    @Test
+    fun `sem custos informados o lucro minimo nao se aplica`() =
+        assertEquals(RideRating.GOOD, evaluate(offer, RideRules(BigDecimal("1.00"), minNetProfit = BigDecimal("50"))).rating)
 }

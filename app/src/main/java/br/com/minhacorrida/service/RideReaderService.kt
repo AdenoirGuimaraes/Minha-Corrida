@@ -417,7 +417,8 @@ class RideReaderService : AccessibilityService() {
     private fun recordRide(analysis: RideAnalysis) {
         // inDrive só é guardado pelo botão que o motorista tocar (ver onInDriveButtonTapped).
         if (analysis.offer.platform == Platform.INDRIVE) return
-        if (analysis.rating != br.com.minhacorrida.core.model.RideRating.GOOD) return
+        // Verde ou amarelo vão para o histórico (a voz continua só nas verdes).
+        if (!analysis.rating.isAcceptable) return
         if (analysis.offer.sameRideAs(lastRecordedOffer)) return
         lastRecordedOffer = analysis.offer
         try {

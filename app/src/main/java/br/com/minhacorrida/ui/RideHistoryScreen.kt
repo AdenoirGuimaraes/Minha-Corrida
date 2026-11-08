@@ -187,10 +187,18 @@ class RideHistoryScreen(
         return try {
             val analysis = evaluate(
                 RideOffer(Platform.PARTICULAR, fare, tripKm = trip, pickupKm = pickup?.takeIf { it.signum() > 0 }),
-                RideRules(settings.getMinValuePerKm(), operatingCost = settings.getOperatingCost()),
+                RideRules(
+                    settings.getMinValuePerKm(),
+                    operatingCost = settings.getOperatingCost(),
+                    minNetProfit = settings.getMinNetProfit(),
+                ),
             )
             val card = cardFormatter.card(analysis)
-            val color = if (analysis.rating == br.com.minhacorrida.core.model.RideRating.GOOD) "🟢" else "🔴"
+            val color = when (analysis.rating) {
+                br.com.minhacorrida.core.model.RideRating.GOOD -> "🟢"
+                br.com.minhacorrida.core.model.RideRating.LOW_PROFIT -> "🟡"
+                br.com.minhacorrida.core.model.RideRating.BELOW_MINIMUM -> "🔴"
+            }
             "$color R$/km ${card.valuePerKm} · ${card.profitLabel} R$ ${card.profitValue}\n" +
                 "${card.kmDetails.replace('\n', ' ')} · ${card.profitDetails.substringAfter('\n')}"
         } catch (e: Exception) {

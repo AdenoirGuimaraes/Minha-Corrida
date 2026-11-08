@@ -29,7 +29,8 @@ class RecordRideUseCase(
     operator fun invoke(analysis: RideAnalysis, originalFare: BigDecimal? = null): RideRecord? {
         return try {
             val offer = analysis.offer
-            if (analysis.rating != RideRating.GOOD) return null
+            // Verde ou amarelo (R$/km ok): o motorista pode aceitar. Vermelha não entra.
+            if (!analysis.rating.isAcceptable) return null
             val now = nowMillis()
             val recent = repository.between(now - DUPLICATE_WINDOW_MS, now + 1)
             if (recent.any { it.platform == offer.platform && it.fare.compareTo(offer.fare) == 0 &&
@@ -50,6 +51,7 @@ class RecordRideUseCase(
                     fuelCost = fuel,
                     maintenanceCost = maintenance,
                     good = true,
+                    lowProfit = analysis.rating == RideRating.LOW_PROFIT,
                     feePercent = analysis.metrics.feePercent,
                     originalFare = originalFare
                         ?.setScale(2, RoundingMode.HALF_UP)
@@ -146,7 +148,7 @@ class RideHistoryUseCase(
         if (record == null || newFare.signum() <= 0) {
             null
         } else {
-            record.withFare(newFare, settings.getMinValuePerKm()).also(repository::replace)
+            record.withFare(newFare, settings.getMinValuePerKm(), settings.getMinNetProfit()).also(repository::replace)
         }
     } catch (e: Exception) {
         logger.error(TAG, "Falha ao corrigir o valor", e)
@@ -199,7 +201,10 @@ class RideHistoryUseCase(
                 maintenanceCost = maintenance,
                 done = true,
                 good = perKm >= settings.getMinValuePerKm(),
-            ).also(repository::add)
+            ).let { r ->
+                val minProfit = settings.getMinNetProfit()
+                r.copy(lowProfit = r.good && minProfit != null && r.totalCost != null && r.netProfit < minProfit)
+            }.also(repository::add)
         }
     } catch (e: Exception) {
         logger.error(TAG, "Falha ao registrar corrida manual", e)

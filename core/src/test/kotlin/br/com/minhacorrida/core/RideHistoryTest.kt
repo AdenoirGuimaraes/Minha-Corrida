@@ -174,4 +174,17 @@ class RideHistoryTest {
         assertNull(history.registerManual(BigDecimal.ZERO, null, BigDecimal("8"), now))
         assertNull(history.registerManual(BigDecimal("20"), null, BigDecimal.ZERO, now))
     }
+
+    @Test
+    fun `corrida amarela tambem e guardada e aparece com bolinha amarela`() {
+        settings.minProfit = BigDecimal("8.00")
+        // R$ 10 em 4,1 km: R$ 2,44/km (ok), lucro R$ 6,51 (< R$ 8,00) → amarela
+        val a = analysis("10.00", "2.2", "1.9")
+        val yellow = RideRules(BigDecimal("2.00"), operatingCost = settings.cost, minNetProfit = settings.minProfit)
+        val r = record(evaluate(a.offer, yellow))!!
+        assertTrue(r.lowProfit)
+        assertEquals("🟡 15:00 · Uber · R$ 10,00 · 4,1 km · lucro R$ 6,51", RideHistoryFormatter(zone).row(r, HistoryPeriod.DAY))
+        // Corrigindo o valor para R$ 15, o lucro passa de R$ 8 e a corrida fica verde.
+        assertEquals(false, history.changeFare(r.id, BigDecimal("15"))!!.lowProfit)
+    }
 }

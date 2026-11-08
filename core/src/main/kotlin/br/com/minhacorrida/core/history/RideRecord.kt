@@ -13,7 +13,8 @@ import java.math.RoundingMode
  * @property fuelCost gasto com combustível (km total × preço do litro ÷ km/l); null se os custos não estavam informados.
  * @property maintenanceCost gasto com manutenção/outros (km total × outros custos/km); null idem.
  * @property done true quando o motorista marcou que REALIZOU a corrida.
- * @property good true = estava verde (atinge o mínimo R$/km); false = vermelha (pedido do inDrive aberto).
+ * @property good true = atinge o mínimo R$/km (verde ou amarelo); false = vermelha.
+ * @property lowProfit true = amarela: R$/km ok, mas lucro líquido abaixo do mínimo.
  * @property feePercent taxa da plataforma descontada depois (inDrive); 0 na Uber e particular.
  * @property originalFare valor oferecido pelo passageiro, quando o valor foi trocado
  *   (contraproposta no inDrive ou correção à mão); null se nunca mudou.
@@ -33,6 +34,7 @@ data class RideRecord(
     val good: Boolean = true,
     val originalFare: BigDecimal? = null,
     val feePercent: BigDecimal = BigDecimal.ZERO,
+    val lowProfit: Boolean = false,
 ) {
     /** O que fica com o motorista: valor − taxa da plataforma. */
     val netFare: BigDecimal
@@ -42,15 +44,19 @@ data class RideRecord(
      * A mesma corrida com outro valor (contraproposta aceita ou correção à mão).
      * Km e gastos não mudam (dependem só da distância); R$/km, lucro e cor são recalculados.
      */
-    fun withFare(newFare: BigDecimal, minValuePerKm: BigDecimal): RideRecord {
+    fun withFare(newFare: BigDecimal, minValuePerKm: BigDecimal, minNetProfit: BigDecimal? = null): RideRecord {
         val fare = newFare.setScale(2, RoundingMode.HALF_UP)
         val net = br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase.netOf(fare, feePercent)
         val perKm = net.divide(totalKm, 2, RoundingMode.HALF_UP)
-        return copy(
+        val updated = copy(
             fare = fare,
             valuePerKm = perKm,
             good = perKm >= minValuePerKm,
             originalFare = originalFare ?: this.fare,
+        )
+        return updated.copy(
+            lowProfit = updated.good && minNetProfit != null && updated.totalCost != null &&
+                updated.netProfit < minNetProfit,
         )
     }
 

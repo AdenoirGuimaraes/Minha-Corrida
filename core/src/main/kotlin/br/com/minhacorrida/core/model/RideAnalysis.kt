@@ -23,8 +23,20 @@ data class RideMetrics(
     val platformFee: BigDecimal get() = grossFare - netFare
 }
 
-/** Classificação da corrida frente ao mínimo configurado pelo motorista. */
-enum class RideRating { GOOD, BELOW_MINIMUM }
+/**
+ * Classificação da corrida (cor do card):
+ * - [GOOD] verde: atinge o mínimo R$/km e o lucro líquido mínimo;
+ * - [LOW_PROFIT] amarelo: atinge o mínimo R$/km, mas o lucro líquido fica abaixo do mínimo;
+ * - [BELOW_MINIMUM] vermelho: abaixo do mínimo R$/km ou nota do passageiro abaixo da mínima.
+ */
+enum class RideRating {
+    GOOD,
+    LOW_PROFIT,
+    BELOW_MINIMUM;
+
+    /** Verde ou amarelo: vale guardar no histórico (o motorista pode aceitar). */
+    val isAcceptable: Boolean get() = this != BELOW_MINIMUM
+}
 
 /**
  * Valor mínimo da corrida para atingir o R$/km desejado.

@@ -74,6 +74,14 @@ Voz em velocidade 1,4×.
   (combustível + manutenção).
 - Corridas com mais de **60 dias** são apagadas automaticamente.
 
+## Cores do card
+- 🟢 **Verde**: R$/km ≥ mínimo **e** lucro líquido ≥ lucro mínimo (voz "Aceitar corrida").
+- 🟡 **Amarelo**: R$/km ≥ mínimo, mas lucro líquido abaixo do lucro mínimo (sem voz).
+- 🔴 **Vermelho**: R$/km abaixo do mínimo ou nota do passageiro abaixo da mínima.
+- Sem lucro mínimo configurado (ou sem custos do carro), vale só o R$/km.
+- Verdes e amarelas vão para a aba Corridas (🟢/🟡).
+- Abas na ordem: **Corridas** (abre primeiro), **Configurações**, **Simulador**.
+
 ## Taxas das plataformas
 - **Uber**: o valor do card **já é o ganho do motorista** (taxa da Uber descontada). Conferido em
   05/11: a soma dos cards do dia (R$ 86,18) bate com os ganhos da Uber na quinta (R$ 86,19).

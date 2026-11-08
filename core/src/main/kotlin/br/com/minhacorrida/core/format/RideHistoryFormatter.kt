@@ -70,7 +70,11 @@ class RideHistoryFormatter(
         val at = Instant.ofEpochMilli(record.timestampMillis).atZone(zone)
         val whenText = if (period == HistoryPeriod.DAY) at.format(time) else "${at.format(dayMonth)} ${at.format(time)}"
         val profit = if (record.totalCost == null) "sem custos" else "lucro R$ ${money(record.netProfit)}"
-        val color = if (record.good) "🟢" else "🔴"
+        val color = when {
+            !record.good -> "🔴"
+            record.lowProfit -> "🟡"
+            else -> "🟢"
+        }
         val original = record.originalFare?.let { " (era R$ ${money(it)})" }.orEmpty()
         return "$color $whenText · ${record.platform.displayName} · R$ ${money(record.fare)}$original" +
             " · ${km(record.totalKm)} km · $profit"

@@ -46,6 +46,12 @@
         android:paddingHorizontal="16dp">
 
         <TextView
+            android:id="@+id/tabHistory"
+            style="@style/TabButton"
+            android:layout_marginEnd="8dp"
+            android:text="@string/tab_history" />
+
+        <TextView
             android:id="@+id/tabSettings"
             style="@style/TabButton"
             android:layout_marginEnd="8dp"
@@ -54,13 +60,7 @@
         <TextView
             android:id="@+id/tabSimulator"
             style="@style/TabButton"
-            android:layout_marginEnd="8dp"
             android:text="@string/tab_simulator" />
-
-        <TextView
-            android:id="@+id/tabHistory"
-            style="@style/TabButton"
-            android:text="@string/tab_history" />
     </LinearLayout>
 
     <FrameLayout
@@ -72,7 +72,8 @@
         <ScrollView
             android:id="@+id/pageSettings"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -122,6 +123,15 @@
                         android:id="@+id/etMinRating"
                         style="@style/NumberField"
                         android:hint="4,70" />
+
+                    <TextView
+                        style="@style/FieldLabel"
+                        android:text="@string/min_profit_label" />
+
+                    <EditText
+                        android:id="@+id/etMinProfit"
+                        style="@style/NumberField"
+                        android:hint="6,00" />
 
                     <TextView
                         style="@style/FieldLabel"
@@ -427,8 +437,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:visibility="gone">
+            android:paddingHorizontal="16dp">
 
             <!-- Filtro Dia / Semana / Mês -->
             <LinearLayout

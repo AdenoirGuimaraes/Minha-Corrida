@@ -80,6 +80,18 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         prefs.edit().putString(KEY_INDRIVE_FEE, percent.toPlainString()).apply()
     }
 
+    override fun getMinNetProfit(): BigDecimal? =
+        prefs.getString(KEY_MIN_NET_PROFIT, null)?.toBigDecimalOrNull()
+
+    override fun setMinNetProfit(value: BigDecimal?) {
+        if (value == null) {
+            prefs.edit().remove(KEY_MIN_NET_PROFIT).apply()
+            return
+        }
+        require(value.signum() >= 0) { "Lucro mínimo não pode ser negativo" }
+        prefs.edit().putString(KEY_MIN_NET_PROFIT, value.toPlainString()).apply()
+    }
+
     override fun isVoiceEnabled(): Boolean = prefs.getBoolean(KEY_VOICE, true)
 
     override fun setVoiceEnabled(enabled: Boolean) {
@@ -97,6 +109,7 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         const val KEY_PLATFORMS = "enabled_platforms"
         const val KEY_VOICE = "voice_enabled"
         const val KEY_INDRIVE_FEE = "indrive_fee_percent"
+        const val KEY_MIN_NET_PROFIT = "min_net_profit"
         val DEFAULT_INDRIVE_FEE = BigDecimal("10")
         val MAX_FEE = BigDecimal("50")
         val DEFAULT_MIN_VALUE_PER_KM = BigDecimal("1.80")

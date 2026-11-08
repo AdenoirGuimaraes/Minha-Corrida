@@ -13,7 +13,8 @@ import br.com.minhacorrida.core.model.RideRating
  * Preenche o layout `overlay_ride` (card de 3 quadrados) com uma análise. Usado pelo card
  * sobre os apps de corrida e pelo simulador — os dois ficam sempre iguais.
  *
- * Cores: fundo verde (corrida boa) ou vermelho (abaixo do mínimo); faixa do topo na cor
+ * Cores: fundo verde (boa), amarelo (R$/km ok, lucro abaixo do mínimo) ou vermelho
+ * (abaixo do mínimo R$/km ou nota ruim); faixa do topo na cor
  * do app — Uber preta com letras brancas, inDrive verde-limão com letras pretas.
  */
 class RideCardBinder(private val formatter: RideAnalysisFormatter) {
@@ -49,7 +50,13 @@ class RideCardBinder(private val formatter: RideAnalysisFormatter) {
 
         root.background = GradientDrawable().apply {
             cornerRadius = 18 * density
-            setColor(if (analysis.rating == RideRating.GOOD) COLOR_GOOD else COLOR_BAD)
+            setColor(
+                when (analysis.rating) {
+                    RideRating.GOOD -> COLOR_GOOD
+                    RideRating.LOW_PROFIT -> COLOR_LOW_PROFIT
+                    RideRating.BELOW_MINIMUM -> COLOR_BAD
+                },
+            )
         }
     }
 
@@ -64,6 +71,8 @@ class RideCardBinder(private val formatter: RideAnalysisFormatter) {
     private companion object {
         const val COLOR_GOOD = 0xF01B8A3A.toInt()
         const val COLOR_BAD = 0xF0C62828.toInt()
+        /** Amarelo escuro: R$/km ok, lucro abaixo do mínimo (texto branco continua legível). */
+        const val COLOR_LOW_PROFIT = 0xF0B8860B.toInt()
         const val UBER_BLACK = 0xFF000000.toInt()
         const val INDRIVE_LIME = 0xFFC1F11D.toInt()
         const val PARTICULAR_YELLOW = 0xFFFFC107.toInt()

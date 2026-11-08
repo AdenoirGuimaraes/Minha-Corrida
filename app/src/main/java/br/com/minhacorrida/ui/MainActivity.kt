@@ -60,7 +60,7 @@ class MainActivity : Activity() {
     private lateinit var historyScreen: RideHistoryScreen
 
     private enum class Tab { SETTINGS, SIMULATOR, HISTORY }
-    private var currentTab = Tab.SETTINGS
+    private var currentTab = Tab.HISTORY
     private lateinit var pageSettings: View
     private lateinit var pageSimulator: View
     private lateinit var previewCard: View
@@ -78,6 +78,7 @@ class MainActivity : Activity() {
     private lateinit var etMinValue: EditText
     private lateinit var etMinRating: EditText
     private lateinit var etInDriveFee: EditText
+    private lateinit var etMinProfit: EditText
     private lateinit var etTimeout: EditText
     private lateinit var etFuelPrice: EditText
     private lateinit var etKmPerLiter: EditText
@@ -135,7 +136,7 @@ class MainActivity : Activity() {
 
         watchFieldsForPreview()
         updatePreview()
-        selectTab(Tab.SETTINGS)
+        selectTab(Tab.HISTORY)
     }
 
     override fun onResume() {
@@ -183,6 +184,7 @@ class MainActivity : Activity() {
         etMinValue = findViewById(R.id.etMinValue)
         etMinRating = findViewById(R.id.etMinRating)
         etInDriveFee = findViewById(R.id.etInDriveFee)
+        etMinProfit = findViewById(R.id.etMinProfit)
         etTimeout = findViewById(R.id.etTimeout)
         etFuelPrice = findViewById(R.id.etFuelPrice)
         etKmPerLiter = findViewById(R.id.etKmPerLiter)
@@ -238,7 +240,7 @@ class MainActivity : Activity() {
         }
         listOf(
             etSimFare, etSimRating, etSimPickupKm, etSimTripKm,
-            etMinValue, etMinRating, etInDriveFee, etFuelPrice, etKmPerLiter, etOtherCost,
+            etMinValue, etMinRating, etMinProfit, etInDriveFee, etFuelPrice, etKmPerLiter, etOtherCost,
         ).forEach { it.addTextChangedListener(watcher) }
     }
 
@@ -269,6 +271,7 @@ class MainActivity : Activity() {
                 minPassengerRating = ratingOrNull(etMinRating),
                 operatingCost = cost,
                 inDriveFeePercent = feeOrNull(etInDriveFee) ?: BigDecimal.ZERO,
+                minNetProfit = nonNegativeOrNull(etMinProfit),
             )
             val analysis = container.evaluateRide(offer, rules)
             previewAnalysis = analysis
@@ -340,6 +343,7 @@ class MainActivity : Activity() {
         }
         settings.getMinPassengerRating()?.let { etMinRating.setText(decimalText(it)) }
         etInDriveFee.setText(decimalText(settings.getInDriveFeePercent()))
+        settings.getMinNetProfit()?.let { etMinProfit.setText(decimalText(it)) }
         val platforms = settings.getEnabledPlatforms()
         cbUber.isChecked = Platform.UBER in platforms
         cbInDrive.isChecked = Platform.INDRIVE in platforms
@@ -366,6 +370,11 @@ class MainActivity : Activity() {
                 toast(getString(R.string.invalid_fee))
                 return
             }
+            val minProfit = if (etMinProfit.text.isBlank()) null else nonNegativeOrNull(etMinProfit)
+            if (etMinProfit.text.isNotBlank() && minProfit == null) {
+                toast(getString(R.string.invalid_min_profit))
+                return
+            }
             val platforms = buildSet {
                 if (cbUber.isChecked) add(Platform.UBER)
                 if (cbInDrive.isChecked) add(Platform.INDRIVE)
@@ -382,6 +391,7 @@ class MainActivity : Activity() {
             settings.setOperatingCost(cost.value)
             settings.setMinPassengerRating(minRating.value)
             settings.setInDriveFeePercent(inDriveFee)
+            settings.setMinNetProfit(minProfit)
             settings.setEnabledPlatforms(platforms)
             settings.setVoiceEnabled(cbVoice.isChecked)
             toast(getString(R.string.saved))

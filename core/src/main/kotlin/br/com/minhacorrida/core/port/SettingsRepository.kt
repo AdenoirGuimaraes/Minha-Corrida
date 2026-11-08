@@ -40,6 +40,12 @@ interface SettingsRepository {
     /** @throws IllegalArgumentException fora de 0 a 50. */
     fun setInDriveFeePercent(percent: BigDecimal)
 
+    /** Lucro líquido mínimo por corrida (R$): abaixo dele, com R$/km ok, o card fica amarelo. null = sem filtro. */
+    fun getMinNetProfit(): BigDecimal?
+
+    /** @throws IllegalArgumentException se negativo. */
+    fun setMinNetProfit(value: BigDecimal?)
+
     /** Voz "Aceitar corrida…" para corridas verdes (padrão: ligada). */
     fun isVoiceEnabled(): Boolean
 

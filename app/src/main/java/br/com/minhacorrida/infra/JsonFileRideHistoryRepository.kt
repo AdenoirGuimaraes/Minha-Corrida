@@ -105,6 +105,7 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         r.maintenanceCost?.let { put("maintenance", it.toPlainString()) }
         put("done", r.done)
         put("good", r.good)
+        if (r.lowProfit) put("lowProfit", true)
         r.originalFare?.let { put("originalFare", it.toPlainString()) }
         if (r.feePercent.signum() > 0) put("feePercent", r.feePercent.toPlainString())
     }
@@ -122,6 +123,7 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         maintenanceCost = o.optString("maintenance").takeIf { it.isNotEmpty() }?.let(::BigDecimal),
         done = o.optBoolean("done", false),
         good = o.optBoolean("good", true),
+        lowProfit = o.optBoolean("lowProfit", false),
         originalFare = o.optString("originalFare").takeIf { it.isNotEmpty() }?.let(::BigDecimal),
         feePercent = o.optString("feePercent").takeIf { it.isNotEmpty() }?.let(::BigDecimal) ?: BigDecimal.ZERO,
     )
