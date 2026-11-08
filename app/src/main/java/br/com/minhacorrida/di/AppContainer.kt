@@ -47,6 +47,9 @@ class AppContainer(context: Context) {
     val inDriveTap = br.com.minhacorrida.core.usecase.InDriveTapUseCase(
         evaluateRide, settings, recordRide, rideHistoryRepository, logger,
     )
+    /** Toque no cartão da Uber: "Aceitar"/"Tenho interesse" guardam a corrida; X não guarda. */
+    val uberTap = br.com.minhacorrida.core.usecase.UberTapUseCase(recordRide, logger)
+    val diagnosticsReport = br.com.minhacorrida.core.diagnostics.DiagnosticsReportFormatter()
     val rideHistory = RideHistoryUseCase(rideHistoryRepository, settings, logger)
     val historyFormatter = RideHistoryFormatter()
     val checkForUpdate = CheckForUpdateUseCase(

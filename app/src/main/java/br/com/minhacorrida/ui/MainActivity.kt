@@ -520,32 +520,93 @@ class MainActivity : Activity() {
 
     // ---- Diagnóstico ----
 
-    /** Mostra as últimas leituras, com opção de compartilhar o texto. */
+    /**
+     * Resumo do diagnóstico (quantas leituras e as 10 últimas) com o botão que exporta o
+     * relatório completo em Markdown (.md) para anexar no chat de calibração.
+     */
     private fun showDiagnostics() {
-        val report = container.diagnostics.dump()
+        val entries = try {
+            container.diagnostics.entries()
+        } catch (e: Exception) {
+            android.util.Log.e("MC/MainActivity", "Falha ao ler diagnóstico", e)
+            emptyList()
+        }
+        val preview = if (entries.isEmpty()) {
+            getString(R.string.diagnostics_empty)
+        } else {
+            val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale("pt", "BR"))
+            getString(R.string.diagnostics_summary, entries.size, br.com.minhacorrida.infra.DiagnosticsStore.MAX_ENTRIES) + "\n\n" +
+                entries.takeLast(PREVIEW_ENTRIES).asReversed().joinToString("\n") { e ->
+                    val app = Platform.fromPackage(e.packageName)?.displayName ?: e.packageName
+                    "• ${time.format(java.util.Date(e.timestampMillis))} · $app · ${e.result.take(70)}"
+                }
+        }
         val content = TextView(this).apply {
             val padding = (16 * resources.displayMetrics.density).toInt()
             setPadding(padding, padding, padding, padding)
             setTextIsSelectable(true)
-            textSize = 12f
-            text = report
+            textSize = 13f
+            text = preview
         }
         AlertDialog.Builder(this)
             .setTitle(R.string.diagnostics_title)
             .setView(ScrollView(this).apply { addView(content) })
-            .setPositiveButton(R.string.diagnostics_share) { _, _ -> shareText(report) }
-            .setNeutralButton(R.string.diagnostics_clear) { _, _ -> container.diagnostics.clear() }
+            .setPositiveButton(R.string.diagnostics_export) { _, _ -> exportDiagnostics(entries) }
+            .setNeutralButton(R.string.diagnostics_clear) { _, _ ->
+                container.diagnostics.clear()
+                toast(getString(R.string.diagnostics_cleared))
+            }
             .setNegativeButton(R.string.diagnostics_close, null)
             .show()
     }
 
-    private fun shareText(text: String) {
+    /** Gera o relatório .md (versão, aparelho, regras e leituras) e abre o compartilhar do Android. */
+    private fun exportDiagnostics(entries: List<br.com.minhacorrida.core.diagnostics.DiagnosticEntry>) {
         try {
-            val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
-            startActivity(Intent.createChooser(send, getString(R.string.diagnostics_share)))
+            if (entries.isEmpty()) {
+                toast(getString(R.string.diagnostics_empty))
+                return
+            }
+            val now = System.currentTimeMillis()
+            val metrics = resources.displayMetrics
+            val header = br.com.minhacorrida.core.diagnostics.DiagnosticsHeader(
+                appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                device = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}, " +
+                    "tela ${metrics.widthPixels}×${metrics.heightPixels}",
+                rules = rulesSummary(),
+                generatedAtMillis = now,
+            )
+            val markdown = container.diagnosticsReport.markdown(header, entries)
+            val dir = File(cacheDir, "reports").apply { mkdirs() }
+            dir.listFiles()?.forEach { it.delete() } // só o relatório mais recente fica
+            val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date(now))
+            val file = File(dir, "minha-corrida-diagnostico-$stamp.md").apply { writeText(markdown) }
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.updates", file)
+            val send = Intent(Intent.ACTION_SEND)
+                .setType("text/markdown")
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .putExtra(Intent.EXTRA_SUBJECT, file.name)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            send.clipData = android.content.ClipData.newRawUri(file.name, uri)
+            startActivity(Intent.createChooser(send, getString(R.string.diagnostics_export)))
         } catch (e: Exception) {
-            android.util.Log.e("MC/MainActivity", "Falha ao compartilhar diagnóstico", e)
+            android.util.Log.e("MC/MainActivity", "Falha ao exportar diagnóstico", e)
+            toast(getString(R.string.diagnostics_export_failed))
         }
+    }
+
+    /** Regras de agora, para o cabeçalho do relatório. */
+    private fun rulesSummary(): String = try {
+        val settings = container.settings
+        val parts = mutableListOf("mínimo R$ ${decimalText(settings.getMinValuePerKm())}/km")
+        settings.getMinNetProfit()?.let { parts += "lucro mín. R$ ${decimalText(it)}" }
+        parts += "taxa inDrive ${decimalText(settings.getInDriveFeePercent())}%"
+        settings.getMinPassengerRating()?.let { parts += "nota mín. ${decimalText(it)}" }
+        parts += "custos " + if (settings.getOperatingCost() != null) "informados" else "não informados"
+        parts += "apps: " + settings.getEnabledPlatforms().joinToString { it.displayName }
+        parts.joinToString(" · ")
+    } catch (e: Exception) {
+        "indisponível"
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_LONG).show()
@@ -559,6 +620,7 @@ class MainActivity : Activity() {
     }
 
     private companion object {
+        const val PREVIEW_ENTRIES = 10
         /** Intervalo mínimo entre consultas ao GitHub (abrir e fechar o app rápido não repete). */
         const val UPDATE_CHECK_INTERVAL_MS = 60_000L
     }

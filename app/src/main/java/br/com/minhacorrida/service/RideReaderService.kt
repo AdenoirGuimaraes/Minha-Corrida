@@ -41,8 +41,9 @@ class RideReaderService : AccessibilityService() {
     private lateinit var overlay: RideOverlayController
     private var voice: VoiceAnnouncer? = null
 
-    /** Última corrida guardada no histórico e a thread que grava o arquivo. */
-    private var lastRecordedOffer: br.com.minhacorrida.core.model.RideOffer? = null
+    /** Último cartão da Uber analisado (e quando): é o que um toque em "Aceitar" guarda. */
+    private var lastUberAnalysis: RideAnalysis? = null
+    private var lastUberAnalysisAt = 0L
 
     // Pedido do inDrive na tela (para a contraproposta) e o que ele já guardou no histórico.
     private var pendingInDrive: RideAnalysis? = null
@@ -113,9 +114,15 @@ class RideReaderService : AccessibilityService() {
         }
         paused = false
 
-        // Toque do motorista num botão (contraproposta do inDrive): não é mudança de tela.
+        // Toque do motorista num botão (aceite/recusa/contraproposta): não é mudança de tela.
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-            if (pkg != null && Platform.fromPackage(pkg) == Platform.INDRIVE) onInDriveButtonTapped(event, pkg)
+            when {
+                pkg != null && Platform.fromPackage(pkg) == Platform.INDRIVE -> onInDriveButtonTapped(event, pkg)
+                pkg != null && Platform.fromPackage(pkg) == Platform.UBER -> onUberButtonTapped(event, pkg)
+                // Cartão da Uber sem nome de app (log de 02/11): o toque pode chegar sem pacote.
+                pkg == null && currentTarget?.source == ReadingTarget.Source.UBER_CARD_OVERLAY ->
+                    onUberButtonTapped(event, UBER_PACKAGE)
+            }
             return
         }
 
@@ -144,6 +151,7 @@ class RideReaderService : AccessibilityService() {
             voice?.stop()
             currentTarget = null
             lastAnalysis = null
+            lastUberAnalysis = null
             ocrPackage = null
             ocrOfferKey = null
             ocrTexts = emptyList()
@@ -166,21 +174,74 @@ class RideReaderService : AccessibilityService() {
      */
     private fun onInDriveButtonTapped(event: AccessibilityEvent, pkg: String) {
         try {
-            val text = (event.text.joinToString(" ").ifBlank { null }
-                ?: event.contentDescription?.toString()
-                ?: runCatching { event.source?.text?.toString() }.getOrNull()).orEmpty().trim()
-            if (text.isEmpty()) return
+            val text = tappedText(event)
+            if (text.isEmpty()) {
+                // Ex.: lápis da contraproposta (ícone sem texto): registrado para calibrar.
+                container.diagnostics.record(pkg, "toque no inDrive", tapDetails(event), emptyList(), "toque sem texto", force = true)
+                return
+            }
             val pending = pendingInDrive
             val savedId = pendingInDriveSavedId
             historyExecutor.execute {
                 val result = container.inDriveTap.onTap(text, pending, savedId)
-                container.diagnostics.record(pkg, "toque no inDrive", listOf(text), emptyList(), describe(result), force = true)
+                container.diagnostics.record(pkg, "toque no inDrive", listOf(text) + tapDetails(event), emptyList(), describe(result), force = true)
                 handler.post { applyInDriveTap(result) }
             }
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao tratar toque no inDrive", e)
         }
     }
+
+    /**
+     * Toque no cartão da Uber (o motorista decide, não a cor):
+     * - "Aceitar" (tela cheia) / "Tenho interesse" (cartão sobre o inDrive) → guarda a corrida;
+     * - X → nada é guardado.
+     * Todo toque fica no diagnóstico ("toque na Uber"), com ou sem texto, para calibrar.
+     */
+    private fun onUberButtonTapped(event: AccessibilityEvent, pkg: String) {
+        try {
+            val text = tappedText(event)
+            val card = lastUberAnalysis?.takeIf { SystemClock.elapsedRealtime() - lastUberAnalysisAt <= UBER_CARD_VALID_MS }
+            val details = tapDetails(event)
+            historyExecutor.execute {
+                val result = container.uberTap.onTap(text, card)
+                val summary = when (result) {
+                    is br.com.minhacorrida.core.usecase.UberTap.Accepted ->
+                        "aceite: ${container.formatter.headline(result.analysis)} " +
+                            if (result.saved != null) "(guardada na aba Corridas)" else "(já estava guardada)"
+                    br.com.minhacorrida.core.usecase.UberTap.Rejected -> "recusa (X): nada guardado"
+                    is br.com.minhacorrida.core.usecase.UberTap.Ignored -> "toque ignorado: ${result.reason}"
+                }
+                val texts = (if (text.isEmpty()) listOf("(sem texto)") else listOf(text)) + details
+                container.diagnostics.record(pkg, "toque na Uber", texts, emptyList(), summary, force = true)
+                if (result is br.com.minhacorrida.core.usecase.UberTap.Rejected) handler.post { overlay.hideNow() }
+            }
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao tratar toque na Uber", e)
+        }
+    }
+
+    /** Texto do botão tocado: texto do evento, descrição (ícones como o X) ou texto do nó. */
+    private fun tappedText(event: AccessibilityEvent): String =
+        (event.text.joinToString(" ").ifBlank { null }
+            ?: event.contentDescription?.toString()?.ifBlank { null }
+            ?: runCatching { event.source?.text?.toString()?.ifBlank { null } }.getOrNull()
+            ?: runCatching { event.source?.contentDescription?.toString() }.getOrNull())
+            .orEmpty().trim()
+
+    /** Detalhes técnicos do toque (classe e id do botão) para o relatório de calibração. */
+    private fun tapDetails(event: AccessibilityEvent): List<String> = runCatching {
+        val source = event.source
+        listOfNotNull(
+            event.className?.let { "classe: $it" },
+            source?.viewIdResourceName?.let { "id: $it" },
+            source?.contentDescription?.takeIf { it.isNotBlank() }?.let { "descrição: $it" },
+            source?.let { node ->
+                val r = Rect().also(node::getBoundsInScreen)
+                "posição: x=${r.left}–${r.right} y=${r.top}–${r.bottom}"
+            },
+        )
+    }.getOrDefault(emptyList())
 
     private fun describe(result: br.com.minhacorrida.core.usecase.InDriveTap): String = when (result) {
         is br.com.minhacorrida.core.usecase.InDriveTap.NewFare ->
@@ -401,30 +462,16 @@ class RideReaderService : AccessibilityService() {
             lastAnalysis = analysis
             container.logger.debug(TAG, "Oferta: $analysis")
         }
+        // Nada é guardado só por aparecer: Uber pelo toque em Aceitar/Tenho interesse
+        // (onUberButtonTapped) e inDrive pelo toque em Aceitar por/valor (onInDriveButtonTapped).
+        if (analysis.offer.platform == Platform.UBER) {
+            lastUberAnalysis = analysis
+            lastUberAnalysisAt = SystemClock.elapsedRealtime()
+        }
         // Oferta já fechada (toque ou tempo) não reabre até surgir outra.
         if (visibility.shouldShow(analysis.offer)) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
             announceIfGood(analysis)
-            recordRide(analysis)
-        }
-    }
-
-    /**
-     * Guarda a corrida no histórico (aba Corridas): verdes da Uber e todos os pedidos do
-     * inDrive (podem virar bons com contraproposta). DEPOIS do card na tela e fora da
-     * thread principal: gravar o arquivo não atrasa o card nem a voz.
-     */
-    private fun recordRide(analysis: RideAnalysis) {
-        // inDrive só é guardado pelo botão que o motorista tocar (ver onInDriveButtonTapped).
-        if (analysis.offer.platform == Platform.INDRIVE) return
-        // Verde ou amarelo vão para o histórico (a voz continua só nas verdes).
-        if (!analysis.rating.isAcceptable) return
-        if (analysis.offer.sameRideAs(lastRecordedOffer)) return
-        lastRecordedOffer = analysis.offer
-        try {
-            historyExecutor.execute { container.recordRide(analysis) }
-        } catch (e: Exception) {
-            container.logger.error(TAG, "Falha ao agendar gravação no histórico", e)
         }
     }
 
@@ -616,6 +663,9 @@ class RideReaderService : AccessibilityService() {
 
     private companion object {
         const val TAG = "RideReaderService"
+        val UBER_PACKAGE: String = Platform.UBER.packageNames.first()
+        /** Toque em "Aceitar" vale para o cartão lido nos últimos 2 minutos. */
+        const val UBER_CARD_VALID_MS = 120_000L
         const val DEBOUNCE_MS = 120L
         const val MAP_SETTLE_MS = 300L
         const val MAP_RETRY_MS = 500L

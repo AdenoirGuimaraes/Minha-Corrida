@@ -113,12 +113,13 @@ class RideHistoryScreen(
         }
     }
 
-    // ---- Registrar Corrida Manual ----
+    // ---- Registrar corrida ----
 
     /**
-     * Formulário da corrida particular: valor, km até o passageiro (opcional), km da viagem
-     * e hora. O cálculo do card (R$/km, lucro, mínimo) aparece enquanto digita.
-     * Data: o dia na tela (filtro Dia) ou hoje (Semana/Mês).
+     * Formulário "Registrar corrida" (corrida que o leitor não gravou, ou particular):
+     * app (Particular, Uber ou inDrive), valor, km até o passageiro (opcional), km da viagem
+     * e hora. No inDrive a taxa configurada é descontada, como no leitor. O cálculo do card
+     * aparece enquanto digita. Data: o dia na tela (filtro Dia) ou hoje (Semana/Mês).
      */
     private fun openManualRide() {
         val day = if (period == HistoryPeriod.DAY) reference else LocalDate.now()
@@ -140,6 +141,28 @@ class RideHistoryScreen(
             inputType = InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
             setText(LocalTime.now().format(TIME))
         }
+        // Escolha do app: decide a taxa descontada (só o inDrive tem).
+        val platforms = listOf(Platform.PARTICULAR, Platform.UBER, Platform.INDRIVE)
+        val rgPlatform = android.widget.RadioGroup(activity).apply {
+            orientation = android.widget.RadioGroup.HORIZONTAL
+            platforms.forEachIndexed { index, platform ->
+                addView(android.widget.RadioButton(activity).apply {
+                    id = View.generateViewId()
+                    tag = platform
+                    text = platform.displayName
+                    setTextColor(activity.getColor(R.color.mc_text))
+                    buttonTintList = android.content.res.ColorStateList.valueOf(activity.getColor(R.color.mc_yellow))
+                    isChecked = index == 0
+                })
+            }
+        }
+        fun selectedPlatform(): Platform =
+            rgPlatform.findViewById<android.widget.RadioButton>(rgPlatform.checkedRadioButtonId)?.tag as? Platform
+                ?: Platform.PARTICULAR
+        val tvFeeNote = TextView(activity).apply {
+            setTextColor(activity.getColor(R.color.mc_text_muted))
+            textSize = 13f
+        }
         val tvPreview = TextView(activity).apply {
             setTextColor(activity.getColor(R.color.mc_yellow))
             setPadding(0, (12 * density).toInt(), 0, 0)
@@ -148,6 +171,7 @@ class RideHistoryScreen(
         val form = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, 0, pad, 0)
+            addView(label(R.string.hist_manual_platform)); addView(rgPlatform); addView(tvFeeNote)
             addView(label(R.string.hist_manual_fare)); addView(etFare)
             addView(label(R.string.hist_manual_pickup)); addView(etPickup)
             addView(label(R.string.hist_manual_trip)); addView(etTrip)
@@ -155,12 +179,16 @@ class RideHistoryScreen(
             addView(tvPreview)
         }
         val updatePreview = {
+            val platform = selectedPlatform()
+            tvFeeNote.text = feeNote(platform)
             tvPreview.text = manualPreview(
+                platform,
                 NumberParser.parse(etFare.text.toString()),
                 NumberParser.parse(etPickup.text.toString()),
                 NumberParser.parse(etTrip.text.toString()),
             )
         }
+        rgPlatform.setOnCheckedChangeListener { _, _ -> updatePreview() }
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
@@ -173,23 +201,37 @@ class RideHistoryScreen(
             .setTitle(activity.getString(R.string.hist_manual_title, day.format(DAY)))
             .setView(android.widget.ScrollView(activity).apply { addView(form) })
             .setPositiveButton(R.string.save) { _, _ ->
-                saveManualRide(day, etFare.text.toString(), etPickup.text.toString(), etTrip.text.toString(), etTime.text.toString())
+                saveManualRide(
+                    selectedPlatform(), day, etFare.text.toString(), etPickup.text.toString(),
+                    etTrip.text.toString(), etTime.text.toString(),
+                )
             }
             .setNegativeButton(R.string.diagnostics_close, null)
             .show()
     }
 
-    /** Mesmo cálculo do card, com as regras e custos de agora. */
-    private fun manualPreview(fare: BigDecimal?, pickup: BigDecimal?, trip: BigDecimal?): String {
+    /** Explica o desconto do app escolhido (inDrive: taxa; Uber: valor já é o ganho). */
+    private fun feeNote(platform: Platform): String = when (platform) {
+        Platform.INDRIVE -> activity.getString(
+            R.string.hist_manual_fee_indrive,
+            settings.getInDriveFeePercent().stripTrailingZeros().toPlainString().replace('.', ','),
+        )
+        Platform.UBER -> activity.getString(R.string.hist_manual_fee_uber)
+        else -> activity.getString(R.string.hist_manual_fee_none)
+    }
+
+    /** Mesmo cálculo do card, com as regras, a taxa e os custos de agora. */
+    private fun manualPreview(platform: Platform, fare: BigDecimal?, pickup: BigDecimal?, trip: BigDecimal?): String {
         if (fare == null || fare.signum() <= 0 || trip == null || trip.signum() <= 0) {
             return activity.getString(R.string.hist_manual_preview_empty)
         }
         return try {
             val analysis = evaluate(
-                RideOffer(Platform.PARTICULAR, fare, tripKm = trip, pickupKm = pickup?.takeIf { it.signum() > 0 }),
+                RideOffer(platform, fare, tripKm = trip, pickupKm = pickup?.takeIf { it.signum() > 0 }),
                 RideRules(
                     settings.getMinValuePerKm(),
                     operatingCost = settings.getOperatingCost(),
+                    inDriveFeePercent = settings.getInDriveFeePercent(),
                     minNetProfit = settings.getMinNetProfit(),
                 ),
             )
@@ -206,7 +248,14 @@ class RideHistoryScreen(
         }
     }
 
-    private fun saveManualRide(day: LocalDate, fareText: String, pickupText: String, tripText: String, timeText: String) {
+    private fun saveManualRide(
+        platform: Platform,
+        day: LocalDate,
+        fareText: String,
+        pickupText: String,
+        tripText: String,
+        timeText: String,
+    ) {
         val fare = NumberParser.parse(fareText)
         val trip = NumberParser.parse(tripText)
         val pickup = if (pickupText.isBlank()) null else NumberParser.parse(pickupText)
@@ -220,9 +269,18 @@ class RideHistoryScreen(
         val millis = day.atTime(time).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
         try {
             io.execute {
-                val saved = history.registerManual(fare, pickup?.takeIf { it.signum() > 0 }, trip, millis)
+                val saved = history.registerManual(fare, pickup?.takeIf { it.signum() > 0 }, trip, millis, platform)
                 main.post {
-                    toast(activity.getString(if (saved != null) R.string.hist_manual_saved else R.string.hist_manual_invalid))
+                    toast(
+                        if (saved != null) {
+                            activity.getString(
+                                R.string.hist_manual_saved, platform.displayName,
+                                saved.netFare.setScale(2).toPlainString().replace('.', ','),
+                            )
+                        } else {
+                            activity.getString(R.string.hist_manual_invalid)
+                        },
+                    )
                     refresh()
                 }
             }

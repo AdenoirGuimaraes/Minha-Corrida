@@ -169,6 +169,33 @@ class RideHistoryTest {
     }
 
     @Test
+    fun `registrar corrida do inDrive desconta a taxa (corrida de 08-11, R$ 14)`() {
+        settings.inDriveFee = BigDecimal("10")
+        val r = history.registerManual(BigDecimal("14"), BigDecimal("3"), BigDecimal("3.4"), now, Platform.INDRIVE)!!
+        assertEquals(Platform.INDRIVE, r.platform)
+        assertTrue(r.done)
+        assertEquals("12.60", r.netFare.toPlainString())                // 14 − 10%
+        assertEquals("1.97", r.valuePerKm.toPlainString())              // 12,60 ÷ 6,4 km
+        assertTrue(!r.good)                                             // abaixo de R$ 2,00/km
+        assertEquals("12.60", history.page(HistoryPeriod.DAY, today).summary.totalFare.toPlainString())
+    }
+
+    @Test
+    fun `registrar corrida da Uber nao desconta taxa`() {
+        settings.inDriveFee = BigDecimal("10")
+        val r = history.registerManual(BigDecimal("12.06"), null, BigDecimal("4"), now, Platform.UBER)!!
+        assertEquals("12.06", r.netFare.toPlainString())
+        assertEquals("3.02", r.valuePerKm.toPlainString())
+    }
+
+    @Test
+    fun `corrida aceita pelo motorista e guardada mesmo vermelha`() {
+        assertNull(record(analysis("7.37", "2.8", "3.5")))
+        val saved = record(analysis("7.37", "2.8", "3.5"), acceptedByDriver = true)!!
+        assertTrue(!saved.good)
+    }
+
+    @Test
     fun `corrida manual sem km ate o passageiro e com valores invalidos`() {
         assertEquals("8.00", history.registerManual(BigDecimal("20"), null, BigDecimal("8"), now)!!.totalKm.toPlainString())
         assertNull(history.registerManual(BigDecimal.ZERO, null, BigDecimal("8"), now))

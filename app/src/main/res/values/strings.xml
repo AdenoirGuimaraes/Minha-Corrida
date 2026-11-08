@@ -51,18 +51,22 @@
     <string name="period_month">Mês</string>
     <string name="hist_profit">Lucro</string>
     <string name="hist_cost">Separar p/ abastecer</string>
-    <string name="hist_hint">🟢 verdes e 🟡 amarelas (inDrive: só as que você aceitou ou fez contraproposta). Marque as que realizou. Toque longo corrige o valor.</string>
+    <string name="hist_hint">Uber: as que você tocou em Aceitar ou Tenho interesse (o X não grava). inDrive: as que você aceitou ou fez contraproposta. Marque as que realizou. Toque longo corrige o valor.</string>
     <string name="hist_empty">Nenhuma corrida neste período.</string>
     <string name="hist_edit_title">Corrigir valor da corrida</string>
-    <string name="hist_manual_button">Registrar Corrida Manual</string>
+    <string name="hist_manual_button">Registrar Corrida</string>
     <string name="hist_keep_button">Corridas Selecionadas</string>
-    <string name="hist_manual_title">Corrida manual · %1$s</string>
+    <string name="hist_manual_title">Registrar corrida · %1$s</string>
+    <string name="hist_manual_platform">App da corrida</string>
+    <string name="hist_manual_fee_indrive">Digite o valor do app: a taxa de %1$s%% do inDrive é descontada.</string>
+    <string name="hist_manual_fee_uber">Digite o valor da Uber: ele já é o seu ganho (sem desconto).</string>
+    <string name="hist_manual_fee_none">Corrida fora dos apps: sem taxa.</string>
     <string name="hist_manual_fare">Valor da corrida (R$)</string>
     <string name="hist_manual_pickup">Km até o passageiro (opcional)</string>
     <string name="hist_manual_trip">Km da viagem</string>
     <string name="hist_manual_time">Hora (ex.: 14:30)</string>
     <string name="hist_manual_preview_empty">Preencha valor e km da viagem para ver o cálculo.</string>
-    <string name="hist_manual_saved">Corrida particular registrada como realizada.</string>
+    <string name="hist_manual_saved">Corrida %1$s registrada como realizada (fica com você R$ %2$s).</string>
     <string name="hist_manual_invalid">Informe valor e km da viagem maiores que zero e a hora no formato 14:30.</string>
     <string name="hist_keep_title">Manter só as corridas selecionadas?</string>
     <string name="hist_keep_message">Apagar %1$d corrida(s) não marcada(s) de %2$s? As %3$d marcada(s) ficam salvas. Isso não pode ser desfeito.</string>
@@ -88,4 +92,9 @@
     <string name="diagnostics_share">Compartilhar</string>
     <string name="diagnostics_clear">Limpar</string>
     <string name="diagnostics_close">Fechar</string>
+    <string name="diagnostics_export">Exportar relatório (.md)</string>
+    <string name="diagnostics_empty">Nenhuma leitura registrada ainda. Abra uma oferta no Uber ou inDrive e volte aqui.</string>
+    <string name="diagnostics_summary">%1$d leituras guardadas (até %2$d; as mais antigas saem). Faça a corrida e toque em Exportar relatório para enviar o arquivo .md no chat.\n\nÚltimas leituras:</string>
+    <string name="diagnostics_cleared">Diagnóstico apagado. As próximas leituras começam do zero.</string>
+    <string name="diagnostics_export_failed">Não foi possível gerar o relatório. Tente de novo.</string>
 </resources>

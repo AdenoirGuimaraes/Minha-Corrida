@@ -11,9 +11,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Guarda no histórico uma corrida VERDE (uma vez por corrida). Quem chama decide quando:
- * Uber ao mostrar o card; inDrive só quando o motorista toca em "Aceitar por" ou numa
- * contraproposta (ver [InDriveTapUseCase]).
+ * Guarda uma corrida no histórico (uma vez por corrida). Quem chama decide quando:
+ * Uber quando o motorista toca em "Aceitar" ou "Tenho interesse" (ver [br.com.minhacorrida.core.usecase.UberTapUseCase]);
+ * inDrive quando toca em "Aceitar por" ou numa contraproposta (ver [br.com.minhacorrida.core.usecase.InDriveTapUseCase]).
  * A mesma corrida lida de novo em poucos minutos (eventos repetidos da tela) não duplica.
  */
 class RecordRideUseCase(
@@ -24,13 +24,19 @@ class RecordRideUseCase(
 ) {
     /**
      * @param originalFare valor oferecido pelo passageiro, quando o valor guardado é de contraproposta.
-     * @return a corrida guardada agora, ou null (vermelha, repetida ou erro).
+     * @param acceptedByDriver true quando o motorista ACEITOU (toque no botão): guarda qualquer cor,
+     *   inclusive vermelha — foi decisão dele. false: só verde ou amarela.
+     * @return a corrida guardada agora, ou null (vermelha sem aceite, repetida ou erro).
      */
-    operator fun invoke(analysis: RideAnalysis, originalFare: BigDecimal? = null): RideRecord? {
+    operator fun invoke(
+        analysis: RideAnalysis,
+        originalFare: BigDecimal? = null,
+        acceptedByDriver: Boolean = false,
+    ): RideRecord? {
         return try {
             val offer = analysis.offer
-            // Verde ou amarelo (R$/km ok): o motorista pode aceitar. Vermelha não entra.
-            if (!analysis.rating.isAcceptable) return null
+            // Sem aceite do motorista, só verde ou amarelo (R$/km ok) entram.
+            if (!acceptedByDriver && !analysis.rating.isAcceptable) return null
             val now = nowMillis()
             val recent = repository.between(now - DUPLICATE_WINDOW_MS, now + 1)
             if (recent.any { it.platform == offer.platform && it.fare.compareTo(offer.fare) == 0 &&
@@ -50,7 +56,7 @@ class RecordRideUseCase(
                     valuePerKm = analysis.metrics.valuePerKm,
                     fuelCost = fuel,
                     maintenanceCost = maintenance,
-                    good = true,
+                    good = analysis.rating.isAcceptable,
                     lowProfit = analysis.rating == RideRating.LOW_PROFIT,
                     feePercent = analysis.metrics.feePercent,
                     originalFare = originalFare
@@ -169,10 +175,13 @@ class RideHistoryUseCase(
     }
 
     /**
-     * Botão "Registrar Corrida Manual": corrida fora dos apps (particular), já marcada como
-     * realizada. Gastos com os custos do carro de agora; cor pelo mínimo R$/km de agora.
+     * Botão "Registrar corrida": corrida que o leitor não gravou (ou particular), já marcada
+     * como realizada. Gastos com os custos do carro de agora; cor pelas regras de agora.
+     * No inDrive, [fare] é o valor do app e a taxa configurada é descontada (como no leitor);
+     * Uber (o valor já é o ganho do motorista) e Particular não têm desconto.
      *
      * @param pickupKm km até o passageiro (null/zero se saiu do lugar dele).
+     * @param platform app da corrida (padrão: Particular).
      * @return a corrida guardada, ou null se os valores forem inválidos.
      */
     fun registerManual(
@@ -180,18 +189,21 @@ class RideHistoryUseCase(
         pickupKm: BigDecimal?,
         tripKm: BigDecimal,
         timestampMillis: Long,
+        platform: Platform = Platform.PARTICULAR,
     ): RideRecord? = try {
         if (fare.signum() <= 0 || tripKm.signum() <= 0 || (pickupKm != null && pickupKm.signum() < 0)) {
             null
         } else {
             val totalKm = (tripKm + (pickupKm ?: BigDecimal.ZERO)).setScale(2, RoundingMode.HALF_UP)
             val roundedFare = fare.setScale(2, RoundingMode.HALF_UP)
-            val perKm = roundedFare.divide(totalKm, 2, RoundingMode.HALF_UP)
+            val feePercent = if (platform == Platform.INDRIVE) settings.getInDriveFeePercent() else BigDecimal.ZERO
+            val net = br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase.netOf(roundedFare, feePercent)
+            val perKm = net.divide(totalKm, 2, RoundingMode.HALF_UP)
             val (fuel, maintenance) = RideCosts.of(totalKm, settings.getOperatingCost())
             RideRecord(
-                id = "$timestampMillis-${Platform.PARTICULAR.name}-${roundedFare.toPlainString()}",
+                id = "$timestampMillis-${platform.name}-${roundedFare.toPlainString()}",
                 timestampMillis = timestampMillis,
-                platform = Platform.PARTICULAR,
+                platform = platform,
                 fare = roundedFare,
                 pickupKm = pickupKm,
                 tripKm = tripKm,
@@ -201,6 +213,7 @@ class RideHistoryUseCase(
                 maintenanceCost = maintenance,
                 done = true,
                 good = perKm >= settings.getMinValuePerKm(),
+                feePercent = feePercent,
             ).let { r ->
                 val minProfit = settings.getMinNetProfit()
                 r.copy(lowProfit = r.good && minProfit != null && r.totalCost != null && r.netProfit < minProfit)

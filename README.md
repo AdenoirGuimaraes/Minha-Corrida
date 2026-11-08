@@ -57,14 +57,16 @@ Voz em velocidade 1,4×.
 - **Checklist** de apps lidos e de "Falar corridas": verde marcado, vermelho desmarcado.
 
 ## Aba Corridas (histórico)
-- Guardadas sem atrasar o card, só **verdes** (data, hora, app, valor, km e gastos com os custos
-  do carro daquele momento):
-  - **Uber**: ao mostrar o card;
-  - **inDrive**: pelo **botão que você tocar** — "Aceitar por R$ x" ou uma contraproposta ("R$ 17,50").
-    O card é **refeito com o valor tocado** (verde/vermelho, voz se verde) e só é guardado se ficar
-    verde. **Pular/Fechar** recusa: nada fica guardado.
-- **Registrar Corrida Manual**: corrida fora dos apps (particular) — valor, km até o passageiro
-  (opcional), km da viagem e hora; mostra o cálculo do card enquanto digita e entra já realizada.
+- Guardadas pelo **botão que você tocar** (não pela cor do card), sem atrasar o card — data, hora,
+  app, valor, km e gastos com os custos do carro daquele momento:
+  - **Uber**: toque em **Aceitar** (Uber em tela cheia) ou **Tenho interesse** (cartão sobre o
+    inDrive) guarda a corrida, de qualquer cor. O **X** não guarda nada.
+  - **inDrive**: "Aceitar por R$ x" ou uma contraproposta ("R$ 17,50"). O card é **refeito com o
+    valor tocado** e é guardado se ficar verde ou amarelo. **Pular/Fechar** recusa: nada fica guardado.
+- **Registrar Corrida**: corrida que o leitor não gravou, ou particular. Escolha o app
+  (**Particular, Uber ou inDrive**), valor, km até o passageiro (opcional), km da viagem e hora.
+  No inDrive a taxa configurada é descontada (como no leitor); Uber e Particular sem desconto.
+  Mostra o cálculo do card enquanto digita e entra já realizada.
 - **Corridas Selecionadas**: depois de marcar as realizadas, apaga as não marcadas do período na
   tela (com confirmação); as marcadas ficam com os cálculos no resumo.
 - **Toque longo** na corrida corrige o valor à mão (ex.: valor digitado no lápis). Km e gastos não
@@ -73,6 +75,14 @@ Voz em velocidade 1,4×.
 - Resumo das realizadas: corridas e **km rodados**, **lucro** e **separar p/ abastecer**
   (combustível + manutenção).
 - Corridas com mais de **60 dias** são apagadas automaticamente.
+
+## Diagnóstico para calibrar a leitura
+- **Configurações → Diagnóstico da leitura** guarda as **200 leituras** mais recentes (telas e
+  **toques** na Uber e no inDrive, inclusive toques sem texto, com classe, id e posição do botão).
+- A navegação que só muda números ("50 m", "2,5 km") entra no máximo a cada 30 s, para que as 200
+  leituras cubram uma corrida inteira.
+- **Exportar relatório (.md)** gera um arquivo Markdown (versão, aparelho, regras e leituras em
+  ordem) e abre o compartilhar do Android para anexar no chat.
 
 ## Cores do card
 - 🟢 **Verde**: R$/km ≥ mínimo **e** lucro líquido ≥ lucro mínimo (voz "Aceitar corrida").
