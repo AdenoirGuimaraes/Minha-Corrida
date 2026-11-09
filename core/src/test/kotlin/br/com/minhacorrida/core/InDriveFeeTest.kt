@@ -72,19 +72,4 @@ class InDriveFeeTest {
         assertEquals("Líquido R$ 13,50\nGasto R$ 7,31", card.profitDetails)
         assertEquals("19,12", card.minimumValue)
     }
-
-    @Test
-    fun `contraproposta guardada no historico com a taxa`() {
-        val settings = Fixtures.FakeSettings(min = BigDecimal("2.00"), cost = cost, inDriveFee = BigDecimal("10"))
-        val repo = InMemoryRideHistoryRepository()
-        val tap = InDriveTapUseCase(evaluate, settings, RecordRideUseCase(repo, settings, NoOpLogger), repo, NoOpLogger)
-        val pedido = evaluate(offer(Platform.INDRIVE), rules)
-
-        val r = assertIs<InDriveTap.NewFare>(tap.onTap("R$ 20", pedido, null))
-        assertEquals(RideRating.GOOD, r.analysis.rating)              // 18,00 ÷ 8,6 = R$ 2,09/km
-        val saved = r.saved!!
-        assertEquals("18.00", saved.netFare.toPlainString())
-        assertEquals("10.69", saved.netProfit.toPlainString())       // 18,00 − 7,31
-        assertEquals("2.30", saved.withFare(BigDecimal("22"), BigDecimal("2.00")).valuePerKm.toPlainString())
-    }
 }

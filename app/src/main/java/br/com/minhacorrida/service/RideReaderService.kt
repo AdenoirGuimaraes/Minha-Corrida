@@ -41,13 +41,9 @@ class RideReaderService : AccessibilityService() {
     private lateinit var overlay: RideOverlayController
     private var voice: VoiceAnnouncer? = null
 
-    /** Último cartão da Uber analisado (e quando): é o que um toque em "Aceitar" guarda. */
-    private var lastUberAnalysis: RideAnalysis? = null
-    private var lastUberAnalysisAt = 0L
 
     // Pedido do inDrive na tela (para a contraproposta) e o que ele já guardou no histórico.
     private var pendingInDrive: RideAnalysis? = null
-    private var pendingInDriveSavedId: String? = null
 
     /** Até quando o card refeito pela contraproposta fica na tela, sem ser trocado pela leitura da tela. */
     private var counterOfferHoldUntil = 0L
@@ -151,7 +147,6 @@ class RideReaderService : AccessibilityService() {
             voice?.stop()
             currentTarget = null
             lastAnalysis = null
-            lastUberAnalysis = null
             ocrPackage = null
             ocrOfferKey = null
             ocrTexts = emptyList()
@@ -166,10 +161,10 @@ class RideReaderService : AccessibilityService() {
     }
 
     /**
-     * Toque do motorista no pedido do inDrive (o app confia no botão tocado):
-     * - valor ("Aceitar por R$ 15", contraproposta "R$ 17,50") → card refeito com esse valor,
-     *   voz se verde, e guardado no histórico só se verde;
-     * - "Pular"/"Fechar" → pedido recusado: nada fica guardado e o card some.
+     * Toque do motorista no pedido do inDrive:
+     * - valor ("Aceitar por R$ 15", contraproposta "R$ 17,50") → card refeito com esse valor (voz se verde);
+     * - "Pular"/"Fechar" → pedido recusado: o card some.
+     * O toque não grava: a corrida entra no histórico quando a tela confirma (RideLifecycleUseCase).
      * Todo toque fica no diagnóstico ("toque no inDrive").
      */
     private fun onInDriveButtonTapped(event: AccessibilityEvent, pkg: String) {
@@ -181,9 +176,8 @@ class RideReaderService : AccessibilityService() {
                 return
             }
             val pending = pendingInDrive
-            val savedId = pendingInDriveSavedId
             historyExecutor.execute {
-                val result = container.inDriveTap.onTap(text, pending, savedId)
+                val result = container.inDriveTap.onTap(text, pending)
                 container.diagnostics.record(pkg, "toque no inDrive", listOf(text) + tapDetails(event), emptyList(), describe(result), force = true)
                 handler.post { applyInDriveTap(result) }
             }
@@ -193,31 +187,17 @@ class RideReaderService : AccessibilityService() {
     }
 
     /**
-     * Toque no cartão da Uber (o motorista decide, não a cor):
-     * - "Aceitar" (tela cheia) / "Tenho interesse" (cartão sobre o inDrive) → guarda a corrida;
-     * - X → nada é guardado.
-     * Todo toque fica no diagnóstico ("toque na Uber"), com ou sem texto, para calibrar.
+     * Toque na Uber: só vai para o diagnóstico. O relatório de 09/11 mostrou que os toques no
+     * cartão da oferta ("Tenho interesse", X) não chegam ao app; a corrida é gravada quando
+     * aparece "Encontro com <passageiro>" (RideLifecycleUseCase).
      */
     private fun onUberButtonTapped(event: AccessibilityEvent, pkg: String) {
         try {
             val text = tappedText(event)
-            val card = lastUberAnalysis?.takeIf { SystemClock.elapsedRealtime() - lastUberAnalysisAt <= UBER_CARD_VALID_MS }
-            val details = tapDetails(event)
-            historyExecutor.execute {
-                val result = container.uberTap.onTap(text, card)
-                val summary = when (result) {
-                    is br.com.minhacorrida.core.usecase.UberTap.Accepted ->
-                        "aceite: ${container.formatter.headline(result.analysis)} " +
-                            if (result.saved != null) "(guardada na aba Corridas)" else "(já estava guardada)"
-                    br.com.minhacorrida.core.usecase.UberTap.Rejected -> "recusa (X): nada guardado"
-                    is br.com.minhacorrida.core.usecase.UberTap.Ignored -> "toque ignorado: ${result.reason}"
-                }
-                val texts = (if (text.isEmpty()) listOf("(sem texto)") else listOf(text)) + details
-                container.diagnostics.record(pkg, "toque na Uber", texts, emptyList(), summary, force = true)
-                if (result is br.com.minhacorrida.core.usecase.UberTap.Rejected) handler.post { overlay.hideNow() }
-            }
+            val texts = (if (text.isEmpty()) listOf("(sem texto)") else listOf(text)) + tapDetails(event)
+            container.diagnostics.record(pkg, "toque na Uber", texts, emptyList(), "toque registrado", force = true)
         } catch (e: Exception) {
-            container.logger.error(TAG, "Falha ao tratar toque na Uber", e)
+            container.logger.error(TAG, "Falha ao registrar toque na Uber", e)
         }
     }
 
@@ -245,10 +225,8 @@ class RideReaderService : AccessibilityService() {
 
     private fun describe(result: br.com.minhacorrida.core.usecase.InDriveTap): String = when (result) {
         is br.com.minhacorrida.core.usecase.InDriveTap.NewFare ->
-            "card refeito: ${container.formatter.headline(result.analysis)}" +
-                if (result.saved != null) " (verde: guardada na aba Corridas)" else " (vermelha: não guardada)"
-        is br.com.minhacorrida.core.usecase.InDriveTap.Skipped ->
-            "pedido recusado" + if (result.removedId != null) " (removido da aba Corridas)" else ""
+            "card refeito: ${container.formatter.headline(result.analysis)} (grava quando o passageiro confirmar)"
+        br.com.minhacorrida.core.usecase.InDriveTap.Skipped -> "pedido recusado"
         br.com.minhacorrida.core.usecase.InDriveTap.Ignored -> "toque ignorado"
     }
 
@@ -257,16 +235,14 @@ class RideReaderService : AccessibilityService() {
         try {
             when (result) {
                 is br.com.minhacorrida.core.usecase.InDriveTap.NewFare -> {
-                    pendingInDriveSavedId = result.saved?.id
                     val seconds = container.settings.getOverlayTimeoutSeconds()
                     counterOfferHoldUntil = SystemClock.elapsedRealtime() + seconds * 1_000L
                     lastAnalysis = result.analysis
                     overlay.show(result.analysis, seconds)
                     announceIfGood(result.analysis)
                 }
-                is br.com.minhacorrida.core.usecase.InDriveTap.Skipped -> {
+                br.com.minhacorrida.core.usecase.InDriveTap.Skipped -> {
                     pendingInDrive = null
-                    pendingInDriveSavedId = null
                     counterOfferHoldUntil = 0L
                     lastAnalysis = null
                     overlay.hideNow()
@@ -403,9 +379,39 @@ class RideReaderService : AccessibilityService() {
                 else -> "nenhuma oferta reconhecida"
             }
             recordDiagnostics(target, texts, result)
+            followRide(pkg, analysis, combined)
             showOrHide(analysis)
         } catch (e: Exception) {
             container.logger.error(TAG, "Erro ao analisar a tela de $pkg", e)
+        }
+    }
+
+    /**
+     * Acompanha a corrida pelas telas do app: guarda o último pedido lido e, quando a tela
+     * confirma a corrida ("Encontro com…" na Uber, "R$ 13 · Dinheiro" + "Estou aqui" no inDrive),
+     * grava no histórico; na tela de avaliação marca como realizada. Fora da thread principal.
+     */
+    private fun followRide(pkg: String, analysis: RideAnalysis?, texts: List<String>) {
+        val platform = Platform.fromPackage(pkg) ?: return
+        try {
+            analysis?.let { container.rideLifecycle.onOffer(it) }
+            historyExecutor.execute {
+                val event = container.rideLifecycle.onScreen(platform, texts) ?: return@execute
+                val summary = when (event) {
+                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Confirmed ->
+                        "corrida confirmada: R$ ${event.record.fare.toPlainString().replace('.', ',')} " +
+                            "· ${event.record.totalKm.toPlainString().replace('.', ',')} km (guardada na aba Corridas)"
+                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.ConfirmedWithoutOffer ->
+                        "corrida confirmada sem pedido lido antes: não guardada (use Registrar Corrida)"
+                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Completed ->
+                        "corrida concluída: marcada como realizada"
+                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.CounterOfferSent ->
+                        "contraproposta de R$ ${event.fare.toPlainString().replace('.', ',')} enviada: aguardando o passageiro"
+                }
+                container.diagnostics.record(pkg, "acompanhamento da corrida", texts.take(20), emptyList(), summary, force = true)
+            }
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao acompanhar a corrida", e)
         }
     }
 
@@ -451,7 +457,6 @@ class RideReaderService : AccessibilityService() {
         ) {
             // Pedido novo do inDrive na tela: é ele que recebe os toques a partir de agora.
             pendingInDrive = analysis
-            pendingInDriveSavedId = null
         }
         if (analysis == null) {
             lastAnalysis = null
@@ -462,12 +467,8 @@ class RideReaderService : AccessibilityService() {
             lastAnalysis = analysis
             container.logger.debug(TAG, "Oferta: $analysis")
         }
-        // Nada é guardado só por aparecer: Uber pelo toque em Aceitar/Tenho interesse
-        // (onUberButtonTapped) e inDrive pelo toque em Aceitar por/valor (onInDriveButtonTapped).
-        if (analysis.offer.platform == Platform.UBER) {
-            lastUberAnalysis = analysis
-            lastUberAnalysisAt = SystemClock.elapsedRealtime()
-        }
+        // Nada é guardado só por aparecer: a corrida entra no histórico quando a tela do app
+        // confirma que ela é sua (followRide / RideLifecycleUseCase).
         // Oferta já fechada (toque ou tempo) não reabre até surgir outra.
         if (visibility.shouldShow(analysis.offer)) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
@@ -664,8 +665,6 @@ class RideReaderService : AccessibilityService() {
     private companion object {
         const val TAG = "RideReaderService"
         val UBER_PACKAGE: String = Platform.UBER.packageNames.first()
-        /** Toque em "Aceitar" vale para o cartão lido nos últimos 2 minutos. */
-        const val UBER_CARD_VALID_MS = 120_000L
         const val DEBOUNCE_MS = 120L
         const val MAP_SETTLE_MS = 300L
         const val MAP_RETRY_MS = 500L

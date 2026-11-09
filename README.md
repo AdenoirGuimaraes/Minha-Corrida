@@ -57,12 +57,23 @@ Voz em velocidade 1,4×.
 - **Checklist** de apps lidos e de "Falar corridas": verde marcado, vermelho desmarcado.
 
 ## Aba Corridas (histórico)
-- Guardadas pelo **botão que você tocar** (não pela cor do card), sem atrasar o card — data, hora,
-  app, valor, km e gastos com os custos do carro daquele momento:
-  - **Uber**: toque em **Aceitar** (Uber em tela cheia) ou **Tenho interesse** (cartão sobre o
-    inDrive) guarda a corrida, de qualquer cor. O **X** não guarda nada.
-  - **inDrive**: "Aceitar por R$ x" ou uma contraproposta ("R$ 17,50"). O card é **refeito com o
-    valor tocado** e é guardado se ficar verde ou amarelo. **Pular/Fechar** recusa: nada fica guardado.
+- Guardadas **só as corridas que ficaram com você**, seguindo as telas de cada app (calibrado com
+  os relatórios de diagnóstico de 09/11) — nada é gravado pela cor do card nem pelo toque:
+
+  | Etapa | Uber | inDrive |
+  |---|---|---|
+  | Pedido | cartão lido (guardado como "último pedido") | "Pedido de viagem" lido |
+  | Aguardando | — | "Oferecendo sua tarifa R$ 13. Aguarde a resposta" |
+  | **Confirmada → grava** | "Encontro com Fernanda" / "Destino de …" | "R$ 13 · Dinheiro" + "Estou aqui" / "Começar a corrida" / … |
+  | **Concluída → ✅ realizada** | "Como foi a viagem?" / "Avaliar usuário" | "Avalie seu passageiro" |
+
+  - A corrida gravada é o último pedido lido daquele app (até 10 min antes), de **qualquer cor**.
+    No inDrive o valor é o da tela da corrida — inclui contraproposta pelo valor pronto **ou pelo lápis** —
+    e a taxa é descontada.
+  - Ofertas que chegam durante uma corrida não são gravadas; telas repetidas da mesma corrida também não.
+  - Os toques no cartão da Uber ("Tenho interesse", X) **não chegam ao app** (o cartão bloqueia a leitura):
+    por isso a Uber é confirmada pela tela "Encontro com…".
+  - inDrive: o toque num valor só refaz o card; **Pular/Fechar** recusa.
 - **Registrar Corrida**: corrida que o leitor não gravou, ou particular. Escolha o app
   (**Particular, Uber ou inDrive**), valor, km até o passageiro (opcional), km da viagem e hora.
   No inDrive a taxa configurada é descontada (como no leitor); Uber e Particular sem desconto.

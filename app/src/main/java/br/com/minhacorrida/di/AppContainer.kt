@@ -43,12 +43,12 @@ class AppContainer(context: Context) {
     /** Histórico de corridas verdes (uma instância para serviço e tela). */
     val rideHistoryRepository: RideHistoryRepository = JsonFileRideHistoryRepository(context, logger)
     val recordRide = RecordRideUseCase(rideHistoryRepository, settings, logger)
-    /** Botão tocado no pedido do inDrive: refaz o card e decide se guarda (só verde) ou descarta (Pular). */
-    val inDriveTap = br.com.minhacorrida.core.usecase.InDriveTapUseCase(
+    /** Botão tocado no pedido do inDrive: refaz o card com o valor tocado (não grava). */
+    val inDriveTap = br.com.minhacorrida.core.usecase.InDriveTapUseCase(evaluateRide, settings, logger)
+    /** Grava só as corridas confirmadas pela tela do app e marca como realizadas no fim. */
+    val rideLifecycle = br.com.minhacorrida.core.usecase.RideLifecycleUseCase(
         evaluateRide, settings, recordRide, rideHistoryRepository, logger,
     )
-    /** Toque no cartão da Uber: "Aceitar"/"Tenho interesse" guardam a corrida; X não guarda. */
-    val uberTap = br.com.minhacorrida.core.usecase.UberTapUseCase(recordRide, logger)
     val diagnosticsReport = br.com.minhacorrida.core.diagnostics.DiagnosticsReportFormatter()
     val rideHistory = RideHistoryUseCase(rideHistoryRepository, settings, logger)
     val historyFormatter = RideHistoryFormatter()
