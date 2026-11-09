@@ -64,6 +64,14 @@ data class RideRecord(
     val totalCost: BigDecimal?
         get() = if (fuelCost == null || maintenanceCost == null) null else fuelCost + maintenanceCost
 
+    /** Cor da corrida: vermelha (abaixo do R$/km mínimo), amarela (lucro baixo) ou verde. */
+    val rating: br.com.minhacorrida.core.model.RideRating
+        get() = when {
+            !good -> br.com.minhacorrida.core.model.RideRating.BELOW_MINIMUM
+            lowProfit -> br.com.minhacorrida.core.model.RideRating.LOW_PROFIT
+            else -> br.com.minhacorrida.core.model.RideRating.GOOD
+        }
+
     /** Lucro real líquido (já sem a taxa da plataforma); sem custos informados, o valor líquido. */
     val netProfit: BigDecimal
         get() = netFare - (totalCost ?: BigDecimal.ZERO)

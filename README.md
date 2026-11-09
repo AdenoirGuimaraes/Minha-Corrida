@@ -82,7 +82,10 @@ Voz em velocidade 1,4×.
   tela (com confirmação); as marcadas ficam com os cálculos no resumo.
 - **Toque longo** na corrida corrige o valor à mão (ex.: valor digitado no lápis). Km e gastos não
   mudam; R$/km, lucro e cor são recalculados.
-- Na aba **Corridas**: filtro **Dia / Semana / Mês** com ◀ ▶; marque com o check as que você realizou.
+- Na aba **Corridas**: filtro **Dia / Semana / Mês** com ◀ ▶. Cada corrida aparece no **mesmo card
+  da oferta** (faixa do app com valor, "era R$" e hora; quadrados R$/km | Lucro | Mín. verde, na cor
+  da corrida), com os valores e gastos guardados; o Mín. verde usa as regras de agora.
+  **Toque no card** marca/desmarca "✅ Realizada" (não marcada fica mais apagada).
 - Resumo das realizadas: corridas e **km rodados**, **lucro** e **separar p/ abastecer**
   (combustível + manutenção).
 - Corridas com mais de **60 dias** são apagadas automaticamente.

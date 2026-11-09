@@ -80,6 +80,54 @@ class RideHistoryFormatter(
             " · ${km(record.totalKm)} km · $profit"
     }
 
+    /**
+     * Card da corrida guardada, igual ao card da oferta (faixa do app + 3 quadrados), com os
+     * valores e gastos GUARDADOS da corrida. O 3º quadrado ("Mín. verde") usa as regras de agora.
+     * Ex. (inDrive R$ 13 era R$ 10,50, 4,5 km, gasto R$ 3,83):
+     * faixa "inDrive — R$ 13,00 (era 10,50)" · "15:19"; R$/km "2,60" / "4,5 km\n(1,2 + 3,3)";
+     * Lucro "7,87" / "Líquido R$ 11,70\nGasto R$ 3,83"; Mín. verde "…" / "R$ 2,00/km\nLucro R$ 7,00".
+     *
+     * @param minValuePerKm mínimo R$/km de agora; [minNetProfit] lucro mínimo de agora (ou null).
+     */
+    fun card(
+        record: RideRecord,
+        period: HistoryPeriod,
+        minValuePerKm: BigDecimal,
+        minNetProfit: BigDecimal?,
+    ): RideCardText {
+        val at = Instant.ofEpochMilli(record.timestampMillis).atZone(zone)
+        val whenText = if (period == HistoryPeriod.DAY) at.format(time) else "${at.format(dayMonth)} ${at.format(time)}"
+        val pickup = record.pickupKm?.takeIf { it.signum() > 0 }
+        val kmDetails = if (pickup != null) {
+            "${km(record.totalKm)} km\n(${km(pickup)} + ${km(record.tripKm)})"
+        } else {
+            "${km(record.totalKm)} km\n(só trajeto)"
+        }
+        val fareLine = if (record.feePercent.signum() > 0) {
+            "Líquido R$ ${money(record.netFare)}"
+        } else {
+            "Corrida R$ ${money(record.fare)}"
+        }
+        val cost = record.totalCost
+        val effectiveMinProfit = minNetProfit?.takeIf { cost != null }
+        val green = br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase.greenFare(
+            record.totalKm, record.feePercent, minValuePerKm, cost, effectiveMinProfit,
+        )
+        val original = record.originalFare?.let { " (era ${money(it)})" }.orEmpty()
+        return RideCardText(
+            platform = "${record.platform.displayName} — R$ ${money(record.fare)}$original",
+            rating = whenText,
+            valuePerKm = money(record.valuePerKm),
+            kmDetails = kmDetails,
+            profitLabel = if (cost != null && record.netProfit.signum() < 0) "Prejuízo" else "Lucro",
+            profitValue = if (cost != null) money(record.netProfit.abs()) else "—",
+            profitDetails = if (cost != null) "$fareLine\nGasto R$ ${money(cost)}" else "$fareLine\nSem custos",
+            minimumValue = money(green),
+            minimumLabel = "R$ ${money(minValuePerKm)}/km" +
+                effectiveMinProfit?.let { "\nLucro R$ ${money(it)}" }.orEmpty(),
+        )
+    }
+
     private fun money(value: BigDecimal) = DecimalFormat("#,##0.00", DecimalFormatSymbols(locale)).format(value)
     private fun km(value: BigDecimal) = DecimalFormat("#,##0.#", DecimalFormatSymbols(locale)).format(value)
 }

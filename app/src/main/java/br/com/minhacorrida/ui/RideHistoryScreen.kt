@@ -50,6 +50,7 @@ class RideHistoryScreen(
     private val cardFormatter: RideAnalysisFormatter,
 ) {
     private val main = Handler(Looper.getMainLooper())
+    private val cardBinder = RideCardBinder(cardFormatter)
     private val periodTabs: Map<HistoryPeriod, TextView> = mapOf(
         HistoryPeriod.DAY to activity.findViewById(R.id.periodDay),
         HistoryPeriod.WEEK to activity.findViewById(R.id.periodWeek),
@@ -329,17 +330,44 @@ class RideHistoryScreen(
         tvCostDetail.text = formatter.costDetails(page)
     }
 
-    /** Linha com check: verde = realizei, vermelho = não realizei. */
-    private fun rowView(record: RideRecord, period: HistoryPeriod) = CheckBox(activity).apply {
-        text = formatter.row(record, period)
-        isChecked = record.done
-        buttonTintList = activity.getColorStateList(R.color.check_tint)
-        setTextColor(activity.getColorStateList(R.color.check_tint))
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        val pad = (6 * resources.displayMetrics.density).toInt()
-        setPadding(paddingLeft, pad, paddingRight, pad)
-        setOnCheckedChangeListener { _, checked -> onDoneChanged(record.id, checked) }
-        setOnLongClickListener { askNewFare(record); true }
+    /**
+     * Corrida guardada no mesmo card da oferta: faixa do app (valor, "era R$" e hora) e os
+     * 3 quadrados R$/km | Lucro | Mín. verde, na cor da corrida. Embaixo, se foi realizada.
+     * Toque marca/desmarca "realizada"; toque longo corrige o valor.
+     */
+    private fun rowView(record: RideRecord, period: HistoryPeriod): View {
+        val card = activity.layoutInflater.inflate(R.layout.overlay_ride, list, false)
+        try {
+            val text = formatter.card(record, period, settings.getMinValuePerKm(), settings.getMinNetProfit())
+            cardBinder.bindTexts(card, text, record.platform, record.rating)
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao montar o card da corrida ${record.id}", e)
+        }
+        val density = activity.resources.displayMetrics.density
+        (card.layoutParams as? LinearLayout.LayoutParams ?: LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT,
+        )).also { params ->
+            params.bottomMargin = (10 * density).toInt()
+            card.layoutParams = params
+        }
+        val status = card.findViewById<TextView>(R.id.tvTapToClose).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+        var done = record.done
+        val showStatus = {
+            status.text = activity.getString(if (done) R.string.hist_card_done else R.string.hist_card_not_done)
+            status.setTextColor(if (done) 0xFFFFFFFF.toInt() else 0xCCFFFFFF.toInt())
+            card.alpha = if (done) 1f else NOT_DONE_ALPHA
+        }
+        showStatus()
+        card.setOnClickListener {
+            done = !done
+            showStatus()
+            onDoneChanged(record.id, done)
+        }
+        card.setOnLongClickListener { askNewFare(record); true }
+        return card
     }
 
     /** Toque longo: corrigir o valor (contraproposta aceita, valor digitado no lápis etc.). */
@@ -389,6 +417,8 @@ class RideHistoryScreen(
     }
 
     private companion object {
+        /** Corrida ainda não marcada como realizada: card mais apagado. */
+        const val NOT_DONE_ALPHA = 0.6f
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("H:mm")
         val DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM")
     }

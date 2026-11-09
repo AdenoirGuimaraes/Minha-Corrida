@@ -77,14 +77,33 @@ class CalculateRideMetricsUseCase {
         return byKm.copy(minNetProfit = minNetProfit, greenFare = byKm.minimumFare.max(byProfit))
     }
 
-    /** Valor cobrado no app que deixa [net] com o motorista: net ÷ (1 − taxa), para cima. */
-    private fun grossFor(net: BigDecimal, feePercent: BigDecimal): BigDecimal {
-        val keep = (HUNDRED - feePercent).divide(HUNDRED, 6, RoundingMode.HALF_UP)
-        return net.divide(keep, 2, RoundingMode.CEILING)
-    }
+    private fun grossFor(net: BigDecimal, feePercent: BigDecimal): BigDecimal = Companion.grossFor(net, feePercent)
 
     companion object {
         private val HUNDRED = BigDecimal(100)
+
+        /** Valor cobrado no app que deixa [net] com o motorista: net ÷ (1 − taxa), para cima. */
+        fun grossFor(net: BigDecimal, feePercent: BigDecimal): BigDecimal {
+            val keep = (HUNDRED - feePercent).divide(HUNDRED, 6, RoundingMode.HALF_UP)
+            return net.divide(keep, 2, RoundingMode.CEILING)
+        }
+
+        /**
+         * "Mín. verde" de uma distância já conhecida (corrida guardada): o maior entre o valor do
+         * R$/km mínimo e o valor que deixa [minNetProfit] de lucro sobre [cost]; ambos com a taxa.
+         * Sem [cost] ou sem [minNetProfit], só o R$/km.
+         */
+        fun greenFare(
+            totalKm: BigDecimal,
+            feePercent: BigDecimal,
+            minValuePerKm: BigDecimal,
+            cost: BigDecimal?,
+            minNetProfit: BigDecimal?,
+        ): BigDecimal {
+            val byKm = grossFor(minValuePerKm * totalKm, feePercent)
+            if (cost == null || minNetProfit == null) return byKm
+            return byKm.max(grossFor(cost + minNetProfit, feePercent))
+        }
 
         /** Valor que fica com o motorista depois da taxa da plataforma (2 casas). */
         fun netOf(gross: BigDecimal, feePercent: BigDecimal): BigDecimal =

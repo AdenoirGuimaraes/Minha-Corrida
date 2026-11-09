@@ -51,7 +51,9 @@
     <string name="period_month">Mês</string>
     <string name="hist_profit">Lucro</string>
     <string name="hist_cost">Separar p/ abastecer</string>
-    <string name="hist_hint">Entram sozinhas só as corridas que ficaram com você (Uber: tela "Encontro com…"; inDrive: passageiro aceitou), com o valor combinado, e ficam marcadas ✅ quando você avalia o passageiro no fim. Faltou alguma? Use Registrar Corrida. Toque longo corrige o valor.</string>
+    <string name="hist_card_done">✅ Realizada · toque para desmarcar</string>
+    <string name="hist_card_not_done">⬜ Toque para marcar como realizada</string>
+    <string name="hist_hint">Entram sozinhas só as corridas que ficaram com você (Uber: tela "Encontro com…"; inDrive: passageiro aceitou), com o valor combinado, e ficam marcadas ✅ quando você avalia o passageiro no fim. Toque no card marca ou desmarca; toque longo corrige o valor. Faltou alguma? Use Registrar Corrida.</string>
     <string name="hist_empty">Nenhuma corrida neste período.</string>
     <string name="hist_edit_title">Corrigir valor da corrida</string>
     <string name="hist_manual_button">Registrar Corrida</string>

@@ -181,6 +181,33 @@ class RideHistoryTest {
     }
 
     @Test
+    fun `card da corrida guardada igual ao card da oferta (Jana, R$ 13 no inDrive)`() {
+        settings.inDriveFee = BigDecimal("10")
+        val r = history.registerManual(BigDecimal("13"), BigDecimal("1.2"), BigDecimal("3.3"), now, Platform.INDRIVE)!!
+        val card = RideHistoryFormatter(zone).card(r, HistoryPeriod.DAY, BigDecimal("2.00"), BigDecimal("7.00"))
+        assertEquals("inDrive — R$ 13,00", card.platform)
+        assertEquals("15:00", card.rating)
+        assertEquals("2,60", card.valuePerKm)                           // 11,70 ÷ 4,5 km
+        assertEquals("4,5 km\n(1,2 + 3,3)", card.kmDetails)
+        assertEquals("7,87", card.profitValue)                          // 11,70 − 3,83
+        assertEquals("Líquido R$ 11,70\nGasto R$ 3,83", card.profitDetails)
+        assertEquals("12,04", card.minimumValue)                        // (3,83 + 7,00) ÷ 0,9
+        assertEquals("R$ 2,00/km\nLucro R$ 7,00", card.minimumLabel)
+    }
+
+    @Test
+    fun `card da corrida mostra o valor original e sem lucro minimo so o R$ por km`() {
+        val r = history.registerManual(BigDecimal("12"), null, BigDecimal("4"), now, Platform.UBER)!!
+            .withFare(BigDecimal("14"), BigDecimal("2.00"))
+        val card = RideHistoryFormatter(zone).card(r, HistoryPeriod.MONTH, BigDecimal("2.00"), null)
+        assertEquals("Uber — R$ 14,00 (era 12,00)", card.platform)
+        assertEquals("05/11 15:00", card.rating)
+        assertEquals("4 km\n(só trajeto)", card.kmDetails)
+        assertEquals("8,00", card.minimumValue)                         // 2,00 × 4 km
+        assertEquals("R$ 2,00/km", card.minimumLabel)
+    }
+
+    @Test
     fun `registrar corrida da Uber nao desconta taxa`() {
         settings.inDriveFee = BigDecimal("10")
         val r = history.registerManual(BigDecimal("12.06"), null, BigDecimal("4"), now, Platform.UBER)!!

@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.TextView
 import br.com.minhacorrida.R
 import br.com.minhacorrida.core.format.RideAnalysisFormatter
+import br.com.minhacorrida.core.format.RideCardText
 import br.com.minhacorrida.core.model.Platform
 import br.com.minhacorrida.core.model.RideAnalysis
 import br.com.minhacorrida.core.model.RideRating
@@ -21,10 +22,19 @@ class RideCardBinder(private val formatter: RideAnalysisFormatter) {
 
     /** @param showCloseHint false esconde o "toque para fechar" (hoje sempre visível). */
     fun bind(root: View, analysis: RideAnalysis, showCloseHint: Boolean = true) {
-        val text = formatter.card(analysis)
+        bindTexts(root, formatter.card(analysis), analysis.offer.platform, analysis.rating)
+        root.findViewById<TextView>(R.id.tvTapToClose).visibility = if (showCloseHint) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Mesmo card para uma corrida já guardada (aba Corridas): textos prontos de
+     * [br.com.minhacorrida.core.format.RideHistoryFormatter.card] e a cor guardada da corrida.
+     * O texto de baixo (no lugar de "toque para fechar") fica por conta de quem chama.
+     */
+    fun bindTexts(root: View, text: RideCardText, platform: Platform, rating: RideRating) {
         val density = root.resources.displayMetrics.density
 
-        val brand = brandColors(analysis.offer.platform)
+        val brand = brandColors(platform)
         root.findViewById<View>(R.id.platformStrip).background = GradientDrawable().apply {
             cornerRadius = 10 * density
             setColor(brand.background)
@@ -46,12 +56,11 @@ class RideCardBinder(private val formatter: RideAnalysisFormatter) {
         root.findViewById<TextView>(R.id.tvProfitDetails).text = text.profitDetails
         root.findViewById<TextView>(R.id.tvMinimumFare).text = text.minimumValue
         root.findViewById<TextView>(R.id.tvMinimumLabel).text = text.minimumLabel
-        root.findViewById<TextView>(R.id.tvTapToClose).visibility = if (showCloseHint) View.VISIBLE else View.GONE
 
         root.background = GradientDrawable().apply {
             cornerRadius = 18 * density
             setColor(
-                when (analysis.rating) {
+                when (rating) {
                     RideRating.GOOD -> COLOR_GOOD
                     RideRating.LOW_PROFIT -> COLOR_LOW_PROFIT
                     RideRating.BELOW_MINIMUM -> COLOR_BAD
