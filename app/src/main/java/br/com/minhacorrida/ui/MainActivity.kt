@@ -79,6 +79,8 @@ class MainActivity : Activity() {
     private lateinit var etMinRating: EditText
     private lateinit var etInDriveFee: EditText
     private lateinit var etMinProfit: EditText
+    private lateinit var etDailyGoal: EditText
+    private lateinit var deductionsEditor: DeductionsEditor
     private lateinit var etTimeout: EditText
     private lateinit var etFuelPrice: EditText
     private lateinit var etKmPerLiter: EditText
@@ -130,6 +132,7 @@ class MainActivity : Activity() {
         historyScreen = RideHistoryScreen(
             this, container.rideHistory, container.historyFormatter, ioExecutor,
             container.evaluateRide, container.settings, container.formatter,
+            container.goalSettings, container.goalFormatter,
         )
         historyScreen.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
@@ -185,6 +188,8 @@ class MainActivity : Activity() {
         etMinRating = findViewById(R.id.etMinRating)
         etInDriveFee = findViewById(R.id.etInDriveFee)
         etMinProfit = findViewById(R.id.etMinProfit)
+        etDailyGoal = findViewById(R.id.etDailyGoal)
+        deductionsEditor = DeductionsEditor(this, findViewById(R.id.deductionsList), findViewById(R.id.btnAddDeduction))
         etTimeout = findViewById(R.id.etTimeout)
         etFuelPrice = findViewById(R.id.etFuelPrice)
         etKmPerLiter = findViewById(R.id.etKmPerLiter)
@@ -344,6 +349,9 @@ class MainActivity : Activity() {
         settings.getMinPassengerRating()?.let { etMinRating.setText(decimalText(it)) }
         etInDriveFee.setText(decimalText(settings.getInDriveFeePercent()))
         settings.getMinNetProfit()?.let { etMinProfit.setText(decimalText(it)) }
+        val goals = container.goalSettings
+        goals.getDailyGoal()?.let { etDailyGoal.setText(decimalText(it)) }
+        deductionsEditor.show(goals.getProfitDeductions())
         val platforms = settings.getEnabledPlatforms()
         cbUber.isChecked = Platform.UBER in platforms
         cbInDrive.isChecked = Platform.INDRIVE in platforms
@@ -375,6 +383,16 @@ class MainActivity : Activity() {
                 toast(getString(R.string.invalid_min_profit))
                 return
             }
+            val dailyGoal = if (etDailyGoal.text.isBlank()) null else positive(etDailyGoal)
+            if (etDailyGoal.text.isNotBlank() && dailyGoal == null) {
+                toast(getString(R.string.invalid_goal))
+                return
+            }
+            val deductions = deductionsEditor.read()
+            if (deductions == null) {
+                toast(getString(R.string.invalid_deduction))
+                return
+            }
             val platforms = buildSet {
                 if (cbUber.isChecked) add(Platform.UBER)
                 if (cbInDrive.isChecked) add(Platform.INDRIVE)
@@ -394,6 +412,8 @@ class MainActivity : Activity() {
             settings.setMinNetProfit(minProfit)
             settings.setEnabledPlatforms(platforms)
             settings.setVoiceEnabled(cbVoice.isChecked)
+            container.goalSettings.setDailyGoal(dailyGoal)
+            container.goalSettings.setProfitDeductions(deductions)
             toast(getString(R.string.saved))
         } catch (e: Exception) {
             android.util.Log.e("MC/MainActivity", "Falha ao salvar configurações", e)

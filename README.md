@@ -90,6 +90,17 @@ Voz em velocidade 1,4×.
   (combustível + manutenção).
 - Corridas com mais de **60 dias** são apagadas automaticamente.
 
+## Meta diária e deduções do lucro
+- **Configurações → Meta diária e deduções**: meta diária (R$) = quanto você quer que **fique com
+  você** no dia, já sem combustível, manutenção e deduções (vazio = sem meta).
+- **Deduções do lucro líquido (%)**: descrição + porcentagem (ex.: "Dízimo" 10%); **+ Adicionar
+  dedução** cria outra linha, **✕** remove. Calculadas sobre o lucro líquido positivo
+  (corridas − combustível − manutenção); a soma deve ficar abaixo de 100%.
+- **Aba Corridas**: abaixo do resumo, cada dedução em R$ e quanto fica com você; no filtro **Dia**,
+  "Meta do dia R$ 150,00 · 55%", barra de progresso e "Falta R$ 67,07 no bolso = R$ 74,53 de lucro
+  líquido" (o que falta ÷ (1 − soma das %), porque as deduções levam a parte delas). Batida:
+  "🎉 Meta batida! Passou R$ x".
+
 ## Diagnóstico para calibrar a leitura
 - **Configurações → Diagnóstico da leitura** guarda as **200 leituras** mais recentes (telas e
   **toques** na Uber e no inDrive, inclusive toques sem texto, com classe, id e posição do botão).

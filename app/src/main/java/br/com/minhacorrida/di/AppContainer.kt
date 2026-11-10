@@ -31,7 +31,11 @@ import br.com.minhacorrida.update.GitHubReleaseSource
 class AppContainer(context: Context) {
     val logger: AppLogger = AndroidLogger()
     val diagnostics = DiagnosticsStore(context, logger)
-    val settings: SettingsRepository = SharedPrefsSettingsRepository(context.applicationContext)
+    private val prefsSettings = SharedPrefsSettingsRepository(context.applicationContext)
+    val settings: SettingsRepository = prefsSettings
+    /** Meta diária e deduções do lucro (mesmo arquivo de preferências, porta própria). */
+    val goalSettings: br.com.minhacorrida.core.goal.GoalSettingsRepository = prefsSettings
+    val goalFormatter = br.com.minhacorrida.core.format.GoalFormatter()
     val readingSession: ReadingSession = SharedPrefsReadingSession(context, logger)
     val parserRegistry = ParserRegistry(
         listOf(UberOfferParser(logger), InDriveOfferParser(logger)),

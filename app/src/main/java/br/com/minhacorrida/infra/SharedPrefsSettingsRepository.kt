@@ -4,11 +4,16 @@ import android.content.Context
 import br.com.minhacorrida.core.model.OperatingCost
 import br.com.minhacorrida.core.model.OverlayTimeout
 import br.com.minhacorrida.core.model.Platform
+import br.com.minhacorrida.core.goal.DailyGoalCalculator
+import br.com.minhacorrida.core.goal.GoalSettingsRepository
+import br.com.minhacorrida.core.goal.ProfitDeduction
 import br.com.minhacorrida.core.port.SettingsRepository
+import org.json.JSONArray
+import org.json.JSONObject
 import java.math.BigDecimal
 
 /** Persiste as preferências em SharedPreferences (leitura em memória, rápida). */
-class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
+class SharedPrefsSettingsRepository(context: Context) : SettingsRepository, GoalSettingsRepository {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -92,6 +97,41 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         prefs.edit().putString(KEY_MIN_NET_PROFIT, value.toPlainString()).apply()
     }
 
+    override fun getDailyGoal(): BigDecimal? =
+        prefs.getString(KEY_DAILY_GOAL, null)?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
+
+    override fun setDailyGoal(value: BigDecimal?) {
+        if (value == null) {
+            prefs.edit().remove(KEY_DAILY_GOAL).apply()
+            return
+        }
+        require(value.signum() > 0) { "Meta diária deve ser positiva" }
+        prefs.edit().putString(KEY_DAILY_GOAL, value.toPlainString()).apply()
+    }
+
+    /** Guardadas como JSON: [{"d":"Dízimo","p":"10"}]. Itens inválidos são ignorados. */
+    override fun getProfitDeductions(): List<ProfitDeduction> {
+        val raw = prefs.getString(KEY_DEDUCTIONS, null) ?: return emptyList()
+        return try {
+            val array = JSONArray(raw)
+            (0 until array.length()).mapNotNull { i ->
+                val o = array.optJSONObject(i) ?: return@mapNotNull null
+                val percent = o.optString("p").toBigDecimalOrNull() ?: return@mapNotNull null
+                runCatching { ProfitDeduction(o.optString("d"), percent) }.getOrNull()
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MC/Settings", "Deduções ilegíveis; ignorando", e)
+            emptyList()
+        }
+    }
+
+    override fun setProfitDeductions(deductions: List<ProfitDeduction>) {
+        require(DailyGoalCalculator.isValid(deductions)) { "As deduções devem somar menos de 100%" }
+        val array = JSONArray()
+        deductions.forEach { array.put(JSONObject().put("d", it.description.trim()).put("p", it.percent.toPlainString())) }
+        prefs.edit().putString(KEY_DEDUCTIONS, array.toString()).apply()
+    }
+
     override fun isVoiceEnabled(): Boolean = prefs.getBoolean(KEY_VOICE, true)
 
     override fun setVoiceEnabled(enabled: Boolean) {
@@ -110,6 +150,8 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository {
         const val KEY_VOICE = "voice_enabled"
         const val KEY_INDRIVE_FEE = "indrive_fee_percent"
         const val KEY_MIN_NET_PROFIT = "min_net_profit"
+        const val KEY_DAILY_GOAL = "daily_goal"
+        const val KEY_DEDUCTIONS = "profit_deductions"
         val DEFAULT_INDRIVE_FEE = BigDecimal("10")
         val MAX_FEE = BigDecimal("50")
         val DEFAULT_MIN_VALUE_PER_KM = BigDecimal("1.80")
