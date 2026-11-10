@@ -65,7 +65,6 @@ class RideHistoryScreen(
     private val tvCostDetail: TextView = activity.findViewById(R.id.tvHistCostDetail)
     private val list: LinearLayout = activity.findViewById(R.id.historyList)
     private val tvEmpty: TextView = activity.findViewById(R.id.tvHistEmpty)
-    private val tvDeductions: TextView = activity.findViewById(R.id.tvHistDeductions)
     private val goalBox: View = activity.findViewById(R.id.goalBox)
     private val tvGoalTitle: TextView = activity.findViewById(R.id.tvGoalTitle)
     private val pbGoal: android.widget.ProgressBar = activity.findViewById(R.id.pbGoal)
@@ -330,27 +329,32 @@ class RideHistoryScreen(
         tvEmpty.visibility = if (page.rides.isEmpty()) View.VISIBLE else View.GONE
     }
 
+    /**
+     * Resumo do período: corridas e km, lucro líquido, o total a "Separar" (combustível +
+     * manutenção + deduções como o dízimo) item por item e, no filtro Dia, a meta diária.
+     * Atualiza na hora ao marcar/desmarcar corridas.
+     */
     private fun renderSummary(page: RideHistoryPage) {
         tvCountKm.text = formatter.countAndKm(page)
         tvProfit.text = formatter.profit(page)
-        tvCost.text = formatter.cost(page)
-        tvCostDetail.text = formatter.costDetails(page)
-        renderGoal(page)
-    }
-
-    /**
-     * Deduções (ex.: dízimo) sobre o lucro líquido do período e, no filtro Dia, a meta diária:
-     * barra de progresso e quanto falta (no bolso e em lucro líquido). Atualiza ao marcar corridas.
-     */
-    private fun renderGoal(page: RideHistoryPage) {
-        try {
+        val progress = try {
             val goal = if (page.period == HistoryPeriod.DAY) goals.getDailyGoal() else null
-            val progress = br.com.minhacorrida.core.goal.DailyGoalCalculator.progress(
+            br.com.minhacorrida.core.goal.DailyGoalCalculator.progress(
                 page.summary.netProfit, goals.getProfitDeductions(), goal,
             )
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao calcular deduções/meta", e)
+            br.com.minhacorrida.core.goal.DailyGoalCalculator.progress(page.summary.netProfit, emptyList(), null)
+        }
+        tvCost.text = formatter.setAside(page, progress)
+        tvCostDetail.text = formatter.setAsideDetails(page, progress)
+        renderGoal(progress)
+    }
+
+    /** Meta diária (só no filtro Dia): barra de progresso e quanto falta (no bolso e em lucro líquido). */
+    private fun renderGoal(progress: br.com.minhacorrida.core.goal.GoalProgress) {
+        try {
             val text = goalFormatter.format(progress)
-            tvDeductions.text = text.deductions.orEmpty()
-            tvDeductions.visibility = if (text.deductions == null) View.GONE else View.VISIBLE
             if (text.title == null) {
                 goalBox.visibility = View.GONE
                 return

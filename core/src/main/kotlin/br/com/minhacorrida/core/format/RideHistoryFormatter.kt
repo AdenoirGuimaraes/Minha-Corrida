@@ -1,5 +1,6 @@
 package br.com.minhacorrida.core.format
 
+import br.com.minhacorrida.core.goal.GoalProgress
 import br.com.minhacorrida.core.history.HistoryPeriod
 import br.com.minhacorrida.core.history.RideHistoryPage
 import br.com.minhacorrida.core.history.RideRecord
@@ -48,18 +49,36 @@ class RideHistoryFormatter(
 
     fun profit(page: RideHistoryPage): String = "R$ ${money(page.summary.netProfit)}"
 
-    fun cost(page: RideHistoryPage): String = "R$ ${money(page.summary.totalCost)}"
+    /**
+     * Total a separar do recebido: combustível + manutenção + deduções (ex.: dízimo).
+     * Ex. (10/11): 10,87 + 5,31 + 4,35 = "R$ 20,53".
+     */
+    fun setAside(page: RideHistoryPage, progress: GoalProgress): String =
+        "R$ ${money(page.summary.totalCost + progress.totalDeductions)}"
 
-    /** "Combustível R$ 9,30 + manutenção R$ 4,60 · corridas R$ 48,00" (+ aviso de corridas sem custo). */
-    fun costDetails(page: RideHistoryPage): String {
+    /**
+     * O total de [setAside] item por item, cada um na sua linha, e o que fica com o motorista:
+     * "⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\n📌 Dízimo (10%) R$ 4,35\n
+     * Recebido R$ 59,70 · fica com você R$ 39,17" (+ aviso de corridas sem custo).
+     */
+    fun setAsideDetails(page: RideHistoryPage, progress: GoalProgress): String {
         val s = page.summary
-        val base = "Combustível R$ ${money(s.fuelCost)} + manutenção R$ ${money(s.maintenanceCost)}" +
-            " · recebido R$ ${money(s.totalFare)}"
-        return if (s.ridesWithoutCost > 0) {
-            "$base\n${s.ridesWithoutCost} corrida(s) sem gasto: os custos do carro não estavam preenchidos"
-        } else {
-            base
+        val lines = mutableListOf(
+            "⛽ Combustível R$ ${money(s.fuelCost)}",
+            "🔧 Manutenção R$ ${money(s.maintenanceCost)}",
+        )
+        progress.deductions.forEach { d ->
+            lines += "📌 ${d.deduction.label} (${percent(d.deduction.percent)}%) R$ ${money(d.amount)}"
         }
+        lines += if (progress.deductions.isEmpty()) {
+            "Recebido R$ ${money(s.totalFare)}"
+        } else {
+            "Recebido R$ ${money(s.totalFare)} · fica com você R$ ${money(progress.kept)}"
+        }
+        if (s.ridesWithoutCost > 0) {
+            lines += "${s.ridesWithoutCost} corrida(s) sem gasto: os custos do carro não estavam preenchidos"
+        }
+        return lines.joinToString("\n")
     }
 
     /**
@@ -130,4 +149,5 @@ class RideHistoryFormatter(
 
     private fun money(value: BigDecimal) = DecimalFormat("#,##0.00", DecimalFormatSymbols(locale)).format(value)
     private fun km(value: BigDecimal) = DecimalFormat("#,##0.#", DecimalFormatSymbols(locale)).format(value)
+    private fun percent(value: BigDecimal) = DecimalFormat("#,##0.##", DecimalFormatSymbols(locale)).format(value)
 }

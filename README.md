@@ -96,7 +96,10 @@ Voz em velocidade 1,4×.
 - **Deduções do lucro líquido (%)**: descrição + porcentagem (ex.: "Dízimo" 10%); **+ Adicionar
   dedução** cria outra linha, **✕** remove. Calculadas sobre o lucro líquido positivo
   (corridas − combustível − manutenção); a soma deve ficar abaixo de 100%.
-- **Aba Corridas**: abaixo do resumo, cada dedução em R$ e quanto fica com você; no filtro **Dia**,
+- **Aba Corridas → Separar**: total a separar do recebido = combustível + manutenção + deduções,
+  detalhado linha a linha (⛽ Combustível, 🔧 Manutenção, 📌 Dízimo (10%)…) e "Recebido R$ x · fica
+  com você R$ y" (antes era "Separar p/ abastecer", que somava combustível e manutenção sem dizer).
+- **Meta**: no filtro **Dia**,
   "Meta do dia R$ 150,00 · 55%", barra de progresso e "Falta R$ 67,07 no bolso = R$ 74,53 de lucro
   líquido" (o que falta ÷ (1 − soma das %), porque as deduções levam a parte delas). Batida:
   "🎉 Meta batida! Passou R$ x".

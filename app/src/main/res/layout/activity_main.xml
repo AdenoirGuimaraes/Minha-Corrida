@@ -618,19 +618,11 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:textColor="@color/mc_text_muted"
-                    android:textSize="13sp" />
-
-                <!-- Deduções (ex.: dízimo) e meta do dia: preenchidos pelo RideHistoryScreen. -->
-                <TextView
-                    android:id="@+id/tvHistDeductions"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="2dp"
                     android:textColor="@color/mc_text"
-                    android:textSize="14sp"
-                    android:visibility="gone" />
+                    android:textSize="14sp" />
 
+                <!-- Meta do dia: preenchida pelo RideHistoryScreen (só no filtro Dia). -->
                 <LinearLayout
                     android:id="@+id/goalBox"
                     android:layout_width="match_parent"

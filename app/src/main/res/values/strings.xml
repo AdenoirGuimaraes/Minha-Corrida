@@ -50,7 +50,7 @@
     <string name="period_week">Semana</string>
     <string name="period_month">Mês</string>
     <string name="hist_profit">Lucro</string>
-    <string name="hist_cost">Separar p/ abastecer</string>
+    <string name="hist_cost">Separar</string>
     <string name="goal_title">Meta diária e deduções</string>
     <string name="goal_label">Meta diária (R$) — quanto quer que fique com você no dia, já sem combustível, manutenção e deduções</string>
     <string name="deductions_label">Deduções do lucro líquido (%)</string>

@@ -28,7 +28,6 @@ class DailyGoalTest {
 
         val t = formatter.format(p)
         assertEquals("Meta do dia R$ 150,00 · 55%", t.title)
-        assertEquals("Dízimo 10%: R$ 9,22\nFica com você R$ 82,93", t.deductions)
         assertEquals("Falta R$ 67,07 no bolso = R$ 74,53 de lucro líquido", t.status)
     }
 
@@ -50,7 +49,6 @@ class DailyGoalTest {
         assertEquals("170.00", p.kept.toPlainString())
         assertTrue(p.reached)
         assertEquals(100, p.progressPercent)
-        assertEquals("Dízimo 10%: R$ 20,00 · Dedução 5%: R$ 10,00\nFica com você R$ 170,00", formatter.format(p).deductions)
         assertEquals("🎉 Meta batida! Passou R$ 20,00", formatter.format(p).status)
     }
 
@@ -58,11 +56,10 @@ class DailyGoalTest {
     fun `sem deducoes falta e o proprio lucro e sem meta so mostra as deducoes`() {
         val semDeducao = DailyGoalCalculator.progress(BigDecimal("50"), emptyList(), BigDecimal("150"))
         assertEquals("Falta R$ 100,00 de lucro líquido", formatter.format(semDeducao).status)
-        assertNull(formatter.format(semDeducao).deductions)
 
         val semMeta = formatter.format(DailyGoalCalculator.progress(BigDecimal("50"), listOf(dizimo), null))
         assertNull(semMeta.title)
-        assertEquals("Dízimo 10%: R$ 5,00\nFica com você R$ 45,00", semMeta.deductions)
+        assertNull(semMeta.status)
     }
 
     @Test
@@ -78,5 +75,31 @@ class DailyGoalTest {
         assertFailsWith<IllegalArgumentException> { ProfitDeduction("x", BigDecimal("100")) }
         assertFalse(DailyGoalCalculator.isValid(listOf(ProfitDeduction("a", BigDecimal("60")), ProfitDeduction("b", BigDecimal("40")))))
         assertTrue(DailyGoalCalculator.isValid(listOf(dizimo)))
+    }
+
+    // Print de 10/11: "Separar p/ abastecer R$ 16,18" somava combustível e manutenção sem dizer.
+    @Test
+    fun `separar mostra cada gasto e cada deducao e o total inclui o dizimo`() {
+        val page = br.com.minhacorrida.core.history.RideHistoryPage(
+            period = br.com.minhacorrida.core.history.HistoryPeriod.DAY,
+            range = br.com.minhacorrida.core.history.DateRange(java.time.LocalDate.of(2026, 11, 10), java.time.LocalDate.of(2026, 11, 10)),
+            rides = emptyList(),
+            summary = br.com.minhacorrida.core.history.RideHistorySummary(
+                doneCount = 5, totalKm = BigDecimal("17.7"), totalFare = BigDecimal("59.70"),
+                fuelCost = BigDecimal("10.87"), maintenanceCost = BigDecimal("5.31"),
+                netProfit = BigDecimal("43.52"), ridesWithoutCost = 0,
+            ),
+        )
+        val history = br.com.minhacorrida.core.format.RideHistoryFormatter()
+        val progress = DailyGoalCalculator.progress(BigDecimal("43.52"), listOf(dizimo), null)
+        assertEquals("R$ 20,53", history.setAside(page, progress))   // 10,87 + 5,31 + 4,35
+        assertEquals(
+            "⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\n📌 Dízimo (10%) R$ 4,35\n" +
+                "Recebido R$ 59,70 · fica com você R$ 39,17",
+            history.setAsideDetails(page, progress),
+        )
+        val semDeducao = DailyGoalCalculator.progress(BigDecimal("43.52"), emptyList(), null)
+        assertEquals("R$ 16,18", history.setAside(page, semDeducao))
+        assertEquals("⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\nRecebido R$ 59,70", history.setAsideDetails(page, semDeducao))
     }
 }
