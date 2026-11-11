@@ -86,6 +86,9 @@ Voz em velocidade 1,4×.
   da oferta** (faixa do app com valor, "era R$" e hora; quadrados R$/km | Lucro | Mín. verde, na cor
   da corrida), com os valores e gastos guardados; o Mín. verde usa as regras de agora.
   **Toque no card** marca/desmarca "✅ Realizada" (não marcada fica mais apagada).
+- Layout da aba: filtros Dia/Semana/Mês e a data ◀ ▶ ficam fixos; resumo, botões (Registrar
+  Corrida | Corridas Selecionadas, lado a lado), "ⓘ Como as corridas entram" (toque abre/fecha a
+  explicação) e os cards rolam juntos.
 - Resumo das realizadas: corridas e **km rodados**, **lucro** e **separar p/ abastecer**
   (combustível + manutenção).
 - Corridas com mais de **60 dias** são apagadas automaticamente.

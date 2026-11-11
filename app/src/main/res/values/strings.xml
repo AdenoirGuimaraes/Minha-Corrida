@@ -61,6 +61,8 @@
     <string name="deduction_remove">Remover dedução</string>
     <string name="invalid_goal">Meta diária inválida: use um valor maior que zero ou deixe vazio.</string>
     <string name="invalid_deduction">Dedução inválida: a porcentagem deve ficar entre 0 e 100 e a soma de todas abaixo de 100%.</string>
+    <string name="hist_hint_show">ⓘ Como as corridas entram ▾</string>
+    <string name="hist_hint_hide">ⓘ Como as corridas entram ▴</string>
     <string name="hist_card_done">✅ Realizada · toque para desmarcar</string>
     <string name="hist_card_not_done">⬜ Toque para marcar como realizada</string>
     <string name="hist_hint">Entram sozinhas só as corridas que ficaram com você (Uber: tela "Encontro com…"; inDrive: passageiro aceitou), com o valor combinado, e ficam marcadas ✅ quando você avalia o passageiro no fim. Toque no card marca ou desmarca; toque longo corrige o valor. Faltou alguma? Use Registrar Corrida.</string>

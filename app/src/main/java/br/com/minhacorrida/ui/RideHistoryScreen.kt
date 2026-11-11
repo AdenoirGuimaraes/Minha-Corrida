@@ -83,11 +83,23 @@ class RideHistoryScreen(
         activity.findViewById<View>(R.id.btnPeriodNext).setOnClickListener { move(+1) }
         activity.findViewById<View>(R.id.btnManualRide).setOnClickListener { openManualRide() }
         activity.findViewById<View>(R.id.btnKeepSelected).setOnClickListener { confirmKeepSelected() }
+        bindHintToggle()
     }
 
     // ---- Corridas Selecionadas ----
 
     /** Confirma antes de apagar: mostra quantas saem, quantas ficam e de qual período. */
+    /** "ⓘ Como as corridas entram": um toque mostra a explicação, outro esconde. */
+    private fun bindHintToggle() {
+        val toggle = activity.findViewById<TextView>(R.id.tvHistHintToggle)
+        val hint = activity.findViewById<TextView>(R.id.tvHistHint)
+        toggle.setOnClickListener {
+            val show = hint.visibility != View.VISIBLE
+            hint.visibility = if (show) View.VISIBLE else View.GONE
+            toggle.setText(if (show) R.string.hist_hint_hide else R.string.hist_hint_show)
+        }
+    }
+
     private fun confirmKeepSelected() {
         val page = current ?: return
         val notDone = page.rides.count { !it.done }

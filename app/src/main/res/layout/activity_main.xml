@@ -549,6 +549,23 @@
                     android:textSize="20sp" />
             </LinearLayout>
 
+            <!--
+              Filtros e data acima ficam fixos; daqui para baixo (resumo, botões, explicação e
+              cards das corridas) a aba inteira rola junto (print de 10/11: a lista tinha virado
+              uma faixa no rodapé porque só ela rolava).
+            -->
+            <ScrollView
+                android:id="@+id/historyScroll"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingBottom="16dp">
+
             <!-- Resumo das corridas realizadas -->
             <LinearLayout
                 style="@style/Section"
@@ -660,30 +677,57 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Ações do histórico -->
-            <Button
-                android:id="@+id/btnManualRide"
-                style="@style/YellowButton"
-                android:layout_marginTop="10dp"
-                android:text="@string/hist_manual_button" />
-
-            <Button
-                android:id="@+id/btnKeepSelected"
+            <!-- Ações do histórico: lado a lado (uma linha só). -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:backgroundTint="@color/mc_green"
-                android:text="@string/hist_keep_button"
-                android:textColor="@color/mc_text"
-                android:textStyle="bold" />
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnManualRide"
+                    style="@style/YellowButton"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="0dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:maxLines="2"
+                    android:text="@string/hist_manual_button"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btnKeepSelected"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/mc_green"
+                    android:maxLines="2"
+                    android:text="@string/hist_keep_button"
+                    android:textColor="@color/mc_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Explicação recolhida: um toque abre/fecha (RideHistoryScreen). -->
+            <TextView
+                android:id="@+id/tvHistHintToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:paddingVertical="6dp"
+                android:text="@string/hist_hint_show"
+                android:textColor="@color/mc_yellow"
+                android:textSize="14sp" />
 
             <TextView
+                android:id="@+id/tvHistHint"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
                 android:text="@string/hist_hint"
                 android:textColor="@color/mc_text_muted"
-                android:textSize="13sp" />
+                android:textSize="13sp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvHistEmpty"
@@ -696,17 +740,13 @@
                 android:textSize="14sp"
                 android:visibility="gone" />
 
-            <ScrollView
+            <LinearLayout
+                android:id="@+id/historyList"
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <LinearLayout
-                    android:id="@+id/historyList"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingBottom="16dp" />
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+            </LinearLayout>
             </ScrollView>
         </LinearLayout>
     </FrameLayout>
