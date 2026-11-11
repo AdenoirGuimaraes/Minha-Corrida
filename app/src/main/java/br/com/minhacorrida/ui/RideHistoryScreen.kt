@@ -50,6 +50,8 @@ class RideHistoryScreen(
     private val cardFormatter: RideAnalysisFormatter,
     private val goals: br.com.minhacorrida.core.goal.GoalSettingsRepository,
     private val goalFormatter: br.com.minhacorrida.core.format.GoalFormatter,
+    private val kmSettings: br.com.minhacorrida.core.km.KmSettingsRepository,
+    private val kmLog: br.com.minhacorrida.core.km.KmLogRepository,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val cardBinder = RideCardBinder(cardFormatter)
@@ -82,13 +84,9 @@ class RideHistoryScreen(
         activity.findViewById<View>(R.id.btnPeriodPrev).setOnClickListener { move(-1) }
         activity.findViewById<View>(R.id.btnPeriodNext).setOnClickListener { move(+1) }
         activity.findViewById<View>(R.id.btnManualRide).setOnClickListener { openManualRide() }
-        activity.findViewById<View>(R.id.btnKeepSelected).setOnClickListener { confirmKeepSelected() }
         bindHintToggle()
     }
 
-    // ---- Corridas Selecionadas ----
-
-    /** Confirma antes de apagar: mostra quantas saem, quantas ficam e de qual período. */
     /** "ⓘ Como as corridas entram": um toque mostra a explicação, outro esconde. */
     private fun bindHintToggle() {
         val toggle = activity.findViewById<TextView>(R.id.tvHistHintToggle)
@@ -97,38 +95,6 @@ class RideHistoryScreen(
             val show = hint.visibility != View.VISIBLE
             hint.visibility = if (show) View.VISIBLE else View.GONE
             toggle.setText(if (show) R.string.hist_hint_hide else R.string.hist_hint_show)
-        }
-    }
-
-    private fun confirmKeepSelected() {
-        val page = current ?: return
-        val notDone = page.rides.count { !it.done }
-        if (notDone == 0) {
-            toast(activity.getString(R.string.hist_keep_none))
-            return
-        }
-        val done = page.rides.size - notDone
-        AlertDialog.Builder(activity)
-            .setTitle(R.string.hist_keep_title)
-            .setMessage(
-                activity.getString(R.string.hist_keep_message, notDone, formatter.periodLabel(page, LocalDate.now()), done),
-            )
-            .setPositiveButton(R.string.hist_keep_confirm) { _, _ -> keepSelected(page.period, reference) }
-            .setNegativeButton(R.string.diagnostics_close, null)
-            .show()
-    }
-
-    private fun keepSelected(period: HistoryPeriod, ref: LocalDate) {
-        try {
-            io.execute {
-                val removed = history.keepOnlyDone(period, ref)
-                main.post {
-                    toast(activity.getString(R.string.hist_keep_done, removed))
-                    refresh()
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("MC/RideHistoryScreen", "Falha ao apagar não marcadas", e)
         }
     }
 
@@ -348,19 +314,40 @@ class RideHistoryScreen(
      */
     private fun renderSummary(page: RideHistoryPage) {
         tvCountKm.text = formatter.countAndKm(page)
-        tvProfit.text = formatter.profit(page)
+        val commute = commuteOf(page)
         val progress = try {
             val goal = if (page.period == HistoryPeriod.DAY) goals.getDailyGoal() else null
+            // Gasolina do deslocamento sem passageiro também sai do lucro (antes do dízimo).
             br.com.minhacorrida.core.goal.DailyGoalCalculator.progress(
-                page.summary.netProfit, goals.getProfitDeductions(), goal,
+                page.summary.netProfit - (commute?.fuelCost ?: BigDecimal.ZERO), goals.getProfitDeductions(), goal,
             )
         } catch (e: Exception) {
             android.util.Log.e("MC/RideHistoryScreen", "Falha ao calcular deduções/meta", e)
             br.com.minhacorrida.core.goal.DailyGoalCalculator.progress(page.summary.netProfit, emptyList(), null)
         }
-        tvCost.text = formatter.setAside(page, progress)
-        tvCostDetail.text = formatter.setAsideDetails(page, progress)
+        tvProfit.text = formatter.kept(progress)
+        tvCost.text = formatter.setAside(page, progress, commute)
+        tvCostDetail.text = formatter.setAsideDetails(page, progress, commute)
         renderGoal(progress)
+    }
+
+    /**
+     * Controle de km ligado: km do GPS no período − km das corridas realizadas = deslocamento,
+     * com a gasolina pelos custos do carro. null com o controle desligado ou sem km no período.
+     */
+    private fun commuteOf(page: RideHistoryPage): br.com.minhacorrida.core.km.CommuteCost? = try {
+        if (!kmSettings.isKmTrackingEnabled()) {
+            null
+        } else {
+            val cost = settings.getOperatingCost()
+            br.com.minhacorrida.core.km.CommuteCost.of(
+                kmLog.kmBetween(page.range.start, page.range.endExclusive),
+                page.summary.totalKm, cost?.fuelPricePerLiter, cost?.kmPerLiter,
+            )
+        }
+    } catch (e: Exception) {
+        android.util.Log.e("MC/RideHistoryScreen", "Falha ao calcular o deslocamento", e)
+        null
     }
 
     /** Meta diária (só no filtro Dia): barra de progresso e quanto falta (no bolso e em lucro líquido). */
@@ -418,11 +405,107 @@ class RideHistoryScreen(
             showStatus()
             onDoneChanged(record.id, done)
         }
-        card.setOnLongClickListener { askNewFare(record); true }
+        card.setOnLongClickListener { showRideMenu(record); true }
         return card
     }
 
     /** Toque longo: corrigir o valor (contraproposta aceita, valor digitado no lápis etc.). */
+    // ---- Toque longo: corrigir valor, corrigir km ou excluir ----
+
+    /** Menu do toque longo no card da corrida. */
+    private fun showRideMenu(record: RideRecord) {
+        val title = activity.getString(
+            R.string.hist_menu_title, record.platform.displayName, money(record.fare), TIME.format(at(record)),
+        )
+        AlertDialog.Builder(activity)
+            .setTitle(title)
+            .setItems(
+                arrayOf(
+                    activity.getString(R.string.hist_menu_fare),
+                    activity.getString(R.string.hist_menu_km),
+                    activity.getString(R.string.hist_menu_delete),
+                ),
+            ) { _, which ->
+                when (which) {
+                    0 -> askNewFare(record)
+                    1 -> askNewKm(record)
+                    else -> confirmDelete(record, title)
+                }
+            }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    /** "Corrigir km": km até o passageiro (opcional) e km da viagem. */
+    private fun askNewKm(record: RideRecord) {
+        val density = activity.resources.displayMetrics.density
+        fun field(hintRes: Int, value: BigDecimal?) = EditText(activity).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = activity.getString(hintRes)
+            value?.let { setText(it.stripTrailingZeros().toPlainString().replace('.', ',')) }
+        }
+        val etPickup = field(R.string.hist_manual_pickup, record.pickupKm)
+        val etTrip = field(R.string.hist_manual_trip, record.tripKm)
+        val form = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (20 * density).toInt()
+            setPadding(pad, (8 * density).toInt(), pad, 0)
+            addView(TextView(activity).apply { setText(R.string.hist_manual_pickup) })
+            addView(etPickup)
+            addView(TextView(activity).apply { setText(R.string.hist_manual_trip) })
+            addView(etTrip)
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.hist_menu_km)
+            .setView(form)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val pickup = etPickup.text.toString().takeIf { it.isNotBlank() }?.let(NumberParser::parse)
+                val trip = NumberParser.parse(etTrip.text.toString())
+                if (trip == null || trip.signum() <= 0 || (etPickup.text.isNotBlank() && pickup == null)) {
+                    Toast.makeText(activity, R.string.invalid_value, Toast.LENGTH_LONG).show()
+                    return@setPositiveButton
+                }
+                try {
+                    io.execute {
+                        val saved = history.changeKm(record.id, pickup, trip)
+                        main.post {
+                            if (saved == null) Toast.makeText(activity, R.string.invalid_value, Toast.LENGTH_LONG).show()
+                            refresh()
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MC/RideHistoryScreen", "Falha ao corrigir km", e)
+                }
+            }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    /** "Excluir corrida": confirma mostrando qual corrida sai. */
+    private fun confirmDelete(record: RideRecord, title: String) {
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.hist_delete_title)
+            .setMessage(activity.getString(R.string.hist_delete_message, title))
+            .setPositiveButton(R.string.hist_delete_confirm) { _, _ ->
+                try {
+                    io.execute {
+                        val deleted = history.delete(record.id)
+                        main.post {
+                            if (deleted) toast(activity.getString(R.string.hist_deleted))
+                            refresh()
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MC/RideHistoryScreen", "Falha ao excluir corrida", e)
+                }
+            }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    private fun at(record: RideRecord) = java.time.Instant.ofEpochMilli(record.timestampMillis).atZone(java.time.ZoneId.systemDefault())
+    private fun money(value: BigDecimal) = value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',')
+
     private fun askNewFare(record: RideRecord) {
         val input = EditText(activity).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL

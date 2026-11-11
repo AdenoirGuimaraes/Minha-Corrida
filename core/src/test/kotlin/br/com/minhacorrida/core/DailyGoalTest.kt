@@ -94,10 +94,10 @@ class DailyGoalTest {
         val progress = DailyGoalCalculator.progress(BigDecimal("43.52"), listOf(dizimo), null)
         assertEquals("R$ 20,53", history.setAside(page, progress))   // 10,87 + 5,31 + 4,35
         assertEquals(
-            "⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\n📌 Dízimo (10%) R$ 4,35\n" +
-                "Recebido R$ 59,70 · fica com você R$ 39,17",
+            "⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\n📌 Dízimo (10%) R$ 4,35\nRecebido R$ 59,70",
             history.setAsideDetails(page, progress),
         )
+        assertEquals("R$ 39,17", history.kept(progress))            // número grande: 43,52 − 4,35
         val semDeducao = DailyGoalCalculator.progress(BigDecimal("43.52"), emptyList(), null)
         assertEquals("R$ 16,18", history.setAside(page, semDeducao))
         assertEquals("⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\nRecebido R$ 59,70", history.setAsideDetails(page, semDeducao))

@@ -5,6 +5,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Abre o instalador do Android para a versão baixada. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Controle de km rodados (opcional, ligado pelo motorista): GPS em serviço com notificação. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".MinhaCorridaApp"
@@ -36,6 +42,12 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/ride_reader_service" />
         </service>
+
+        <!-- Conta os km rodados pelo GPS (só com o "Controle de km" ligado). -->
+        <service
+            android:name=".service.KmTrackerService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <!-- Entrega o APK baixado ao instalador do Android. -->
         <provider

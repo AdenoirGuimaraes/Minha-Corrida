@@ -15,11 +15,22 @@ class SharedPrefsReadingSession(context: Context, private val logger: AppLogger)
 
     override fun isActive(): Boolean =
         try {
-            prefs.getBoolean(KEY_ACTIVE, true)
+            prefs.getBoolean(KEY_ACTIVE, true) && !prefs.getBoolean(KEY_PAUSED, false)
         } catch (e: Exception) {
             logger.warn(TAG, "Falha ao ler o estado da leitura; mantendo ligada", e)
             true
         }
+
+    override fun isPausedByUser(): Boolean = runCatching { prefs.getBoolean(KEY_PAUSED, false) }.getOrDefault(false)
+
+    override fun setPausedByUser(paused: Boolean) {
+        try {
+            prefs.edit().putBoolean(KEY_PAUSED, paused).commit()
+            logger.debug(TAG, if (paused) "Leitura pausada pelo motorista" else "Leitura religada pelo motorista")
+        } catch (e: Exception) {
+            logger.error(TAG, "Falha ao gravar a pausa da leitura", e)
+        }
+    }
 
     override fun start() = save(true)
 
@@ -39,5 +50,6 @@ class SharedPrefsReadingSession(context: Context, private val logger: AppLogger)
         const val TAG = "ReadingSession"
         const val PREFS_NAME = "minha_corrida_session"
         const val KEY_ACTIVE = "reading_active"
+        const val KEY_PAUSED = "reading_paused_by_user"
     }
 }

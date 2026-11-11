@@ -60,6 +60,40 @@ data class RideRecord(
         )
     }
 
+    /**
+     * A mesma corrida com outros km (correção à mão, ex.: OCR leu a distância errada).
+     * Gastos recalculados com [cost] (custos de agora; null mantém sem gasto); R$/km, lucro e cor também.
+     *
+     * @throws IllegalArgumentException se [tripKm] não for positivo ou [pickupKm] for negativo.
+     */
+    fun withKm(
+        pickupKm: BigDecimal?,
+        tripKm: BigDecimal,
+        cost: br.com.minhacorrida.core.model.OperatingCost?,
+        minValuePerKm: BigDecimal,
+        minNetProfit: BigDecimal? = null,
+    ): RideRecord {
+        require(tripKm.signum() > 0) { "Km da viagem deve ser positivo" }
+        require(pickupKm == null || pickupKm.signum() >= 0) { "Km até o passageiro não pode ser negativo" }
+        val pickup = pickupKm?.takeIf { it.signum() > 0 }
+        val total = (tripKm + (pickup ?: BigDecimal.ZERO)).setScale(2, RoundingMode.HALF_UP)
+        val (fuel, maintenance) = RideCosts.of(total, cost)
+        val perKm = netFare.divide(total, 2, RoundingMode.HALF_UP)
+        val updated = copy(
+            pickupKm = pickup,
+            tripKm = tripKm.setScale(2, RoundingMode.HALF_UP),
+            totalKm = total,
+            valuePerKm = perKm,
+            fuelCost = fuel,
+            maintenanceCost = maintenance,
+            good = perKm >= minValuePerKm,
+        )
+        return updated.copy(
+            lowProfit = updated.good && minNetProfit != null && updated.totalCost != null &&
+                updated.netProfit < minNetProfit,
+        )
+    }
+
     /** Gasto total da corrida (combustível + manutenção); null se os custos não estavam informados. */
     val totalCost: BigDecimal?
         get() = if (fuelCost == null || maintenanceCost == null) null else fuelCost + maintenanceCost

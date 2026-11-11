@@ -36,6 +36,14 @@ class AppContainer(context: Context) {
     /** Meta diária e deduções do lucro (mesmo arquivo de preferências, porta própria). */
     val goalSettings: br.com.minhacorrida.core.goal.GoalSettingsRepository = prefsSettings
     val goalFormatter = br.com.minhacorrida.core.format.GoalFormatter()
+    /** Controle de km rodados (GPS) e abastecimentos (tanque cheio). */
+    val kmSettings: br.com.minhacorrida.core.km.KmSettingsRepository = prefsSettings
+    val kmLog: br.com.minhacorrida.core.km.KmLogRepository by lazy {
+        br.com.minhacorrida.infra.SharedPrefsKmLogRepository(context, logger)
+    }
+    val fuelLog: br.com.minhacorrida.core.km.FuelLogRepository by lazy {
+        br.com.minhacorrida.infra.SharedPrefsFuelLogRepository(context, logger)
+    }
     val readingSession: ReadingSession = SharedPrefsReadingSession(context, logger)
     val parserRegistry = ParserRegistry(
         listOf(UberOfferParser(logger), InDriveOfferParser(logger)),

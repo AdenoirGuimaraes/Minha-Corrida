@@ -78,19 +78,18 @@ Voz em velocidade 1,4×.
   (**Particular, Uber ou inDrive**), valor, km até o passageiro (opcional), km da viagem e hora.
   No inDrive a taxa configurada é descontada (como no leitor); Uber e Particular sem desconto.
   Mostra o cálculo do card enquanto digita e entra já realizada.
-- **Corridas Selecionadas**: depois de marcar as realizadas, apaga as não marcadas do período na
-  tela (com confirmação); as marcadas ficam com os cálculos no resumo.
-- **Toque longo** na corrida corrige o valor à mão (ex.: valor digitado no lápis). Km e gastos não
-  mudam; R$/km, lucro e cor são recalculados.
+- **Toque longo** na corrida abre o menu: **Corrigir valor** (km e gastos não mudam), **Corrigir km**
+  (busca e viagem; gastos com os custos de agora) ou **Excluir corrida** (com confirmação). O botão
+  "Corridas Selecionadas" saiu: só entram corridas confirmadas, já marcadas no fim.
 - Na aba **Corridas**: filtro **Dia / Semana / Mês** com ◀ ▶. Cada corrida aparece no **mesmo card
   da oferta** (faixa do app com valor, "era R$" e hora; quadrados R$/km | Lucro | Mín. verde, na cor
   da corrida), com os valores e gastos guardados; o Mín. verde usa as regras de agora.
   **Toque no card** marca/desmarca "✅ Realizada" (não marcada fica mais apagada).
-- Layout da aba: filtros Dia/Semana/Mês e a data ◀ ▶ ficam fixos; resumo, botões (Registrar
-  Corrida | Corridas Selecionadas, lado a lado), "ⓘ Como as corridas entram" (toque abre/fecha a
+- Layout da aba: filtros Dia/Semana/Mês e a data ◀ ▶ ficam fixos; resumo, botão Registrar
+  Corrida, "ⓘ Como as corridas entram" (toque abre/fecha a
   explicação) e os cards rolam juntos.
-- Resumo das realizadas: corridas e **km rodados**, **lucro** e **separar p/ abastecer**
-  (combustível + manutenção).
+- Resumo das realizadas: corridas e km; número grande **"Fica com você"** (lucro já sem
+  combustível, manutenção, deslocamento e deduções) e **"Separar"** (a soma desses descontos, item a item).
 - Corridas com mais de **60 dias** são apagadas automaticamente.
 
 ## Meta diária e deduções do lucro
@@ -106,6 +105,23 @@ Voz em velocidade 1,4×.
   "Meta do dia R$ 150,00 · 55%", barra de progresso e "Falta R$ 67,07 no bolso = R$ 74,53 de lucro
   líquido" (o que falta ÷ (1 − soma das %), porque as deduções levam a parte delas). Batida:
   "🎉 Meta batida! Passou R$ x".
+
+## Km rodados (GPS) e abastecimentos (tanque cheio)
+- **Configurações → Km rodados e abastecimentos → "Contar km rodados pelo GPS"** (liga/desliga).
+  Ligado, um serviço com notificação fixa ("Hoje: 52,3 km", botão **Parar**) soma os km de carro:
+  descarta posição imprecisa (> 35 m), GPS parado (< 25 m), trecho a pé (< 9 km/h) e saltos (> 200 km/h).
+- **Aba Corridas → Separar**: com o controle ligado, entra "🚗 Deslocamento 34,6 km (rodou 52,3 km) R$ 20,76"
+  = (km do GPS − km das corridas realizadas) × preço do litro ÷ km/L — a gasolina rodada sem
+  passageiro, para manter o tanque cheio. Ela também sai do lucro antes das deduções.
+- **+ Registrar abastecimento**: data (editável, para anotar depois), km do painel, litros, valor e
+  "Encheu o tanque". Toque na linha edita ou exclui. Do 2º tanque cheio em diante: **consumo real**
+  (km do painel ÷ litros depois do 1º tanque cheio), preço médio do litro e o km do GPS no mesmo
+  intervalo para comparar; **"Usar consumo e preço nos custos"** preenche os custos do carro.
+
+## Pausar a leitura pelo app
+- Faixa no topo do app: **"📖 Leitura de ofertas ligada · toque para pausar"** /
+  **"⏸ Leitura pausada · toque para religar"** (ex.: conferir o histórico da Uber sem o leitor achar
+  que são ofertas). Abrir o app não desfaz a pausa; só o mesmo toque religa.
 
 ## Diagnóstico para calibrar a leitura
 - **Configurações → Diagnóstico da leitura** guarda as **200 leituras** mais recentes (telas e

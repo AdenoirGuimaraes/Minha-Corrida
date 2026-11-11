@@ -1,6 +1,7 @@
 package br.com.minhacorrida.core.format
 
 import br.com.minhacorrida.core.goal.GoalProgress
+import br.com.minhacorrida.core.km.CommuteCost
 import br.com.minhacorrida.core.history.HistoryPeriod
 import br.com.minhacorrida.core.history.RideHistoryPage
 import br.com.minhacorrida.core.history.RideRecord
@@ -47,34 +48,35 @@ class RideHistoryFormatter(
         return "$rides · ${km(s.totalKm)} km"
     }
 
-    fun profit(page: RideHistoryPage): String = "R$ ${money(page.summary.netProfit)}"
+    /** Número grande da esquerda: o que fica com o motorista, já sem gastos e deduções (ex.: dízimo). */
+    fun kept(progress: GoalProgress): String = "R$ ${money(progress.kept)}"
 
     /**
      * Total a separar do recebido: combustível + manutenção + deduções (ex.: dízimo).
      * Ex. (10/11): 10,87 + 5,31 + 4,35 = "R$ 20,53".
      */
-    fun setAside(page: RideHistoryPage, progress: GoalProgress): String =
-        "R$ ${money(page.summary.totalCost + progress.totalDeductions)}"
+    fun setAside(page: RideHistoryPage, progress: GoalProgress, commute: CommuteCost? = null): String =
+        "R$ ${money(page.summary.totalCost + progress.totalDeductions + (commute?.fuelCost ?: BigDecimal.ZERO))}"
 
     /**
      * O total de [setAside] item por item, cada um na sua linha, e o que fica com o motorista:
      * "⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\n📌 Dízimo (10%) R$ 4,35\n
      * Recebido R$ 59,70 · fica com você R$ 39,17" (+ aviso de corridas sem custo).
      */
-    fun setAsideDetails(page: RideHistoryPage, progress: GoalProgress): String {
+    fun setAsideDetails(page: RideHistoryPage, progress: GoalProgress, commute: CommuteCost? = null): String {
         val s = page.summary
         val lines = mutableListOf(
             "⛽ Combustível R$ ${money(s.fuelCost)}",
             "🔧 Manutenção R$ ${money(s.maintenanceCost)}",
         )
+        // Controle de km ligado: gasolina dos km rodados sem passageiro (mantém o tanque cheio).
+        commute?.let { c ->
+            lines += "🚗 Deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km) R$ ${money(c.fuelCost)}"
+        }
         progress.deductions.forEach { d ->
             lines += "📌 ${d.deduction.label} (${percent(d.deduction.percent)}%) R$ ${money(d.amount)}"
         }
-        lines += if (progress.deductions.isEmpty()) {
-            "Recebido R$ ${money(s.totalFare)}"
-        } else {
-            "Recebido R$ ${money(s.totalFare)} · fica com você R$ ${money(progress.kept)}"
-        }
+        lines += "Recebido R$ ${money(s.totalFare)}"
         if (s.ridesWithoutCost > 0) {
             lines += "${s.ridesWithoutCost} corrida(s) sem gasto: os custos do carro não estavam preenchidos"
         }

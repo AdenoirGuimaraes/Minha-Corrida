@@ -13,7 +13,8 @@ import org.json.JSONObject
 import java.math.BigDecimal
 
 /** Persiste as preferências em SharedPreferences (leitura em memória, rápida). */
-class SharedPrefsSettingsRepository(context: Context) : SettingsRepository, GoalSettingsRepository {
+class SharedPrefsSettingsRepository(context: Context) :
+    SettingsRepository, GoalSettingsRepository, br.com.minhacorrida.core.km.KmSettingsRepository {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -97,6 +98,12 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository, Goal
         prefs.edit().putString(KEY_MIN_NET_PROFIT, value.toPlainString()).apply()
     }
 
+    override fun isKmTrackingEnabled(): Boolean = prefs.getBoolean(KEY_KM_TRACKING, false)
+
+    override fun setKmTrackingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_KM_TRACKING, enabled).apply()
+    }
+
     override fun getDailyGoal(): BigDecimal? =
         prefs.getString(KEY_DAILY_GOAL, null)?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
 
@@ -151,6 +158,7 @@ class SharedPrefsSettingsRepository(context: Context) : SettingsRepository, Goal
         const val KEY_INDRIVE_FEE = "indrive_fee_percent"
         const val KEY_MIN_NET_PROFIT = "min_net_profit"
         const val KEY_DAILY_GOAL = "daily_goal"
+        const val KEY_KM_TRACKING = "km_tracking_enabled"
         const val KEY_DEDUCTIONS = "profit_deductions"
         val DEFAULT_INDRIVE_FEE = BigDecimal("10")
         val MAX_FEE = BigDecimal("50")

@@ -81,6 +81,7 @@ class MainActivity : Activity() {
     private lateinit var etMinProfit: EditText
     private lateinit var etDailyGoal: EditText
     private lateinit var deductionsEditor: DeductionsEditor
+    private lateinit var kmControl: KmControlSection
     private lateinit var etTimeout: EditText
     private lateinit var etFuelPrice: EditText
     private lateinit var etKmPerLiter: EditText
@@ -125,6 +126,7 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btnSave).setOnClickListener { saveSettings() }
         findViewById<Button>(R.id.btnDiagnostics).setOnClickListener { showDiagnostics() }
         findViewById<Button>(R.id.btnExit).setOnClickListener { exitApp() }
+        findViewById<TextView>(R.id.btnReadingToggle).setOnClickListener { toggleReadingPause() }
         findViewById<Button>(R.id.btnTestVoice).setOnClickListener { testVoice() }
         tabSettings.setOnClickListener { selectTab(Tab.SETTINGS) }
         tabSimulator.setOnClickListener { selectTab(Tab.SIMULATOR) }
@@ -132,7 +134,7 @@ class MainActivity : Activity() {
         historyScreen = RideHistoryScreen(
             this, container.rideHistory, container.historyFormatter, ioExecutor,
             container.evaluateRide, container.settings, container.formatter,
-            container.goalSettings, container.goalFormatter,
+            container.goalSettings, container.goalFormatter, container.kmSettings, container.kmLog,
         )
         historyScreen.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
@@ -146,6 +148,12 @@ class MainActivity : Activity() {
         super.onResume()
         // Abrir o app = voltar a trabalhar: retoma a leitura se tinha sido encerrada.
         container.readingSession.start()
+        showReadingState()
+        // Controle de km ligado: garante o serviço do GPS (ex.: celular reiniciado).
+        if (::kmControl.isInitialized) {
+            kmControl.refresh()
+            br.com.minhacorrida.service.KmTrackerService.sync(this, container.kmSettings.isKmTrackingEnabled())
+        }
         // Voltando ao app na aba Corridas: mostra as corridas verdes que chegaram nesse meio-tempo.
         if (::historyScreen.isInitialized && currentTab == Tab.HISTORY) historyScreen.refresh()
         tvStatus.setText(if (isServiceEnabled()) R.string.status_on else R.string.status_off)
@@ -190,6 +198,16 @@ class MainActivity : Activity() {
         etMinProfit = findViewById(R.id.etMinProfit)
         etDailyGoal = findViewById(R.id.etDailyGoal)
         deductionsEditor = DeductionsEditor(this, findViewById(R.id.deductionsList), findViewById(R.id.btnAddDeduction))
+        kmControl = KmControlSection(
+            this, container.kmSettings, container.kmLog, container.fuelLog,
+            onToggle = ::onKmTrackingToggled,
+            onUseStats = { price, kmPerLiter ->
+                etFuelPrice.setText(decimalText(price))
+                etKmPerLiter.setText(decimalText(kmPerLiter))
+                toast(getString(R.string.fuel_use_stats_done))
+            },
+        )
+        kmControl.bind()
         etTimeout = findViewById(R.id.etTimeout)
         etFuelPrice = findViewById(R.id.etFuelPrice)
         etKmPerLiter = findViewById(R.id.etKmPerLiter)
@@ -520,6 +538,65 @@ class MainActivity : Activity() {
         }
     }
 
+    // ---- Controle de km (GPS) ----
+
+    /** Ligar pede a permissão de localização (e de notificação); desligar para o serviço. */
+    private fun onKmTrackingToggled(enabled: Boolean) {
+        try {
+            if (enabled && !br.com.minhacorrida.service.KmTrackerService.hasLocationPermission(this)) {
+                val permissions = buildList {
+                    add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                    if (android.os.Build.VERSION.SDK_INT >= 33) add(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+                requestPermissions(permissions.toTypedArray(), REQUEST_LOCATION)
+                return
+            }
+            container.kmSettings.setKmTrackingEnabled(enabled)
+            br.com.minhacorrida.service.KmTrackerService.sync(this, enabled)
+            kmControl.refresh()
+        } catch (e: Exception) {
+            android.util.Log.e("MC/MainActivity", "Falha ao ligar/desligar o controle de km", e)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQUEST_LOCATION) return
+        val granted = br.com.minhacorrida.service.KmTrackerService.hasLocationPermission(this)
+        container.kmSettings.setKmTrackingEnabled(granted)
+        br.com.minhacorrida.service.KmTrackerService.sync(this, granted)
+        if (!granted) toast(getString(R.string.km_permission_denied))
+        kmControl.refresh()
+    }
+
+    // ---- Pausar/religar a leitura ----
+
+    /** Pausa (ex.: conferir o histórico da Uber) ou religa a leitura de ofertas. */
+    private fun toggleReadingPause() {
+        try {
+            val session = container.readingSession
+            val pause = !session.isPausedByUser()
+            session.setPausedByUser(pause)
+            showReadingState()
+            toast(getString(if (pause) R.string.reading_paused_toast else R.string.reading_resumed_toast))
+        } catch (e: Exception) {
+            android.util.Log.e("MC/MainActivity", "Falha ao pausar/religar a leitura", e)
+        }
+    }
+
+    /** Faixa do topo: verde "leitura ligada" ou vermelha "leitura pausada". */
+    private fun showReadingState() {
+        val button = findViewById<TextView>(R.id.btnReadingToggle)
+        val paused = runCatching { container.readingSession.isPausedByUser() }.getOrDefault(false)
+        button.setText(if (paused) R.string.reading_paused else R.string.reading_on)
+        button.setTextColor(getColor(R.color.mc_text))
+        button.background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = 12 * resources.displayMetrics.density
+            setColor(if (paused) 0xFFC62828.toInt() else 0xFF1B8A3A.toInt())
+        }
+    }
+
     // ---- Encerrar ----
 
     /**
@@ -641,6 +718,7 @@ class MainActivity : Activity() {
 
     private companion object {
         const val PREVIEW_ENTRIES = 10
+        const val REQUEST_LOCATION = 7
         /** Intervalo mínimo entre consultas ao GitHub (abrir e fechar o app rápido não repete). */
         const val UPDATE_CHECK_INTERVAL_MS = 60_000L
     }

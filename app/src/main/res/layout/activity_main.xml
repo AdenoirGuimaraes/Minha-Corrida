@@ -37,6 +37,18 @@
             android:textSize="13sp" />
     </LinearLayout>
 
+    <!-- Pausar/religar a leitura de tela sem ir às configurações do celular. -->
+    <TextView
+        android:id="@+id/btnReadingToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:paddingVertical="8dp"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
     <!-- Abas -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -238,6 +250,62 @@
                         android:text="@string/deductions_hint"
                         android:textColor="@color/mc_text_muted"
                         android:textSize="13sp" />
+                </LinearLayout>
+
+                <!-- Km rodados (GPS) e abastecimentos (tanque cheio): KmControlSection. -->
+                <LinearLayout style="@style/Section">
+
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:text="@string/km_title" />
+
+                    <CheckBox
+                        android:id="@+id/cbKmTracking"
+                        style="@style/CheckItem"
+                        android:text="@string/km_enable" />
+
+                    <TextView
+                        android:id="@+id/tvKmToday"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/mc_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/km_hint"
+                        android:textColor="@color/mc_text_muted"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/tvFuelStats"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:textColor="@color/mc_yellow"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnUseFuelStats"
+                        style="@style/YellowButton"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/fuel_use_stats"
+                        android:visibility="gone" />
+
+                    <Button
+                        android:id="@+id/btnAddFuel"
+                        style="@style/YellowButton"
+                        android:text="@string/fuel_add" />
+
+                    <LinearLayout
+                        android:id="@+id/fuelList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
                 </LinearLayout>
 
                 <!-- Checklist: apps lidos e voz (verde = ligado, vermelho = desligado) -->
@@ -690,23 +758,11 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginTop="0dp"
-                    android:layout_marginEnd="6dp"
                     android:layout_weight="1"
                     android:maxLines="2"
                     android:text="@string/hist_manual_button"
                     android:textSize="13sp" />
 
-                <Button
-                    android:id="@+id/btnKeepSelected"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/mc_green"
-                    android:maxLines="2"
-                    android:text="@string/hist_keep_button"
-                    android:textColor="@color/mc_text"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Explicação recolhida: um toque abre/fecha (RideHistoryScreen). -->

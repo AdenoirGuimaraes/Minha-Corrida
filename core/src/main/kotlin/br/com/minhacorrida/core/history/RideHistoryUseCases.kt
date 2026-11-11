@@ -162,16 +162,34 @@ class RideHistoryUseCase(
     }
 
     /**
-     * Botão "Corridas Selecionadas": apaga as corridas NÃO marcadas do período na tela;
-     * as marcadas (realizadas) ficam. @return quantas foram apagadas.
+     * Toque longo → "Corrigir km": novos km da busca e da viagem (gastos com os custos de agora).
+     * @return a corrida corrigida, ou null se não existir ou os km forem inválidos.
      */
-    fun keepOnlyDone(period: HistoryPeriod, reference: LocalDate): Int = try {
-        val toDelete = page(period, reference).rides.filterNot { it.done }
-        toDelete.forEach { repository.delete(it.id) }
-        toDelete.size
+    fun changeKm(id: String, pickupKm: BigDecimal?, tripKm: BigDecimal): RideRecord? = try {
+        val record = repository.findById(id)
+        if (record == null || tripKm.signum() <= 0 || (pickupKm != null && pickupKm.signum() < 0)) {
+            null
+        } else {
+            record.withKm(
+                pickupKm, tripKm, settings.getOperatingCost(), settings.getMinValuePerKm(), settings.getMinNetProfit(),
+            ).also(repository::replace)
+        }
     } catch (e: Exception) {
-        logger.error(TAG, "Falha ao apagar corridas não marcadas", e)
-        0
+        logger.error(TAG, "Falha ao corrigir km da corrida", e)
+        null
+    }
+
+    /** Toque longo → "Excluir corrida". @return true se apagou. */
+    fun delete(id: String): Boolean = try {
+        if (repository.findById(id) == null) {
+            false
+        } else {
+            repository.delete(id)
+            true
+        }
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao excluir corrida", e)
+        false
     }
 
     /**

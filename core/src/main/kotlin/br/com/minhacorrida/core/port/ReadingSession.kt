@@ -8,8 +8,16 @@ package br.com.minhacorrida.core.port
  * e abrir o app retoma.
  */
 interface ReadingSession {
-    /** @return true enquanto o motorista estiver usando o app (leitura ligada). */
+    /** @return true enquanto a leitura estiver ligada (app em uso e não pausada pelo motorista). */
     fun isActive(): Boolean
+
+    /**
+     * Pausa feita pelo botão do app (ex.: conferir o histórico da Uber sem o leitor achar
+     * que são ofertas). Diferente de [stop], abrir o app NÃO desfaz: só o mesmo botão religa.
+     */
+    fun isPausedByUser(): Boolean
+
+    fun setPausedByUser(paused: Boolean)
 
     /** Retoma a leitura (chamado ao abrir o app). */
     fun start()
@@ -20,7 +28,10 @@ interface ReadingSession {
 
 /** Implementação em memória, útil em testes. */
 class InMemoryReadingSession(private var active: Boolean = true) : ReadingSession {
-    override fun isActive() = active
+    private var paused = false
+    override fun isActive() = active && !paused
+    override fun isPausedByUser() = paused
+    override fun setPausedByUser(paused: Boolean) { this.paused = paused }
     override fun start() { active = true }
     override fun stop() { active = false }
 }

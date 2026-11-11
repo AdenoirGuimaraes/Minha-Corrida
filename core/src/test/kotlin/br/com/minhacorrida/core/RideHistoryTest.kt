@@ -118,9 +118,9 @@ class RideHistoryTest {
         val f = RideHistoryFormatter(zone)
         assertEquals("Hoje · 05/11", f.periodLabel(done, today))
         assertEquals("1 corrida realizada · 4,1 km", f.countAndKm(done))
-        assertEquals("R$ 6,51", f.profit(done))
         val semDeducao = br.com.minhacorrida.core.goal.DailyGoalCalculator.progress(done.summary.netProfit, emptyList(), null)
         assertEquals("R$ 3,49", f.setAside(done, semDeducao))
+        assertEquals("R$ 6,51", f.kept(semDeducao))
         assertEquals("🟢 15:00 · Uber · R$ 10,00 · 4,1 km · lucro R$ 6,51", f.row(done.rides.single(), HistoryPeriod.DAY))
         assertEquals("02/11 a 08/11", f.periodLabel(history.page(HistoryPeriod.WEEK, today), today))
         assertEquals("Novembro de 2026", f.periodLabel(history.page(HistoryPeriod.MONTH, today), today))
@@ -138,20 +138,25 @@ class RideHistoryTest {
     }
 
     @Test
-    fun `corridas selecionadas apaga so as nao marcadas do periodo na tela`() {
+    fun `toque longo corrige os km e recalcula gastos, R$ por km e cor`() {
+        record(analysis("10.00", "2.2", "1.9"))                       // 4,1 km
+        val id = history.page(HistoryPeriod.DAY, today).rides.single().id
+        val r = history.changeKm(id, BigDecimal("1.0"), BigDecimal("2.0"))!!
+        assertEquals("3.00", r.totalKm.toPlainString())
+        assertEquals("3.33", r.valuePerKm.toPlainString())
+        assertNull(history.changeKm(id, null, BigDecimal.ZERO))      // viagem precisa ter km
+        assertEquals("3.00", history.page(HistoryPeriod.DAY, today).rides.single().totalKm.toPlainString())
+    }
+
+    @Test
+    fun `toque longo exclui so a corrida escolhida`() {
         record(analysis("10.00", "2.2", "1.9"))
         now += 60_000
         record(analysis("20.00", "1.0", "7.0"))
-        now = today.minusDays(1).atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
-        record(analysis("15.00", "1.0", "5.0"))                       // ontem: fora do período
-        val hoje = history.page(HistoryPeriod.DAY, today)
-        history.setDone(hoje.rides.first().id, true)
-
-        assertEquals(1, history.keepOnlyDone(HistoryPeriod.DAY, today))
-        val depois = history.page(HistoryPeriod.DAY, today)
-        assertEquals(1, depois.rides.size)
-        assertTrue(depois.rides.single().done)
-        assertEquals(1, history.page(HistoryPeriod.DAY, today.minusDays(1)).rides.size)
+        val rides = history.page(HistoryPeriod.DAY, today).rides
+        assertTrue(history.delete(rides.first().id))
+        assertEquals(1, history.page(HistoryPeriod.DAY, today).rides.size)
+        assertTrue(!history.delete("nao-existe"))
     }
 
     @Test
