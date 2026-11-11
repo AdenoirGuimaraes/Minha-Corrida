@@ -34,6 +34,9 @@ class DistanceAccumulator(
 ) {
     private var anchor: GeoPoint? = null
 
+    /** Último ponto aceito (referência atual); null antes do 1º ponto confiável. */
+    val lastPoint: GeoPoint? get() = anchor
+
     /** @return metros a somar por esta posição (0 se ruído, a pé ou salto). */
     fun add(point: GeoPoint): Double {
         if (point.accuracyMeters > maxAccuracyMeters) return 0.0
@@ -63,6 +66,48 @@ class DistanceAccumulator(
             val h = sin(dLat / 2).pow(2) + cos(lat1) * cos(lat2) * sin(dLon / 2).pow(2)
             return 2 * EARTH_RADIUS_M * asin(sqrt(h))
         }
+    }
+}
+
+/**
+ * Início do trajeto que o GPS não pegou (o sensor de veículo leva 1–2 min para perceber o carro e
+ * o GPS mais alguns segundos para o 1º ponto confiável): distância em linha reta entre onde o carro
+ * ficou estacionado (fim do trajeto anterior) e o 1º ponto do GPS, × [roadFactor] (ruas não são
+ * linha reta). Acima de [maxMeters] não estima (outro carro ou dado errado).
+ */
+object TripStartEstimator {
+    const val ROAD_FACTOR = 1.3
+    const val MAX_METERS = 3_000.0
+
+    /** @return metros a acrescentar no começo do trajeto (0 sem estacionamento conhecido). */
+    fun estimate(parking: GeoPoint?, firstFix: GeoPoint, roadFactor: Double = ROAD_FACTOR, maxMeters: Double = MAX_METERS): Double {
+        if (parking == null) return 0.0
+        val straight = DistanceAccumulator.haversineMeters(parking, firstFix)
+        return if (straight > maxMeters) 0.0 else straight * roadFactor
+    }
+}
+
+/**
+ * Ajuste dos km do GPS pelo painel: entre os tanques cheios, painel ÷ km registrados pelo GPS.
+ * Ex.: painel 412 km, GPS 398 km → 1,035 (+3,5%). Só vale com GPS cobrindo ao menos metade do
+ * painel (controle ligado na maior parte do tempo) e fica entre 0,8 e 1,3 (proteção).
+ */
+object KmCorrection {
+    private val MIN = BigDecimal("0.80")
+    private val MAX = BigDecimal("1.30")
+
+    /** @return fator (3 casas), ou null sem dados suficientes. */
+    fun factor(stats: FuelStats, gpsKmInInterval: BigDecimal): BigDecimal? {
+        val odometer = stats.odometerKm ?: return null
+        if (gpsKmInInterval.signum() <= 0 || gpsKmInInterval * BigDecimal(2) < odometer) return null
+        return odometer.divide(gpsKmInInterval, 3, RoundingMode.HALF_UP).max(MIN).min(MAX)
+    }
+
+    /** "+3,5%" / "−2,0%" para mostrar ao motorista. */
+    fun percentLabel(factor: BigDecimal): String {
+        val percent = (factor - BigDecimal.ONE).multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_UP)
+        val sign = if (percent.signum() < 0) "−" else "+"
+        return sign + percent.abs().toPlainString().replace('.', ',') + "%"
     }
 }
 
@@ -171,6 +216,8 @@ data class CommuteCost(
     val fuelCost: BigDecimal,
     /** Preenchido quando veio da média do painel (sem km de GPS no período): km/dia usados. */
     val averagePerDay: BigDecimal? = null,
+    /** Fator do painel aplicado aos km do GPS ([KmCorrection]); null sem ajuste. */
+    val correction: BigDecimal? = null,
 ) {
     companion object {
         /**
@@ -202,15 +249,18 @@ data class CommuteCost(
             ridesKm: BigDecimal,
             fuelPricePerLiter: BigDecimal?,
             kmPerLiter: BigDecimal?,
+            correction: BigDecimal? = null,
         ): CommuteCost? {
             if (gpsKm.signum() <= 0) return null
-            val commute = (gpsKm - ridesKm).max(BigDecimal.ZERO).setScale(1, RoundingMode.HALF_UP)
+            // Km do GPS ajustados pelo painel (perdas no começo dos trajetos, túneis, sinal fraco).
+            val driven = (gpsKm * (correction ?: BigDecimal.ONE)).setScale(1, RoundingMode.HALF_UP)
+            val commute = (driven - ridesKm).max(BigDecimal.ZERO).setScale(1, RoundingMode.HALF_UP)
             val cost = if (fuelPricePerLiter == null || kmPerLiter == null || kmPerLiter.signum() <= 0) {
                 BigDecimal.ZERO.setScale(2)
             } else {
                 (commute * fuelPricePerLiter).divide(kmPerLiter, 2, RoundingMode.HALF_UP)
             }
-            return CommuteCost(gpsKm.setScale(1, RoundingMode.HALF_UP), ridesKm.setScale(1, RoundingMode.HALF_UP), commute, cost)
+            return CommuteCost(driven, ridesKm.setScale(1, RoundingMode.HALF_UP), commute, cost, correction = correction)
         }
     }
 }

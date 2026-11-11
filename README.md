@@ -117,6 +117,14 @@ Voz em velocidade 1,4×.
   Sem resposta, fica em **"⏳ trajetos pendentes"** na aba Corridas (toque para decidir). Só os registrados
   somam nos km do dia (data do início do trajeto).
 - GPS: descarta posição imprecisa (> 35 m), GPS parado (< 25 m), a pé (< 9 km/h) e saltos (> 200 km/h).
+- **Começo estimado do trajeto**: o sensor leva 1–2 min para perceber o carro e o GPS mais alguns segundos
+  para o 1º ponto confiável (~1 km perdido por saída). O app guarda onde o carro ficou estacionado (fim do
+  trajeto anterior) e soma a distância até o 1º ponto do GPS × 1,3 (ruas não são linha reta); acima de 3 km
+  não estima. Aparece na notificação: "Trajeto de 12,4 km (inclui 1,1 km do início estimado)". Descartar
+  um trajeto (outro carro) devolve o estacionamento anterior.
+- **Ajuste pelo painel**: entre os tanques cheios, painel ÷ km do GPS registrados (ex.: 412 ÷ 398 = +3,5%)
+  corrige os km do GPS na aba Corridas ("rodou 51,8 km, painel +3,5%"). Só com GPS cobrindo ao menos
+  metade do painel; limitado entre −20% e +30%.
 - **Aba Corridas → Separar**: "🚗 Deslocamento 34,6 km (rodou 52,3 km) R$ 20,76" = (km registrados − km das
   corridas realizadas) × preço do litro ÷ km/L. **Sem km de GPS no período**, usa a **média do painel**:
   (km do painel entre os 2 últimos tanques cheios − km das corridas realizadas nesse intervalo) ÷ dias,

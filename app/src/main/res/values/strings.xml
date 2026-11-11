@@ -86,6 +86,7 @@
     <string name="km_notification_stop">Encerrar trajeto</string>
     <string name="fuel_stats">Consumo real: %1$s km/L · preço médio R$ %2$s/L\nPainel: %3$s km entre tanques cheios (GPS somou %4$s km)</string>
     <string name="fuel_stats_empty">Anote cada abastecimento de tanque cheio: a partir do 2º, o app calcula o consumo real do carro.</string>
+    <string name="fuel_correction">Ajuste aplicado aos km do GPS: %1$s</string>
     <string name="fuel_use_stats">Usar consumo e preço nos custos</string>
     <string name="fuel_use_stats_done">Valores colocados nos custos do carro. Toque em Salvar para gravar.</string>
     <string name="fuel_add">+ Registrar abastecimento</string>
@@ -107,6 +108,7 @@
     <string name="km_background_denied">Sem \"Permitir o tempo todo\", o GPS só liga com o app aberto. Os abastecimentos continuam dando a média do painel.</string>
     <string name="trip_channel">Trajetos para confirmar</string>
     <string name="trip_notification_title">🚗 Trajeto de %1$s km</string>
+    <string name="trip_notification_title_estimated">🚗 Trajeto de %1$s km (inclui %2$s km do início estimado)</string>
     <string name="trip_notification_text">%1$s–%2$s · Registrar soma no dia; Descartar ignora (ex.: carro do trabalho)</string>
     <string name="trip_keep">Registrar</string>
     <string name="trip_discard">Descartar</string>

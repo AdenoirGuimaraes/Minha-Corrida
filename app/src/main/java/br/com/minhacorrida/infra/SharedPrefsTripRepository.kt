@@ -44,7 +44,7 @@ class SharedPrefsTripRepository(context: Context, private val logger: AppLogger)
 
     private fun toJson(t: Trip) = JSONObject()
         .put("id", t.id).put("s", t.startMillis).put("e", t.endMillis)
-        .put("m", t.meters).put("st", t.status.name).put("r", t.withRide)
+        .put("m", t.meters).put("st", t.status.name).put("r", t.withRide).put("est", t.estimatedMeters)
 
     private fun fromJson(o: JSONObject) = Trip(
         id = o.getString("id"),
@@ -53,6 +53,7 @@ class SharedPrefsTripRepository(context: Context, private val logger: AppLogger)
         meters = o.getDouble("m"),
         status = TripStatus.valueOf(o.getString("st")),
         withRide = o.optBoolean("r", false),
+        estimatedMeters = o.optDouble("est", 0.0),
     )
 
     private companion object {

@@ -74,7 +74,8 @@ class RideHistoryFormatter(
             lines += if (c.averagePerDay != null) {
                 "🚗 Deslocamento (média do painel ${km(c.averagePerDay)} km/dia) R$ ${money(c.fuelCost)}"
             } else {
-                "🚗 Deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km) R$ ${money(c.fuelCost)}"
+                val adjust = c.correction?.let { ", painel ${br.com.minhacorrida.core.km.KmCorrection.percentLabel(it)}" }.orEmpty()
+                "🚗 Deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km$adjust) R$ ${money(c.fuelCost)}"
             }
         }
         progress.deductions.forEach { d ->

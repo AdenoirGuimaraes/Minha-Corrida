@@ -92,8 +92,13 @@ class TripActionReceiver : BroadcastReceiver() {
         val pending = goAsync()
         Thread {
             try {
-                val trips = (context.applicationContext as MinhaCorridaApp).container.trips
-                if (intent.action == ACTION_KEEP) trips.keep(id) else trips.discard(id)
+                val container = (context.applicationContext as MinhaCorridaApp).container
+                if (intent.action == ACTION_KEEP) {
+                    container.trips.keep(id)
+                } else {
+                    container.trips.discard(id)
+                    container.parking.revertIfFrom(id) // outro carro: o seu continua onde estava
+                }
                 context.getSystemService(NotificationManager::class.java).cancel(id.hashCode())
             } catch (e: Exception) {
                 android.util.Log.e("MC/TripAction", "Falha ao decidir o trajeto", e)

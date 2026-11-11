@@ -46,6 +46,9 @@ class KmTrackerService : Service(), LocationListener {
     private var tripMeters = 0.0
     private var lastMovementAt = 0L
     private var lastNotifiedMeters = 0.0
+    /** Começo do trajeto estimado (estacionamento → 1º ponto do GPS); somado uma vez. */
+    private var estimatedMeters = 0.0
+    private var startEstimated = false
 
     /** Fecha o trajeto se o carro ficou parado tempo demais (saída do veículo não detectada). */
     private val idleCheck = object : Runnable {
@@ -90,6 +93,8 @@ class KmTrackerService : Service(), LocationListener {
         tripId = UUID.randomUUID().toString()
         tripStart = System.currentTimeMillis()
         tripMeters = 0.0
+        estimatedMeters = 0.0
+        startEstimated = false
         lastMovementAt = tripStart
         accumulator.reset()
         saveState()
@@ -102,12 +107,15 @@ class KmTrackerService : Service(), LocationListener {
         tripId = id
         tripStart = prefs.getLong(KEY_START, System.currentTimeMillis())
         tripMeters = prefs.getFloat(KEY_METERS, 0f).toDouble()
+        estimatedMeters = prefs.getFloat(KEY_ESTIMATED, 0f).toDouble()
+        startEstimated = true // retomado: o começo já foi estimado (ou não há como)
         lastMovementAt = System.currentTimeMillis()
         return true
     }
 
     private fun saveState() {
-        prefs.edit().putString(KEY_ID, tripId).putLong(KEY_START, tripStart).putFloat(KEY_METERS, tripMeters.toFloat()).apply()
+        prefs.edit().putString(KEY_ID, tripId).putLong(KEY_START, tripStart)
+            .putFloat(KEY_METERS, tripMeters.toFloat()).putFloat(KEY_ESTIMATED, estimatedMeters.toFloat()).apply()
     }
 
     private fun startGps() {
@@ -125,7 +133,18 @@ class KmTrackerService : Service(), LocationListener {
 
     override fun onLocationChanged(location: Location) {
         try {
-            val meters = accumulator.add(GeoPoint(location.latitude, location.longitude, location.accuracy, location.time))
+            val point = GeoPoint(location.latitude, location.longitude, location.accuracy, location.time)
+            val meters = accumulator.add(point)
+            // 1º ponto confiável do trajeto: soma o trecho perdido desde o estacionamento.
+            if (!startEstimated && accumulator.lastPoint != null) {
+                startEstimated = true
+                estimatedMeters = br.com.minhacorrida.core.km.TripStartEstimator.estimate(container.parking.current(), point)
+                if (estimatedMeters > 0) {
+                    tripMeters += estimatedMeters
+                    saveState()
+                    container.logger.debug(TAG, "Começo do trajeto estimado: ${estimatedMeters.toInt()} m")
+                }
+            }
             if (meters <= 0) return
             tripMeters += meters
             lastMovementAt = System.currentTimeMillis()
@@ -146,14 +165,18 @@ class KmTrackerService : Service(), LocationListener {
         val id = tripId
         val start = tripStart
         val meters = tripMeters
+        val estimated = estimatedMeters
         val end = System.currentTimeMillis()
+        // Onde o carro ficou: ponto de partida do próximo trajeto.
+        val lastPoint = accumulator.lastPoint
+        if (id != null && lastPoint != null) container.parking.update(lastPoint, id)
         tripId = null
         prefs.edit().clear().apply()
         if (id != null) {
             Thread {
                 try {
                     val hadRide = container.rideHistoryRepository.between(start, end).isNotEmpty()
-                    when (val outcome = container.trips.finish(id, start, end, meters, hadRide)) {
+                    when (val outcome = container.trips.finish(id, start, end, meters, hadRide, estimated)) {
                         is TripOutcome.NeedsDecision -> notifyDecision(outcome.trip)
                         is TripOutcome.AutoKept -> container.logger.debug(TAG, "Trajeto com corrida registrado: ${outcome.trip.km} km")
                         is TripOutcome.TooShort -> container.logger.debug(TAG, "Trajeto curto ignorado")
@@ -213,7 +236,13 @@ class KmTrackerService : Service(), LocationListener {
         val time = java.text.SimpleDateFormat("HH:mm", java.util.Locale("pt", "BR"))
         val notification = Notification.Builder(this, CHANNEL_DECISION)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(getString(R.string.trip_notification_title, km(trip.meters)))
+            .setContentTitle(
+                if (trip.estimatedMeters > 0) {
+                    getString(R.string.trip_notification_title_estimated, km(trip.meters), km(trip.estimatedMeters))
+                } else {
+                    getString(R.string.trip_notification_title, km(trip.meters))
+                },
+            )
             .setContentText(
                 getString(
                     R.string.trip_notification_text,
@@ -254,6 +283,7 @@ class KmTrackerService : Service(), LocationListener {
         private const val KEY_ID = "id"
         private const val KEY_START = "start"
         private const val KEY_METERS = "meters"
+        private const val KEY_ESTIMATED = "estimated"
 
         fun hasLocationPermission(context: Context): Boolean =
             context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED

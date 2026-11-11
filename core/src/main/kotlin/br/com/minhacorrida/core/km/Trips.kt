@@ -24,6 +24,7 @@ enum class TripStatus {
  *
  * @property meters distância somada pelo GPS no trajeto.
  * @property withRide true se alguma corrida foi confirmada durante o trajeto (é o carro do motorista).
+ * @property estimatedMeters parte de [meters] estimada no começo ([TripStartEstimator]).
  */
 data class Trip(
     val id: String,
@@ -32,6 +33,7 @@ data class Trip(
     val meters: Double,
     val status: TripStatus,
     val withRide: Boolean = false,
+    val estimatedMeters: Double = 0.0,
 ) {
     val km: BigDecimal get() = BigDecimal(meters).divide(BigDecimal(1000), 1, RoundingMode.HALF_UP)
 
@@ -73,8 +75,15 @@ class TripUseCase(
      * Fim do trajeto.
      * @param hadRide true se alguma corrida foi confirmada entre [startMillis] e [endMillis].
      */
-    fun finish(id: String, startMillis: Long, endMillis: Long, meters: Double, hadRide: Boolean): TripOutcome {
-        val base = Trip(id, startMillis, endMillis, meters, TripStatus.PENDING, hadRide)
+    fun finish(
+        id: String,
+        startMillis: Long,
+        endMillis: Long,
+        meters: Double,
+        hadRide: Boolean,
+        estimatedMeters: Double = 0.0,
+    ): TripOutcome {
+        val base = Trip(id, startMillis, endMillis, meters, TripStatus.PENDING, hadRide, estimatedMeters)
         return try {
             when {
                 meters < minMeters -> TripOutcome.TooShort(base.copy(status = TripStatus.DISCARDED))

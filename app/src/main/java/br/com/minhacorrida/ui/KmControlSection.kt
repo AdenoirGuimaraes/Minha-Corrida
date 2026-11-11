@@ -78,7 +78,16 @@ class KmControlSection(
         tvStats.text = when {
             kmPerLiter != null && price != null -> {
                 val gps = kmLog.kmBetween(stats.from!!, stats.to!!)
-                activity.getString(R.string.fuel_stats, decimal(kmPerLiter), money(price), km(stats.odometerKm!!), km(gps))
+                val base = activity.getString(R.string.fuel_stats, decimal(kmPerLiter), money(price), km(stats.odometerKm!!), km(gps))
+                // Ajuste painel ÷ GPS aplicado aos km do GPS na aba Corridas.
+                val factor = br.com.minhacorrida.core.km.KmCorrection.factor(stats, gps)
+                if (factor == null) {
+                    base
+                } else {
+                    base + "\n" + activity.getString(
+                        R.string.fuel_correction, br.com.minhacorrida.core.km.KmCorrection.percentLabel(factor),
+                    )
+                }
             }
             else -> activity.getString(R.string.fuel_stats_empty)
         }

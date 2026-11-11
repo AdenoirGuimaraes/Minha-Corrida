@@ -54,6 +54,7 @@ class RideHistoryScreen(
     private val kmLog: br.com.minhacorrida.core.km.KmLogRepository,
     private val fuelLog: br.com.minhacorrida.core.km.FuelLogRepository,
     private val trips: br.com.minhacorrida.core.km.TripUseCase,
+    private val parking: br.com.minhacorrida.infra.ParkingStore,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val cardBinder = RideCardBinder(cardFormatter)
@@ -346,11 +347,19 @@ class RideHistoryScreen(
         } else {
             val cost = settings.getOperatingCost()
             val gpsKm = kmLog.kmBetween(page.range.start, page.range.endExclusive)
+            val stats = br.com.minhacorrida.core.km.FuelStatsCalculator.of(fuelLog.all())
             if (gpsKm.signum() > 0) {
-                br.com.minhacorrida.core.km.CommuteCost.of(gpsKm, page.summary.totalKm, cost?.fuelPricePerLiter, cost?.kmPerLiter)
+                // Km do GPS ajustados pelo painel (diferença medida entre os tanques cheios).
+                val correction = if (stats.from != null && stats.to != null) {
+                    br.com.minhacorrida.core.km.KmCorrection.factor(stats, kmLog.kmBetween(stats.from!!, stats.to!!))
+                } else {
+                    null
+                }
+                br.com.minhacorrida.core.km.CommuteCost.of(
+                    gpsKm, page.summary.totalKm, cost?.fuelPricePerLiter, cost?.kmPerLiter, correction,
+                )
             } else {
-                // Sem km de GPS no período: média do painel entre os últimos tanques cheios.
-                val stats = br.com.minhacorrida.core.km.FuelStatsCalculator.of(fuelLog.all())
+                // Sem km de GPS no período: média do painel entre os tanques cheios.
                 val perDay = if (stats.from != null && stats.to != null) {
                     br.com.minhacorrida.core.km.OdometerCommute.kmPerDay(stats, history.doneKmBetween(stats.from!!, stats.to!!))
                 } else {
@@ -401,7 +410,12 @@ class RideHistoryScreen(
         fun apply(keep: Boolean) {
             try {
                 io.execute {
-                    if (keep) trips.keep(id) else trips.discard(id)
+                    if (keep) {
+                        trips.keep(id)
+                    } else {
+                        trips.discard(id)
+                        parking.revertIfFrom(id)
+                    }
                     activity.getSystemService(android.app.NotificationManager::class.java).cancel(id.hashCode())
                     main.post { refresh() }
                 }

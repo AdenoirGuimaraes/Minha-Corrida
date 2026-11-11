@@ -135,7 +135,7 @@ class MainActivity : Activity() {
             this, container.rideHistory, container.historyFormatter, ioExecutor,
             container.evaluateRide, container.settings, container.formatter,
             container.goalSettings, container.goalFormatter, container.kmSettings, container.kmLog,
-            container.fuelLog, container.trips,
+            container.fuelLog, container.trips, container.parking,
         )
         historyScreen.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
