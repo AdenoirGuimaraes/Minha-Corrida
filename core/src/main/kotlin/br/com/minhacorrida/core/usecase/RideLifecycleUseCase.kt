@@ -154,13 +154,7 @@ class RideLifecycleUseCase(
         if (clock() - ride.sinceMillis > ACTIVE_MAX_AGE_MS) active.remove(platform)
     }
 
-    private fun currentRules() = RideRules(
-        minValuePerKm = settings.getMinValuePerKm(),
-        minPassengerRating = settings.getMinPassengerRating(),
-        operatingCost = settings.getOperatingCost(),
-        inDriveFeePercent = settings.getInDriveFeePercent(),
-        minNetProfit = settings.getMinNetProfit(),
-    )
+    private fun currentRules() = RideRules.from(settings)
 
     private companion object {
         const val TAG = "RideLifecycle"

@@ -73,6 +73,8 @@ class MainActivity : Activity() {
     private lateinit var etSimRating: EditText
     private lateinit var etSimPickupKm: EditText
     private lateinit var etSimTripKm: EditText
+    private lateinit var etSimMinutes: EditText
+    private lateinit var etMinProfitPerMinute: EditText
 
     // Regras e custos.
     private lateinit var etMinValue: EditText
@@ -193,6 +195,8 @@ class MainActivity : Activity() {
         etSimRating = findViewById(R.id.etSimRating)
         etSimPickupKm = findViewById(R.id.etSimPickupKm)
         etSimTripKm = findViewById(R.id.etSimTripKm)
+        etSimMinutes = findViewById(R.id.etSimMinutes)
+        etMinProfitPerMinute = findViewById(R.id.etMinProfitPerMinute)
         etMinValue = findViewById(R.id.etMinValue)
         etMinRating = findViewById(R.id.etMinRating)
         etInDriveFee = findViewById(R.id.etInDriveFee)
@@ -263,7 +267,7 @@ class MainActivity : Activity() {
             override fun afterTextChanged(s: Editable?) = updatePreview()
         }
         listOf(
-            etSimFare, etSimRating, etSimPickupKm, etSimTripKm,
+            etSimFare, etSimRating, etSimPickupKm, etSimTripKm, etSimMinutes, etMinProfitPerMinute,
             etMinValue, etMinRating, etMinProfit, etInDriveFee, etFuelPrice, etKmPerLiter, etOtherCost,
         ).forEach { it.addTextChangedListener(watcher) }
     }
@@ -286,9 +290,13 @@ class MainActivity : Activity() {
                 return
             }
             val platform = if (rbSimInDrive.isChecked) Platform.INDRIVE else Platform.UBER
+            // Minutos totais (busca + viagem) digitados; vazio = estimados pelos km.
+            val minutes = nonNegativeOrNull(etSimMinutes)?.setScale(0, java.math.RoundingMode.HALF_UP)?.toInt()?.takeIf { it > 0 }
             val offer = RideOffer(
                 platform, fare, tripKm = tripKm, pickupKm = pickupKm,
                 passengerRating = ratingOrNull(etSimRating),
+                pickupMinutes = minutes?.let { 0 },
+                tripMinutes = minutes,
             )
             val rules = RideRules(
                 minValuePerKm = minValue,
@@ -296,6 +304,7 @@ class MainActivity : Activity() {
                 operatingCost = cost,
                 inDriveFeePercent = feeOrNull(etInDriveFee) ?: BigDecimal.ZERO,
                 minNetProfit = nonNegativeOrNull(etMinProfit),
+                minProfitPerMinute = nonNegativeOrNull(etMinProfitPerMinute),
             )
             val analysis = container.evaluateRide(offer, rules)
             previewAnalysis = analysis
@@ -368,6 +377,7 @@ class MainActivity : Activity() {
         settings.getMinPassengerRating()?.let { etMinRating.setText(decimalText(it)) }
         etInDriveFee.setText(decimalText(settings.getInDriveFeePercent()))
         settings.getMinNetProfit()?.let { etMinProfit.setText(decimalText(it)) }
+        settings.getMinProfitPerMinute()?.let { etMinProfitPerMinute.setText(decimalText(it)) }
         val goals = container.goalSettings
         goals.getDailyGoal()?.let { etDailyGoal.setText(decimalText(it)) }
         deductionsEditor.show(goals.getProfitDeductions())
@@ -402,6 +412,11 @@ class MainActivity : Activity() {
                 toast(getString(R.string.invalid_min_profit))
                 return
             }
+            val minPerMinute = if (etMinProfitPerMinute.text.isBlank()) null else nonNegativeOrNull(etMinProfitPerMinute)
+            if (etMinProfitPerMinute.text.isNotBlank() && minPerMinute == null) {
+                toast(getString(R.string.invalid_min_profit_per_minute))
+                return
+            }
             val dailyGoal = if (etDailyGoal.text.isBlank()) null else positive(etDailyGoal)
             if (etDailyGoal.text.isNotBlank() && dailyGoal == null) {
                 toast(getString(R.string.invalid_goal))
@@ -429,6 +444,7 @@ class MainActivity : Activity() {
             settings.setMinPassengerRating(minRating.value)
             settings.setInDriveFeePercent(inDriveFee)
             settings.setMinNetProfit(minProfit)
+            settings.setMinProfitPerMinute(minPerMinute)
             settings.setEnabledPlatforms(platforms)
             settings.setVoiceEnabled(cbVoice.isChecked)
             container.goalSettings.setDailyGoal(dailyGoal)
@@ -742,6 +758,7 @@ class MainActivity : Activity() {
         val settings = container.settings
         val parts = mutableListOf("mínimo R$ ${decimalText(settings.getMinValuePerKm())}/km")
         settings.getMinNetProfit()?.let { parts += "lucro mín. R$ ${decimalText(it)}" }
+        settings.getMinProfitPerMinute()?.let { parts += "lucro mín. R$ ${decimalText(it)}/min" }
         parts += "taxa inDrive ${decimalText(settings.getInDriveFeePercent())}%"
         settings.getMinPassengerRating()?.let { parts += "nota mín. ${decimalText(it)}" }
         parts += "custos " + if (settings.getOperatingCost() != null) "informados" else "não informados"

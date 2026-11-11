@@ -70,11 +70,22 @@ class CalculateRideMetricsUseCase {
         minValuePerKm: BigDecimal,
         profit: RideProfit?,
         minNetProfit: BigDecimal?,
+        minutes: Int = 0,
+        minProfitPerMinute: BigDecimal? = null,
     ): MinimumFare {
         val byKm = minimumFare(metrics, minValuePerKm)
-        if (profit == null || minNetProfit == null) return byKm
-        val byProfit = grossFor(profit.cost + minNetProfit, metrics.feePercent)
-        return byKm.copy(minNetProfit = minNetProfit, greenFare = byKm.minimumFare.max(byProfit))
+        if (profit == null) return byKm
+        var result = byKm
+        if (minNetProfit != null) {
+            val byProfit = grossFor(profit.cost + minNetProfit, metrics.feePercent)
+            result = result.copy(minNetProfit = minNetProfit, greenFare = result.greenFare.max(byProfit))
+        }
+        if (minProfitPerMinute != null && minutes > 0) {
+            // Lucro mínimo pelo tempo: gasto + (mínimo por minuto × minutos), com a taxa.
+            val byMinute = grossFor(profit.cost + minProfitPerMinute * BigDecimal(minutes), metrics.feePercent)
+            result = result.copy(minProfitPerMinute = minProfitPerMinute, greenFare = result.greenFare.max(byMinute))
+        }
+        return result
     }
 
     private fun grossFor(net: BigDecimal, feePercent: BigDecimal): BigDecimal = Companion.grossFor(net, feePercent)

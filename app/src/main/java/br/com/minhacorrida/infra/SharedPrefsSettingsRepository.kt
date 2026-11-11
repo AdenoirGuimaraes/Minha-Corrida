@@ -98,6 +98,18 @@ class SharedPrefsSettingsRepository(context: Context) :
         prefs.edit().putString(KEY_MIN_NET_PROFIT, value.toPlainString()).apply()
     }
 
+    override fun getMinProfitPerMinute(): BigDecimal? =
+        prefs.getString(KEY_MIN_PROFIT_PER_MINUTE, null)?.toBigDecimalOrNull()
+
+    override fun setMinProfitPerMinute(value: BigDecimal?) {
+        if (value == null) {
+            prefs.edit().remove(KEY_MIN_PROFIT_PER_MINUTE).apply()
+            return
+        }
+        require(value.signum() >= 0) { "Lucro mínimo por minuto não pode ser negativo" }
+        prefs.edit().putString(KEY_MIN_PROFIT_PER_MINUTE, value.toPlainString()).apply()
+    }
+
     override fun isKmTrackingEnabled(): Boolean = prefs.getBoolean(KEY_KM_TRACKING, false)
 
     override fun setKmTrackingEnabled(enabled: Boolean) {
@@ -157,6 +169,7 @@ class SharedPrefsSettingsRepository(context: Context) :
         const val KEY_VOICE = "voice_enabled"
         const val KEY_INDRIVE_FEE = "indrive_fee_percent"
         const val KEY_MIN_NET_PROFIT = "min_net_profit"
+        const val KEY_MIN_PROFIT_PER_MINUTE = "min_profit_per_minute"
         const val KEY_DAILY_GOAL = "daily_goal"
         const val KEY_KM_TRACKING = "km_tracking_enabled"
         const val KEY_DEDUCTIONS = "profit_deductions"

@@ -26,7 +26,8 @@ data class RideMetrics(
 /**
  * Classificação da corrida (cor do card):
  * - [GOOD] verde: atinge o mínimo R$/km e o lucro líquido mínimo;
- * - [LOW_PROFIT] amarelo: atinge o mínimo R$/km, mas o lucro líquido fica abaixo do mínimo;
+ * - [LOW_PROFIT] amarelo: atinge o mínimo R$/km, mas o lucro líquido ou o lucro por minuto
+ *   fica abaixo do mínimo;
  * - [BELOW_MINIMUM] vermelho: abaixo do mínimo R$/km ou nota do passageiro abaixo da mínima.
  */
 enum class RideRating {
@@ -53,7 +54,36 @@ data class MinimumFare(
     val minimumFare: BigDecimal,
     val minNetProfit: BigDecimal? = null,
     val greenFare: BigDecimal = minimumFare,
+    /** Lucro mínimo por minuto usado no [greenFare]; null quando não entra. */
+    val minProfitPerMinute: BigDecimal? = null,
 )
+
+/**
+ * Tempo da corrida (busca + viagem).
+ * @property estimated true quando algum trecho não tinha minutos na tela e foi estimado pela
+ *   velocidade média urbana ([RideTime.URBAN_MINUTES_PER_KM]).
+ */
+data class RideTime(val minutes: Int, val estimated: Boolean) {
+    companion object {
+        /** 25 km/h na cidade = 2,4 min por km (só quando a tela não mostra os minutos). */
+        val URBAN_MINUTES_PER_KM = BigDecimal("2.4")
+
+        /** Soma os minutos da tela; trecho sem minutos é estimado pelos km. */
+        fun of(offer: RideOffer): RideTime {
+            var estimated = false
+            fun leg(minutes: Int?, km: BigDecimal?): Int = when {
+                minutes != null -> minutes
+                km == null || km.signum() == 0 -> 0
+                else -> {
+                    estimated = true
+                    (km * URBAN_MINUTES_PER_KM).setScale(0, java.math.RoundingMode.CEILING).toInt()
+                }
+            }
+            val total = leg(offer.pickupMinutes, offer.pickupKm) + leg(offer.tripMinutes, offer.tripKm)
+            return RideTime(total.coerceAtLeast(1), estimated)
+        }
+    }
+}
 
 /**
  * Lucro real líquido da corrida.
@@ -81,7 +111,13 @@ data class RideAnalysis(
     val minimum: MinimumFare,
     val profit: RideProfit? = null,
     val lowPassengerRating: Boolean = false,
+    /** Minutos da corrida (busca + viagem). */
+    val time: RideTime = RideTime.of(offer),
 ) {
+    /** Lucro por minuto (lucro ÷ minutos); null sem custos do carro. */
+    val profitPerMinute: BigDecimal?
+        get() = profit?.netProfit?.divide(BigDecimal(time.minutes), 2, java.math.RoundingMode.HALF_UP)
+
     /**
      * Lucro se a corrida pagasse exatamente o valor mínimo (mínimo R$/km × km total) − gasto.
      * null quando os custos do carro não foram informados.

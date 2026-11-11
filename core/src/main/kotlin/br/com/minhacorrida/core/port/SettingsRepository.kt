@@ -46,6 +46,12 @@ interface SettingsRepository {
     /** @throws IllegalArgumentException se negativo. */
     fun setMinNetProfit(value: BigDecimal?)
 
+    /** Lucro mínimo por minuto de corrida (R$/min); null = sem esse filtro. */
+    fun getMinProfitPerMinute(): BigDecimal?
+
+    /** @throws IllegalArgumentException se for negativo. */
+    fun setMinProfitPerMinute(value: BigDecimal?)
+
     /** Voz "Aceitar corrida…" para corridas verdes (padrão: ligada). */
     fun isVoiceEnabled(): Boolean
 

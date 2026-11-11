@@ -147,6 +147,15 @@
 
                     <TextView
                         style="@style/FieldLabel"
+                        android:text="@string/min_profit_per_minute_label" />
+
+                    <EditText
+                        android:id="@+id/etMinProfitPerMinute"
+                        style="@style/NumberField"
+                        android:hint="0,60" />
+
+                    <TextView
+                        style="@style/FieldLabel"
                         android:text="@string/indrive_fee_label" />
 
                     <EditText
@@ -532,6 +541,15 @@
                                     android:hint="3,0" />
                             </LinearLayout>
                         </LinearLayout>
+
+                        <TextView
+                            style="@style/FieldLabel"
+                            android:text="@string/sim_minutes_label" />
+
+                        <EditText
+                            android:id="@+id/etSimMinutes"
+                            style="@style/NumberField"
+                            android:hint="11" />
 
                         <Button
                             android:id="@+id/btnTestVoice"

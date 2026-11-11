@@ -218,12 +218,7 @@ class RideHistoryScreen(
         return try {
             val analysis = evaluate(
                 RideOffer(platform, fare, tripKm = trip, pickupKm = pickup?.takeIf { it.signum() > 0 }),
-                RideRules(
-                    settings.getMinValuePerKm(),
-                    operatingCost = settings.getOperatingCost(),
-                    inDriveFeePercent = settings.getInDriveFeePercent(),
-                    minNetProfit = settings.getMinNetProfit(),
-                ),
+                RideRules.from(settings).copy(minPassengerRating = null),
             )
             val card = cardFormatter.card(analysis)
             val color = when (analysis.rating) {

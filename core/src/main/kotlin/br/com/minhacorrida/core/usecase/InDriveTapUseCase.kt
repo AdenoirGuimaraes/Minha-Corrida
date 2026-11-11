@@ -48,13 +48,7 @@ class InDriveTapUseCase(
         InDriveTap.Ignored
     }
 
-    private fun rules() = RideRules(
-        minValuePerKm = settings.getMinValuePerKm(),
-        minPassengerRating = settings.getMinPassengerRating(),
-        operatingCost = settings.getOperatingCost(),
-        inDriveFeePercent = settings.getInDriveFeePercent(),
-        minNetProfit = settings.getMinNetProfit(),
-    )
+    private fun rules() = RideRules.from(settings)
 
     /** "Aceitar por R$ 15", "R$ 17,50", "Oferecer R$ 19" → valor; "R$ 2,1/km" e textos longos não. */
     private fun fareOf(text: String): java.math.BigDecimal? {

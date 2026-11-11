@@ -134,7 +134,8 @@ class ProfitAndFiltersTest {
         assertEquals("7 km\n(4 + 3)", card.kmDetails)
         assertEquals("Lucro", card.profitLabel)
         assertEquals("2,63", card.profitValue)
-        assertEquals("Corrida R$ 7,04\nGasto R$ 4,41", card.profitDetails)
+        // 1ª linha: lucro por minuto (2,63 ÷ 16 min da tela: 10 + 6).
+        assertEquals("R$ 0,16/min · 16 min\nCorrida R$ 7,04\nGasto R$ 4,41", card.profitDetails)
         assertEquals("7,00", card.minimumValue)
         // Sem lucro mínimo configurado, o verde depende só do R$/km.
         assertEquals("R$ 1,00/km", card.minimumLabel)

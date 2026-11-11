@@ -30,8 +30,10 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
             // a parte de baixo ainda não foi lida: mostrar o R$/km agora daria um valor errado.
             if (reading.distances.size < 2) return null
             RideOffer(
-                platform, reading.fare, tripKm = reading.distances[1], pickupKm = reading.distances[0],
+                platform, reading.fare, tripKm = reading.distances[1].km, pickupKm = reading.distances[0].km,
                 passengerRating = reading.rating,
+                pickupMinutes = reading.distances[0].minutes,
+                tripMinutes = reading.distances[1].minutes,
             )
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta da Uber", e)
@@ -50,7 +52,10 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
     }
 
     /** Valor, distâncias (só as que vêm depois do valor) e nota de um cartão. */
-    private data class CardReading(val fare: BigDecimal, val distances: List<BigDecimal>, val rating: BigDecimal?)
+    private data class CardReading(val fare: BigDecimal, val distances: List<Leg>, val rating: BigDecimal?)
+
+    /** Trecho do cartão: "12 min (6.6 km)" → 6,6 km em 12 min. */
+    private data class Leg(val km: BigDecimal, val minutes: Int?)
 
     private fun readCard(texts: List<String>): CardReading? {
         val anchor = distanceAnchor(texts)
@@ -119,20 +124,23 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
      * A Uber mostra as distâncias entre parênteses: 1ª = busca, 2ª = viagem.
      * Se o OCR perder os parênteses, usa as distâncias simples na mesma ordem.
      */
-    private fun findDistances(texts: List<String>): List<BigDecimal> {
+    private fun findDistances(texts: List<String>): List<Leg> {
         val inParentheses = texts.flatMap { text ->
-            TextPatterns.PAREN_DISTANCE.findAll(text).mapNotNull { distanceKm(text, it) }.toList()
+            TextPatterns.PAREN_DISTANCE.findAll(text).mapNotNull { leg(text, it) }.toList()
         }
         if (inParentheses.size >= 2) return inParentheses
 
         val plain = texts.flatMap { text ->
             TextPatterns.DISTANCE.findAll(text)
                 .filter { isCardPlainDistance(text, it) }
-                .mapNotNull { distanceKm(text, it) }
+                .mapNotNull { leg(text, it) }
                 .toList()
         }
         return if (plain.size > inParentheses.size) plain else inParentheses
     }
+
+    private fun leg(text: String, match: MatchResult): Leg? =
+        distanceKm(text, match)?.let { Leg(it, TextPatterns.minutesBefore(text, match)) }
 
     /**
      * Converte a distância e corrige o ponto perdido pelo OCR: "12 min (74 km)" seria

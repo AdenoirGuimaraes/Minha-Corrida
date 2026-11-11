@@ -49,6 +49,16 @@ internal object TextPatterns {
         return km.takeIf { it.signum() > 0 }
     }
 
+    private val MINUTES = Regex("""(\d+)\s*min""", RegexOption.IGNORE_CASE)
+
+    /**
+     * Minutos escritos ANTES da distância no mesmo texto: "12 min (6.6 km)", "5 minutos (2.3 km)",
+     * "8 min 3,1 km" (bolha do inDrive). @return minutos (1 a 240) ou null.
+     */
+    fun minutesBefore(text: String, match: MatchResult): Int? =
+        MINUTES.findAll(text.substring(0, match.range.first)).lastOrNull()
+            ?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it in 1..240 }
+
     /** True quando a distância vem precedida de "~" no mesmo texto. */
     fun isApproximate(text: String, match: MatchResult): Boolean =
         text.substring(0, match.range.first).trimEnd().endsWith("~")

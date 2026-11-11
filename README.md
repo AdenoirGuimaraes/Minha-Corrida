@@ -147,12 +147,23 @@ Voz em velocidade 1,4×.
   ordem) e abre o compartilhar do Android para anexar no chat.
 
 ## Cores do card
-- 🟢 **Verde**: R$/km ≥ mínimo **e** lucro líquido ≥ lucro mínimo (voz "Aceitar corrida").
-- 🟡 **Amarelo**: R$/km ≥ mínimo, mas lucro líquido abaixo do lucro mínimo (sem voz).
+- 🟢 **Verde**: R$/km ≥ mínimo **e** lucro líquido ≥ lucro mínimo **e** lucro por minuto ≥ mínimo por minuto
+  (voz "Aceitar corrida").
+- 🟡 **Amarelo**: R$/km ≥ mínimo, mas lucro líquido **ou** lucro por minuto abaixo do mínimo (sem voz).
 - 🔴 **Vermelho**: R$/km abaixo do mínimo ou nota do passageiro abaixo da mínima.
-- Sem lucro mínimo configurado (ou sem custos do carro), vale só o R$/km.
-- Verdes e amarelas vão para a aba Corridas (🟢/🟡).
+- Filtro vazio (ou sem custos do carro) não conta; sem nenhum, vale só o R$/km.
 - Abas na ordem: **Corridas** (abre primeiro), **Configurações**, **Simulador**.
+
+## Lucro por minuto (R$/min)
+- **Configurações → "Lucro mínimo por minuto (R$/min)"** (vazio = sem filtro). Sugestão: R$ 0,60/min
+  (meta de R$ 70 no bolso com dízimo de 10% = R$ 77,78 de lucro; 3–4 h à noite com ~60% do tempo com
+  passageiro → R$ 0,54 a R$ 0,72 por minuto de corrida).
+- Minutos = busca + viagem lidos da tela (Uber: "5 min (1.8 km)" e "6 minutos (2.3 km)"; inDrive: bolha
+  "8 min 3,1 km" quando o OCR junta). Trecho sem minutos na tela é estimado a 25 km/h (2,4 min/km) e o
+  card mostra "≈".
+- Card, quadrado **Lucro**, 1ª linha: "R$ 0,77/min · 11 min". **Mín. verde** passa a considerar também
+  gasto + mínimo por minuto × minutos (linha "R$ 0,60/min").
+- Simulador: campo "Minutos totais (busca + viagem)" (vazio = estimado pelos km).
 
 ## Taxas das plataformas
 - **Uber**: o valor do card **já é o ganho do motorista** (taxa da Uber descontada). Conferido em

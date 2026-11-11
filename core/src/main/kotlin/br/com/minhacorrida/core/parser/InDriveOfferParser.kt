@@ -23,7 +23,8 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
             // "Aceitar por R$ X" só existe na oferta aberta: é o portão desta leitura.
             val fare = findAcceptFare(texts) ?: return null
             val distances = collectDistances(texts)
-            val mapKms = distances.filterNot { it.approximate }.map { it.km }
+            val mapLegs = distances.filterNot { it.approximate }
+            val mapKms = mapLegs.map { it.km }
             if (mapKms.size < 2) {
                 logger.debug(TAG, "Oferta aberta, mas o mapa ainda não foi lido (${mapKms.size} distância(s))")
                 return null
@@ -34,14 +35,17 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
             val tripIndex = approxTrip
                 ?.let { trip -> mapKms.indexOfFirst { isSame(it, trip) } }
                 ?.takeIf { it >= 0 } ?: 0
-            val tripKm = mapKms[tripIndex]
-            val others = mapKms.filterIndexed { index, _ -> index != tripIndex }
+            val trip = mapLegs[tripIndex]
+            val others = mapLegs.filterIndexed { index, _ -> index != tripIndex }
             // Evita contar a mesma bolha duas vezes (lida pela acessibilidade e pelo OCR).
-            val pickupKm = others.firstOrNull { !isSame(it, tripKm) } ?: others.first()
+            val pickup = others.firstOrNull { !isSame(it.km, trip.km) } ?: others.first()
 
             RideOffer(
-                platform, fare, tripKm = tripKm, pickupKm = pickupKm,
+                platform, fare, tripKm = trip.km, pickupKm = pickup.km,
                 passengerRating = TextPatterns.findPassengerRating(texts),
+                // Bolha "8 min 3,1 km": minutos só quando o OCR juntou os dois no mesmo texto.
+                pickupMinutes = pickup.minutes,
+                tripMinutes = trip.minutes,
             )
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta do inDrive", e)
@@ -65,13 +69,13 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
         texts.flatMap { text ->
             TextPatterns.DISTANCE.findAll(text).mapNotNull { match ->
                 TextPatterns.toKm(match.groupValues[1], match.groupValues[2])
-                    ?.let { FoundDistance(it, TextPatterns.isApproximate(text, match)) }
+                    ?.let { FoundDistance(it, TextPatterns.isApproximate(text, match), TextPatterns.minutesBefore(text, match)) }
             }.toList()
         }
 
     private fun isSame(a: BigDecimal, b: BigDecimal) = (a - b).abs() <= SAME_DISTANCE_TOLERANCE_KM
 
-    private data class FoundDistance(val km: BigDecimal, val approximate: Boolean)
+    private data class FoundDistance(val km: BigDecimal, val approximate: Boolean, val minutes: Int? = null)
 
     private companion object {
         const val TAG = "InDriveOfferParser"

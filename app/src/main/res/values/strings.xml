@@ -32,6 +32,9 @@
     <string name="cost_not_set">Preencha preço e consumo para o card mostrar o lucro real de cada corrida.</string>
     <string name="invalid_cost">Preencha preço do combustível e consumo com valores maiores que zero, ex.: 6,30 e 10</string>
     <string name="min_rating_label">Nota mínima do passageiro (vazio = sem filtro)</string>
+    <string name="min_profit_per_minute_label">Lucro mínimo por minuto (R$/min), contando busca + viagem. Abaixo dele, com R$/km ok, o card fica amarelo. Vazio = sem filtro.</string>
+    <string name="invalid_min_profit_per_minute">Lucro mínimo por minuto inválido: use um valor maior ou igual a zero ou deixe vazio.</string>
+    <string name="sim_minutes_label">Minutos totais (busca + viagem). Vazio = estimado pelos km.</string>
     <string name="min_profit_label">Lucro líquido mínimo por corrida (R$). Abaixo dele, com R$/km ok, o card fica amarelo. Vazio = sem filtro.</string>
     <string name="invalid_min_profit">O lucro mínimo não pode ser negativo, ex.: 6,00</string>
     <string name="indrive_fee_label">Taxa do inDrive descontada depois da corrida (%). A Uber já mostra o seu ganho.</string>

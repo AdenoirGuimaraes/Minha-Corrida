@@ -77,7 +77,8 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
             kmDetails = kmDetails,
             profitLabel = if (profit != null && profit.netProfit.signum() < 0) "Prejuízo" else "Lucro",
             profitValue = profit?.let { money(it.netProfit.abs()) } ?: "—",
-            profitDetails = profit?.let { "$fare\nGasto R$ ${money(it.cost)}" } ?: "$fare\nInforme os custos",
+            profitDetails = profit?.let { "${perMinuteLine(analysis)}$fare\nGasto R$ ${money(it.cost)}" }
+                ?: "$fare\nInforme os custos",
             minimumValue = money(analysis.minimum.greenFare),
             minimumLabel = minimumLabel(analysis),
         )
@@ -88,9 +89,20 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
      * Ex.: "R$ 2,00/km\nLucro R$ 6,00". Sem lucro mínimo (ou sem custos): "R$ 2,00/km".
      */
     private fun minimumLabel(analysis: RideAnalysis): String {
-        val perKm = "R$ ${money(analysis.minimum.minValuePerKm)}/km"
-        val minProfit = analysis.minimum.minNetProfit ?: return perKm
-        return "$perKm\nLucro R$ ${money(minProfit)}"
+        val lines = mutableListOf("R$ ${money(analysis.minimum.minValuePerKm)}/km")
+        analysis.minimum.minNetProfit?.let { lines += "Lucro R$ ${money(it)}" }
+        analysis.minimum.minProfitPerMinute?.let { lines += "R$ ${money(it)}/min" }
+        return lines.joinToString("\n")
+    }
+
+    /**
+     * 1ª linha do quadrado Lucro: lucro por minuto e os minutos da corrida, ex. "R$ 0,68/min · 11 min".
+     * Com algum trecho sem minutos na tela (estimado pelos km): "≈ R$ 0,68/min · ≈ 11 min".
+     */
+    private fun perMinuteLine(analysis: RideAnalysis): String {
+        val perMinute = analysis.profitPerMinute ?: return ""
+        val approx = if (analysis.time.estimated) "≈ " else ""
+        return "${approx}R$ ${money(perMinute)}/min · $approx${analysis.time.minutes} min\n"
     }
 
     /**

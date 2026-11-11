@@ -64,6 +64,9 @@ object Fixtures {
         override fun setInDriveFeePercent(percent: BigDecimal) { inDriveFee = percent }
         override fun getMinNetProfit() = minProfit
         override fun setMinNetProfit(value: BigDecimal?) { minProfit = value }
+        var minPerMinute: BigDecimal? = null
+        override fun getMinProfitPerMinute() = minPerMinute
+        override fun setMinProfitPerMinute(value: BigDecimal?) { minPerMinute = value }
         override fun isVoiceEnabled() = voice
         override fun setVoiceEnabled(enabled: Boolean) { voice = enabled }
     }

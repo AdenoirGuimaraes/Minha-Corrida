@@ -69,7 +69,8 @@ class InDriveFeeTest {
         val card = RideAnalysisFormatter().card(evaluate(offer(Platform.INDRIVE), rules))
         assertEquals("inDrive — R$ 15,00", card.platform)
         assertEquals("1,57", card.valuePerKm)
-        assertEquals("Líquido R$ 13,50\nGasto R$ 7,31", card.profitDetails)
+        // Sem minutos na oferta: estimados pelos km (3,1 → 8 min, 5,5 → 14 min) e marcados com "≈".
+        assertEquals("≈ R$ 0,28/min · ≈ 22 min\nLíquido R$ 13,50\nGasto R$ 7,31", card.profitDetails)
         assertEquals("19,12", card.minimumValue)
     }
 }

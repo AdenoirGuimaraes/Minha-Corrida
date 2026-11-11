@@ -34,16 +34,7 @@ class AnalyzeScreenUseCase(
                 logger.warn(TAG, "R$/km implausível (${metrics.valuePerKm}) em $packageName; leitura descartada")
                 return null
             }
-            evaluate(
-                offer,
-                RideRules(
-                    minValuePerKm = settings.getMinValuePerKm(),
-                    minPassengerRating = settings.getMinPassengerRating(),
-                    operatingCost = settings.getOperatingCost(),
-                    inDriveFeePercent = settings.getInDriveFeePercent(),
-                    minNetProfit = settings.getMinNetProfit(),
-                ),
-            )
+            evaluate(offer, RideRules.from(settings))
         } catch (e: Exception) {
             logger.error(TAG, "Erro ao analisar tela de $packageName", e)
             null

@@ -21,7 +21,21 @@ data class RideRules(
     val operatingCost: OperatingCost? = null,
     val inDriveFeePercent: BigDecimal = BigDecimal.ZERO,
     val minNetProfit: BigDecimal? = null,
+    /** Lucro mínimo por minuto de corrida (busca + viagem); abaixo dele o card fica amarelo. */
+    val minProfitPerMinute: BigDecimal? = null,
 ) {
+    companion object {
+        /** Regras de agora, das configurações do motorista. */
+        fun from(settings: br.com.minhacorrida.core.port.SettingsRepository) = RideRules(
+            minValuePerKm = settings.getMinValuePerKm(),
+            minPassengerRating = settings.getMinPassengerRating(),
+            operatingCost = settings.getOperatingCost(),
+            inDriveFeePercent = settings.getInDriveFeePercent(),
+            minNetProfit = settings.getMinNetProfit(),
+            minProfitPerMinute = settings.getMinProfitPerMinute(),
+        )
+    }
+
     /** Taxa descontada depois da corrida: só no inDrive (Uber já mostra o ganho do motorista). */
     fun feeFor(platform: br.com.minhacorrida.core.model.Platform): BigDecimal =
         if (platform == br.com.minhacorrida.core.model.Platform.INDRIVE) inDriveFeePercent else BigDecimal.ZERO
@@ -37,14 +51,19 @@ class EvaluateRideUseCase(private val calculateMetrics: CalculateRideMetricsUseC
         val metrics = calculateMetrics(offer, rules.feeFor(offer.platform))
         val lowRating = isRatingBelowMinimum(offer.passengerRating, rules.minPassengerRating)
         val profit = rules.operatingCost?.let { calculateMetrics.profit(offer, metrics, it) }
-        val rating = classify(metrics.valuePerKm, lowRating, profit?.netProfit, rules)
+        val time = br.com.minhacorrida.core.model.RideTime.of(offer)
+        val perMinute = profit?.netProfit?.divide(BigDecimal(time.minutes), 2, java.math.RoundingMode.HALF_UP)
+        val rating = classify(metrics.valuePerKm, lowRating, profit?.netProfit, perMinute, rules)
         return RideAnalysis(
             offer = offer,
             metrics = metrics,
             rating = rating,
-            minimum = calculateMetrics.minimumFare(metrics, rules.minValuePerKm, profit, rules.minNetProfit),
+            minimum = calculateMetrics.minimumFare(
+                metrics, rules.minValuePerKm, profit, rules.minNetProfit, time.minutes, rules.minProfitPerMinute,
+            ),
             profit = profit,
             lowPassengerRating = lowRating,
+            time = time,
         )
     }
 
@@ -53,10 +72,19 @@ class EvaluateRideUseCase(private val calculateMetrics: CalculateRideMetricsUseC
      * abaixo do mínimo. Verde: os dois ok. Sem lucro mínimo (ou sem custos informados,
      * quando não há como calcular o lucro), vale só o R$/km.
      */
-    private fun classify(valuePerKm: BigDecimal, lowRating: Boolean, netProfit: BigDecimal?, rules: RideRules): RideRating =
+    private fun classify(
+        valuePerKm: BigDecimal,
+        lowRating: Boolean,
+        netProfit: BigDecimal?,
+        profitPerMinute: BigDecimal?,
+        rules: RideRules,
+    ): RideRating =
         when {
             valuePerKm < rules.minValuePerKm || lowRating -> RideRating.BELOW_MINIMUM
             rules.minNetProfit != null && netProfit != null && netProfit < rules.minNetProfit -> RideRating.LOW_PROFIT
+            // Corrida que prende muito tempo (trânsito, busca longa) para o que paga.
+            rules.minProfitPerMinute != null && profitPerMinute != null && profitPerMinute < rules.minProfitPerMinute ->
+                RideRating.LOW_PROFIT
             else -> RideRating.GOOD
         }
 
