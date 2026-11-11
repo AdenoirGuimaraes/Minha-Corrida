@@ -1,0 +1,86 @@
+package br.com.minhacorrida.core
+
+import br.com.minhacorrida.core.km.CommuteCost
+import br.com.minhacorrida.core.km.FuelStats
+import br.com.minhacorrida.core.km.KmLogRepository
+import br.com.minhacorrida.core.km.OdometerCommute
+import br.com.minhacorrida.core.km.Trip
+import br.com.minhacorrida.core.km.TripOutcome
+import br.com.minhacorrida.core.km.TripRepository
+import br.com.minhacorrida.core.km.TripStatus
+import br.com.minhacorrida.core.km.TripUseCase
+import br.com.minhacorrida.core.port.NoOpLogger
+import java.math.BigDecimal
+import java.time.LocalDate
+import java.time.ZoneId
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/** Pedido de 10/11: cada trajeto pergunta Registrar/Descartar (pode ser o carro do trabalho). */
+class TripsTest {
+    private val zone = ZoneId.of("America/Sao_Paulo")
+    private val start = LocalDate.of(2026, 11, 11).atTime(7, 42).atZone(zone).toInstant().toEpochMilli()
+    private val end = start + 23 * 60_000
+
+    private class FakeTrips : TripRepository {
+        val map = linkedMapOf<String, Trip>()
+        override fun save(trip: Trip) { map[trip.id] = trip }
+        override fun find(id: String) = map[id]
+        override fun pending() = map.values.filter { it.status == TripStatus.PENDING }.sortedBy { it.startMillis }
+    }
+
+    private class FakeKmLog : KmLogRepository {
+        val days = mutableMapOf<LocalDate, Double>()
+        override fun addMeters(date: LocalDate, meters: Double) { days[date] = (days[date] ?: 0.0) + meters }
+        override fun kmBetween(start: LocalDate, endExclusive: LocalDate): BigDecimal =
+            BigDecimal(days.filterKeys { it >= start && it < endExclusive }.values.sum() / 1000).setScale(1, java.math.RoundingMode.HALF_UP)
+    }
+
+    private val trips = FakeTrips()
+    private val kmLog = FakeKmLog()
+    private val useCase = TripUseCase(trips, kmLog, NoOpLogger, zone)
+    private val day = LocalDate.of(2026, 11, 11)
+
+    @Test
+    fun `trajeto sem corrida fica pendente e so soma ao registrar`() {
+        val outcome = assertIs<TripOutcome.NeedsDecision>(useCase.finish("t1", start, end, 12_400.0, hadRide = false))
+        assertEquals("12.4", outcome.trip.km.toPlainString())
+        assertEquals(BigDecimal("0.0"), kmLog.kmOn(day))
+        assertEquals(1, useCase.pending().size)
+
+        useCase.keep("t1")
+        assertEquals(BigDecimal("12.4"), kmLog.kmOn(day))
+        assertTrue(useCase.pending().isEmpty())
+        assertNull(useCase.keep("t1"))                                  // decidir de novo não soma 2x
+        assertEquals(BigDecimal("12.4"), kmLog.kmOn(day))
+    }
+
+    @Test
+    fun `descartar ignora o trajeto (carro do trabalho)`() {
+        useCase.finish("t2", start, end, 8_000.0, hadRide = false)
+        useCase.discard("t2")
+        assertEquals(BigDecimal("0.0"), kmLog.kmOn(day))
+        assertEquals(TripStatus.DISCARDED, trips.find("t2")!!.status)
+    }
+
+    @Test
+    fun `trajeto com corrida e registrado sozinho e trajeto curto e ignorado`() {
+        assertIs<TripOutcome.AutoKept>(useCase.finish("t3", start, end, 21_000.0, hadRide = true))
+        assertEquals(BigDecimal("21.0"), kmLog.kmOn(day))
+        assertIs<TripOutcome.TooShort>(useCase.finish("t4", start, end, 300.0, hadRide = false))
+        assertTrue(useCase.pending().isEmpty())
+    }
+
+    @Test
+    fun `media do painel - 412 km em 7 dias com 146 km de corrida da 38 km por dia`() {
+        val stats = FuelStats(BigDecimal("10.5"), BigDecimal("6.30"), BigDecimal("412"), LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 8))
+        val perDay = OdometerCommute.kmPerDay(stats, BigDecimal("146"))!!
+        assertEquals("38.0", perDay.toPlainString())
+        val commute = CommuteCost.averaged(perDay, 1, BigDecimal("6.30"), BigDecimal("10.5"))!!
+        assertEquals("22.80", commute.fuelCost.toPlainString())        // 38 × 6,30 ÷ 10,5
+        assertNull(OdometerCommute.kmPerDay(FuelStats(null, null, null, null, null), BigDecimal.ZERO))
+    }
+}

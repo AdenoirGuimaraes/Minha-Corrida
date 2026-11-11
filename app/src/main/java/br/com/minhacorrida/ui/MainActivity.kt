@@ -135,6 +135,7 @@ class MainActivity : Activity() {
             this, container.rideHistory, container.historyFormatter, ioExecutor,
             container.evaluateRide, container.settings, container.formatter,
             container.goalSettings, container.goalFormatter, container.kmSettings, container.kmLog,
+            container.fuelLog, container.trips,
         )
         historyScreen.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
@@ -152,7 +153,7 @@ class MainActivity : Activity() {
         // Controle de km ligado: garante o serviço do GPS (ex.: celular reiniciado).
         if (::kmControl.isInitialized) {
             kmControl.refresh()
-            br.com.minhacorrida.service.KmTrackerService.sync(this, container.kmSettings.isKmTrackingEnabled())
+            br.com.minhacorrida.service.VehicleDetection.sync(this, container.kmSettings.isKmTrackingEnabled())
         }
         // Voltando ao app na aba Corridas: mostra as corridas verdes que chegaram nesse meio-tempo.
         if (::historyScreen.isInitialized && currentTab == Tab.HISTORY) historyScreen.refresh()
@@ -540,34 +541,78 @@ class MainActivity : Activity() {
 
     // ---- Controle de km (GPS) ----
 
-    /** Ligar pede a permissão de localização (e de notificação); desligar para o serviço. */
+    /**
+     * Ligar pede, em duas etapas: (1) localização, atividade física e notificações;
+     * (2) localização "Permitir o tempo todo" (o GPS liga com o app fechado quando o sensor
+     * detecta o carro). Desligar para o sensor e fecha o trajeto em andamento.
+     */
     private fun onKmTrackingToggled(enabled: Boolean) {
         try {
-            if (enabled && !br.com.minhacorrida.service.KmTrackerService.hasLocationPermission(this)) {
-                val permissions = buildList {
-                    add(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                    add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
-                    if (android.os.Build.VERSION.SDK_INT >= 33) add(android.Manifest.permission.POST_NOTIFICATIONS)
-                }
-                requestPermissions(permissions.toTypedArray(), REQUEST_LOCATION)
+            if (!enabled) {
+                container.kmSettings.setKmTrackingEnabled(false)
+                br.com.minhacorrida.service.VehicleDetection.sync(this, false)
+                kmControl.refresh()
                 return
             }
-            container.kmSettings.setKmTrackingEnabled(enabled)
-            br.com.minhacorrida.service.KmTrackerService.sync(this, enabled)
-            kmControl.refresh()
+            val missing = buildList {
+                if (!br.com.minhacorrida.service.KmTrackerService.hasLocationPermission(this@MainActivity)) {
+                    add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
+                if (!br.com.minhacorrida.service.VehicleDetection.hasActivityPermission(this@MainActivity)) {
+                    add(android.Manifest.permission.ACTIVITY_RECOGNITION)
+                }
+                if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                    checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                ) {
+                    add(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+            if (missing.isNotEmpty()) {
+                requestPermissions(missing.toTypedArray(), REQUEST_LOCATION)
+                return
+            }
+            enableKmTracking()
         } catch (e: Exception) {
             android.util.Log.e("MC/MainActivity", "Falha ao ligar/desligar o controle de km", e)
         }
     }
 
+    /** Permissões básicas dadas: liga e, se faltar, explica e pede "Permitir o tempo todo". */
+    private fun enableKmTracking() {
+        container.kmSettings.setKmTrackingEnabled(true)
+        br.com.minhacorrida.service.VehicleDetection.sync(this, true)
+        kmControl.refresh()
+        if (!br.com.minhacorrida.service.VehicleDetection.hasBackgroundLocation(this)) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.km_background_title)
+                .setMessage(R.string.km_background_message)
+                .setPositiveButton(R.string.km_background_ok) { _, _ ->
+                    requestPermissions(arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION), REQUEST_BACKGROUND)
+                }
+                .setNegativeButton(R.string.diagnostics_close, null)
+                .show()
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != REQUEST_LOCATION) return
-        val granted = br.com.minhacorrida.service.KmTrackerService.hasLocationPermission(this)
-        container.kmSettings.setKmTrackingEnabled(granted)
-        br.com.minhacorrida.service.KmTrackerService.sync(this, granted)
-        if (!granted) toast(getString(R.string.km_permission_denied))
-        kmControl.refresh()
+        when (requestCode) {
+            REQUEST_LOCATION -> {
+                val ok = br.com.minhacorrida.service.KmTrackerService.hasLocationPermission(this) &&
+                    br.com.minhacorrida.service.VehicleDetection.hasActivityPermission(this)
+                if (ok) {
+                    enableKmTracking()
+                } else {
+                    container.kmSettings.setKmTrackingEnabled(false)
+                    toast(getString(R.string.km_permission_denied))
+                    kmControl.refresh()
+                }
+            }
+            REQUEST_BACKGROUND -> if (!br.com.minhacorrida.service.VehicleDetection.hasBackgroundLocation(this)) {
+                toast(getString(R.string.km_background_denied))
+            }
+        }
     }
 
     // ---- Pausar/religar a leitura ----
@@ -719,6 +764,7 @@ class MainActivity : Activity() {
     private companion object {
         const val PREVIEW_ENTRIES = 10
         const val REQUEST_LOCATION = 7
+        const val REQUEST_BACKGROUND = 8
         /** Intervalo mínimo entre consultas ao GitHub (abrir e fechar o app rápido não repete). */
         const val UPDATE_CHECK_INTERVAL_MS = 60_000L
     }

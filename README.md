@@ -106,17 +106,24 @@ Voz em velocidade 1,4×.
   líquido" (o que falta ÷ (1 − soma das %), porque as deduções levam a parte delas). Batida:
   "🎉 Meta batida! Passou R$ x".
 
-## Km rodados (GPS) e abastecimentos (tanque cheio)
-- **Configurações → Km rodados e abastecimentos → "Contar km rodados pelo GPS"** (liga/desliga).
-  Ligado, um serviço com notificação fixa ("Hoje: 52,3 km", botão **Parar**) soma os km de carro:
-  descarta posição imprecisa (> 35 m), GPS parado (< 25 m), trecho a pé (< 9 km/h) e saltos (> 200 km/h).
-- **Aba Corridas → Separar**: com o controle ligado, entra "🚗 Deslocamento 34,6 km (rodou 52,3 km) R$ 20,76"
-  = (km do GPS − km das corridas realizadas) × preço do litro ÷ km/L — a gasolina rodada sem
-  passageiro, para manter o tanque cheio. Ela também sai do lucro antes das deduções.
-- **+ Registrar abastecimento**: data (editável, para anotar depois), km do painel, litros, valor e
-  "Encheu o tanque". Toque na linha edita ou exclui. Do 2º tanque cheio em diante: **consumo real**
-  (km do painel ÷ litros depois do 1º tanque cheio), preço médio do litro e o km do GPS no mesmo
-  intervalo para comparar; **"Usar consumo e preço nos custos"** preenche os custos do carro.
+## Km rodados (sensor de veículo + GPS) e abastecimentos (tanque cheio)
+- **Configurações → Km rodados e abastecimentos → "Contar km rodados automaticamente"** (liga/desliga).
+  Pede localização, atividade física, notificações e, em seguida, localização **"Permitir o tempo todo"**.
+- O **sensor "em veículo"** do Android (Activity Recognition, quase sem bateria) percebe quando você entra
+  num carro e liga o GPS só durante o **trajeto** (notificação "trajeto em andamento" com "Encerrar trajeto").
+  O trajeto fecha ao sair do veículo, no botão, ou após 10 min parado.
+- Fim do trajeto: < 0,5 km é ignorado; **com corrida confirmada no trajeto → registrado sozinho**; senão,
+  notificação **"🚗 Trajeto de 12,4 km · 07:42–08:05 — Registrar | Descartar"** (ex.: carro do trabalho).
+  Sem resposta, fica em **"⏳ trajetos pendentes"** na aba Corridas (toque para decidir). Só os registrados
+  somam nos km do dia (data do início do trajeto).
+- GPS: descarta posição imprecisa (> 35 m), GPS parado (< 25 m), a pé (< 9 km/h) e saltos (> 200 km/h).
+- **Aba Corridas → Separar**: "🚗 Deslocamento 34,6 km (rodou 52,3 km) R$ 20,76" = (km registrados − km das
+  corridas realizadas) × preço do litro ÷ km/L. **Sem km de GPS no período**, usa a **média do painel**:
+  (km do painel entre os 2 últimos tanques cheios − km das corridas realizadas nesse intervalo) ÷ dias,
+  "🚗 Deslocamento (média do painel 38 km/dia) R$ 22,80". Também sai do lucro antes das deduções.
+- **+ Registrar abastecimento**: data (editável), km do painel, litros, valor e "Encheu o tanque"; toque
+  edita/exclui. Do 2º tanque cheio: consumo real, preço médio do litro e painel × GPS no intervalo;
+  **"Usar consumo e preço nos custos"** preenche os custos do carro.
 
 ## Pausar a leitura pelo app
 - Faixa no topo do app: **"📖 Leitura de ofertas ligada · toque para pausar"** /

@@ -179,6 +179,17 @@ class RideHistoryUseCase(
         null
     }
 
+    /** Km das corridas REALIZADAS entre as datas [start, endExclusive) (média do painel). */
+    fun doneKmBetween(start: LocalDate, endExclusive: LocalDate): BigDecimal = try {
+        val range = DateRange(start, endExclusive)
+        repository.between(range.startMillis(zone), range.endMillis(zone))
+            .filter { it.done }
+            .fold(BigDecimal.ZERO) { acc, r -> acc + r.totalKm }
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao somar km das corridas", e)
+        BigDecimal.ZERO
+    }
+
     /** Toque longo → "Excluir corrida". @return true se apagou. */
     fun delete(id: String): Boolean = try {
         if (repository.findById(id) == null) {

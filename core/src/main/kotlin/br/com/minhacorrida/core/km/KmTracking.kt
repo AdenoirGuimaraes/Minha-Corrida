@@ -164,8 +164,35 @@ object FuelStatsCalculator {
  * Deslocamento sem corrida: km rodados (GPS) − km das corridas realizadas, e a gasolina dele.
  * Ex.: rodou 52,3 km, corridas 17,7 km → 34,6 km × R$ 6,30 ÷ 10,5 km/L = R$ 20,76.
  */
-data class CommuteCost(val totalKm: BigDecimal, val ridesKm: BigDecimal, val commuteKm: BigDecimal, val fuelCost: BigDecimal) {
+data class CommuteCost(
+    val totalKm: BigDecimal,
+    val ridesKm: BigDecimal,
+    val commuteKm: BigDecimal,
+    val fuelCost: BigDecimal,
+    /** Preenchido quando veio da média do painel (sem km de GPS no período): km/dia usados. */
+    val averagePerDay: BigDecimal? = null,
+) {
     companion object {
+        /**
+         * Sem km de GPS no período: usa a média do painel ([OdometerCommute]) × [days].
+         * @return null sem média ou sem dias.
+         */
+        fun averaged(
+            kmPerDay: BigDecimal?,
+            days: Long,
+            fuelPricePerLiter: BigDecimal?,
+            kmPerLiter: BigDecimal?,
+        ): CommuteCost? {
+            if (kmPerDay == null || kmPerDay.signum() <= 0 || days <= 0) return null
+            val commute = (kmPerDay * BigDecimal(days)).setScale(1, RoundingMode.HALF_UP)
+            val cost = if (fuelPricePerLiter == null || kmPerLiter == null || kmPerLiter.signum() <= 0) {
+                BigDecimal.ZERO.setScale(2)
+            } else {
+                (commute * fuelPricePerLiter).divide(kmPerLiter, 2, RoundingMode.HALF_UP)
+            }
+            return CommuteCost(commute, BigDecimal.ZERO.setScale(1), commute, cost, kmPerDay)
+        }
+
         /**
          * @param fuelPricePerLiter/kmPerLiter dos custos do carro; null = sem custo (só os km).
          * @return null se o GPS não somou nada no período.

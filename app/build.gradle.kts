@@ -69,4 +69,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     // OCR no próprio aparelho (modelo latino embutido, funciona offline).
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // Sensor "em veículo" (Activity Recognition): liga o GPS só quando o motorista está de carro.
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 }

@@ -149,6 +149,16 @@ class RideHistoryTest {
     }
 
     @Test
+    fun `km das corridas realizadas no intervalo (media do painel)`() {
+        record(analysis("10.00", "2.2", "1.9"))                       // 4,1 km, realizada
+        now += 60_000
+        record(analysis("20.00", "1.0", "7.0"))                       // 8 km, não realizada
+        history.setDone(history.page(HistoryPeriod.DAY, today).rides.first { it.totalKm.compareTo(BigDecimal("4.1")) == 0 }.id, true)
+        assertEquals(0, BigDecimal("4.1").compareTo(history.doneKmBetween(today, today.plusDays(1))))
+        assertEquals(0, BigDecimal.ZERO.compareTo(history.doneKmBetween(today.plusDays(1), today.plusDays(2))))
+    }
+
+    @Test
     fun `toque longo exclui so a corrida escolhida`() {
         record(analysis("10.00", "2.2", "1.9"))
         now += 60_000

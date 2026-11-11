@@ -71,7 +71,11 @@ class RideHistoryFormatter(
         )
         // Controle de km ligado: gasolina dos km rodados sem passageiro (mantém o tanque cheio).
         commute?.let { c ->
-            lines += "🚗 Deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km) R$ ${money(c.fuelCost)}"
+            lines += if (c.averagePerDay != null) {
+                "🚗 Deslocamento (média do painel ${km(c.averagePerDay)} km/dia) R$ ${money(c.fuelCost)}"
+            } else {
+                "🚗 Deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km) R$ ${money(c.fuelCost)}"
+            }
         }
         progress.deductions.forEach { d ->
             lines += "📌 ${d.deduction.label} (${percent(d.deduction.percent)}%) R$ ${money(d.amount)}"

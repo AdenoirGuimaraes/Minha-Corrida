@@ -44,6 +44,12 @@ class AppContainer(context: Context) {
     val fuelLog: br.com.minhacorrida.core.km.FuelLogRepository by lazy {
         br.com.minhacorrida.infra.SharedPrefsFuelLogRepository(context, logger)
     }
+    /** Trajetos do sensor de veículo: pendentes até o motorista Registrar ou Descartar. */
+    val trips: br.com.minhacorrida.core.km.TripUseCase by lazy {
+        br.com.minhacorrida.core.km.TripUseCase(
+            br.com.minhacorrida.infra.SharedPrefsTripRepository(context, logger), kmLog, logger,
+        )
+    }
     val readingSession: ReadingSession = SharedPrefsReadingSession(context, logger)
     val parserRegistry = ParserRegistry(
         listOf(UberOfferParser(logger), InDriveOfferParser(logger)),

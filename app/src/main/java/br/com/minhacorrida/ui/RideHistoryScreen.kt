@@ -52,6 +52,8 @@ class RideHistoryScreen(
     private val goalFormatter: br.com.minhacorrida.core.format.GoalFormatter,
     private val kmSettings: br.com.minhacorrida.core.km.KmSettingsRepository,
     private val kmLog: br.com.minhacorrida.core.km.KmLogRepository,
+    private val fuelLog: br.com.minhacorrida.core.km.FuelLogRepository,
+    private val trips: br.com.minhacorrida.core.km.TripUseCase,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val cardBinder = RideCardBinder(cardFormatter)
@@ -71,6 +73,7 @@ class RideHistoryScreen(
     private val tvGoalTitle: TextView = activity.findViewById(R.id.tvGoalTitle)
     private val pbGoal: android.widget.ProgressBar = activity.findViewById(R.id.pbGoal)
     private val tvGoalStatus: TextView = activity.findViewById(R.id.tvGoalStatus)
+    private val tvPendingTrips: TextView = activity.findViewById(R.id.tvPendingTrips)
 
     private var period = HistoryPeriod.DAY
     private var reference: LocalDate = LocalDate.now()
@@ -85,6 +88,7 @@ class RideHistoryScreen(
         activity.findViewById<View>(R.id.btnPeriodNext).setOnClickListener { move(+1) }
         activity.findViewById<View>(R.id.btnManualRide).setOnClickListener { openManualRide() }
         bindHintToggle()
+        tvPendingTrips.setOnClickListener { showPendingTrips() }
     }
 
     /** "ⓘ Como as corridas entram": um toque mostra a explicação, outro esconde. */
@@ -313,6 +317,7 @@ class RideHistoryScreen(
      * Atualiza na hora ao marcar/desmarcar corridas.
      */
     private fun renderSummary(page: RideHistoryPage) {
+        renderPendingTrips()
         tvCountKm.text = formatter.countAndKm(page)
         val commute = commuteOf(page)
         val progress = try {
@@ -340,14 +345,77 @@ class RideHistoryScreen(
             null
         } else {
             val cost = settings.getOperatingCost()
-            br.com.minhacorrida.core.km.CommuteCost.of(
-                kmLog.kmBetween(page.range.start, page.range.endExclusive),
-                page.summary.totalKm, cost?.fuelPricePerLiter, cost?.kmPerLiter,
-            )
+            val gpsKm = kmLog.kmBetween(page.range.start, page.range.endExclusive)
+            if (gpsKm.signum() > 0) {
+                br.com.minhacorrida.core.km.CommuteCost.of(gpsKm, page.summary.totalKm, cost?.fuelPricePerLiter, cost?.kmPerLiter)
+            } else {
+                // Sem km de GPS no período: média do painel entre os últimos tanques cheios.
+                val stats = br.com.minhacorrida.core.km.FuelStatsCalculator.of(fuelLog.all())
+                val perDay = if (stats.from != null && stats.to != null) {
+                    br.com.minhacorrida.core.km.OdometerCommute.kmPerDay(stats, history.doneKmBetween(stats.from!!, stats.to!!))
+                } else {
+                    null
+                }
+                val lastDay = minOf(page.range.endExclusive, LocalDate.now().plusDays(1))
+                val days = java.time.temporal.ChronoUnit.DAYS.between(page.range.start, lastDay)
+                br.com.minhacorrida.core.km.CommuteCost.averaged(perDay, days, cost?.fuelPricePerLiter, cost?.kmPerLiter)
+            }
         }
     } catch (e: Exception) {
         android.util.Log.e("MC/RideHistoryScreen", "Falha ao calcular o deslocamento", e)
         null
+    }
+
+    // ---- Trajetos pendentes (sensor de veículo) ----
+
+    private fun renderPendingTrips() {
+        val count = trips.pending().size
+        tvPendingTrips.visibility = if (count > 0) View.VISIBLE else View.GONE
+        tvPendingTrips.text = activity.getString(R.string.trip_pending_banner, count)
+    }
+
+    /** Lista dos trajetos pendentes; tocar num deles pergunta Registrar ou Descartar. */
+    private fun showPendingTrips() {
+        val pending = trips.pending()
+        if (pending.isEmpty()) {
+            renderPendingTrips()
+            return
+        }
+        val day = DateTimeFormatter.ofPattern("dd/MM")
+        val zone = ZoneId.systemDefault()
+        val labels = pending.map { t ->
+            val start = java.time.Instant.ofEpochMilli(t.startMillis).atZone(zone)
+            val end = java.time.Instant.ofEpochMilli(t.endMillis).atZone(zone)
+            activity.getString(
+                R.string.trip_row, t.km.toPlainString().replace('.', ','), start.format(day), start.format(TIME), end.format(TIME),
+            )
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.trip_pending_title)
+            .setItems(labels.toTypedArray()) { _, which -> decideTrip(pending[which].id, labels[which]) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    private fun decideTrip(id: String, label: String) {
+        fun apply(keep: Boolean) {
+            try {
+                io.execute {
+                    if (keep) trips.keep(id) else trips.discard(id)
+                    activity.getSystemService(android.app.NotificationManager::class.java).cancel(id.hashCode())
+                    main.post { refresh() }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MC/RideHistoryScreen", "Falha ao decidir o trajeto", e)
+            }
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(label)
+            .setMessage(R.string.trip_decide_message)
+            .setPositiveButton(R.string.trip_keep) { _, _ -> apply(true) }
+            .setNeutralButton(R.string.trip_discard) { _, _ -> apply(false) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
     }
 
     /** Meta diária (só no filtro Dia): barra de progresso e quanto falta (no bolso e em lucro líquido). */
