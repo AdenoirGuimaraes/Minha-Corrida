@@ -75,6 +75,7 @@ class RideHistoryScreen(
     private val pbGoal: android.widget.ProgressBar = activity.findViewById(R.id.pbGoal)
     private val tvGoalStatus: TextView = activity.findViewById(R.id.tvGoalStatus)
     private val tvPendingTrips: TextView = activity.findViewById(R.id.tvPendingTrips)
+    private val tvCoverage: TextView = activity.findViewById(R.id.tvHistCoverage)
 
     private var period = HistoryPeriod.DAY
     private var reference: LocalDate = LocalDate.now()
@@ -329,6 +330,10 @@ class RideHistoryScreen(
         tvProfit.text = formatter.kept(progress)
         tvCost.text = formatter.setAside(page, progress, commute)
         tvCostDetail.text = formatter.setAsideDetails(page, progress, commute)
+        // Mesmo sem bater a meta: as corridas pagaram os custos delas e a gasolina do período?
+        val coverage = formatter.coverage(page, commute)
+        tvCoverage.text = coverage.orEmpty()
+        tvCoverage.visibility = if (coverage == null) View.GONE else View.VISIBLE
         renderGoal(progress)
     }
 

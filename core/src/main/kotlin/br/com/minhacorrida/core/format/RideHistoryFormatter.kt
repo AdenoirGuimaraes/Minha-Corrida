@@ -66,16 +66,16 @@ class RideHistoryFormatter(
     fun setAsideDetails(page: RideHistoryPage, progress: GoalProgress, commute: CommuteCost? = null): String {
         val s = page.summary
         val lines = mutableListOf(
-            "⛽ Combustível R$ ${money(s.fuelCost)}",
-            "🔧 Manutenção R$ ${money(s.maintenanceCost)}",
+            "⛽ Gasolina das corridas (${km(s.totalKm)} km) R$ ${money(s.fuelCost)}",
+            "🔧 Manutenção das corridas R$ ${money(s.maintenanceCost)}",
         )
         // Controle de km ligado: gasolina dos km rodados sem passageiro (mantém o tanque cheio).
         commute?.let { c ->
             lines += if (c.averagePerDay != null) {
-                "🚗 Deslocamento (média do painel ${km(c.averagePerDay)} km/dia) R$ ${money(c.fuelCost)}"
+                "🚗 Gasolina do deslocamento (média do painel ${km(c.averagePerDay)} km/dia) R$ ${money(c.fuelCost)}"
             } else {
                 val adjust = c.correction?.let { ", painel ${br.com.minhacorrida.core.km.KmCorrection.percentLabel(it)}" }.orEmpty()
-                "🚗 Deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km$adjust) R$ ${money(c.fuelCost)}"
+                "🚗 Gasolina do deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km$adjust) R$ ${money(c.fuelCost)}"
             }
         }
         progress.deductions.forEach { d ->
@@ -86,6 +86,44 @@ class RideHistoryFormatter(
             lines += "${s.ridesWithoutCost} corrida(s) sem gasto: os custos do carro não estavam preenchidos"
         }
         return lines.joinToString("\n")
+    }
+
+    /**
+     * As corridas se pagaram? Mesmo sem bater a meta, mostra se o recebido cobriu:
+     * 1) os custos das próprias corridas (gasolina + manutenção dos km com passageiro e de busca);
+     * 2) com o controle de km ligado, a gasolina do período inteiro (corridas + deslocamento).
+     * Ex.: "✅ Corridas pagaram os próprios custos (R$ 16,18) e sobraram R$ 43,52\n
+     * ⛽ Gasolina do dia (52,3 km) R$ 31,63: ✅ coberta pelo recebido".
+     * @return null sem corridas realizadas ou sem custos do carro.
+     */
+    fun coverage(page: RideHistoryPage, commute: CommuteCost? = null): String? {
+        val s = page.summary
+        if (s.doneCount == 0 || s.ridesWithoutCost >= s.doneCount) return null
+        val ridesCost = s.fuelCost + s.maintenanceCost
+        val lines = mutableListOf(
+            if (s.totalFare >= ridesCost) {
+                "✅ Corridas pagaram os próprios custos (R$ ${money(ridesCost)}) e sobraram R$ ${money(s.totalFare - ridesCost)}"
+            } else {
+                "⚠️ Corridas não pagaram os próprios custos (R$ ${money(ridesCost)}): faltaram R$ ${money(ridesCost - s.totalFare)}"
+            },
+        )
+        commute?.let { c ->
+            val dayFuel = s.fuelCost + c.fuelCost
+            val dayKm = s.totalKm + c.commuteKm
+            val label = "⛽ Gasolina ${periodName(page.period)} (${km(dayKm)} km) R$ ${money(dayFuel)}"
+            lines += if (s.totalFare >= dayFuel) {
+                "$label: ✅ coberta pelo recebido"
+            } else {
+                "$label: ⚠️ faltam R$ ${money(dayFuel - s.totalFare)} de corrida para cobrir"
+            }
+        }
+        return lines.joinToString("\n")
+    }
+
+    private fun periodName(period: HistoryPeriod) = when (period) {
+        HistoryPeriod.DAY -> "do dia"
+        HistoryPeriod.WEEK -> "da semana"
+        HistoryPeriod.MONTH -> "do mês"
     }
 
     /**

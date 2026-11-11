@@ -80,7 +80,29 @@ class KmTrackingTest {
         val f = RideHistoryFormatter()
         assertEquals("R$ 20,48", f.kept(progress))                       // (43,52 − 20,76) − 10%
         assertEquals("R$ 39,22", f.setAside(page, progress, commute))    // 10,87 + 5,31 + 2,28 + 20,76
-        assertTrue(f.setAsideDetails(page, progress, commute).contains("🚗 Deslocamento 34,6 km (rodou 52,3 km) R$ 20,76"))
+        assertTrue(f.setAsideDetails(page, progress, commute).contains("🚗 Gasolina do deslocamento 34,6 km (rodou 52,3 km) R$ 20,76"))
+        // Pedido de 11/11: corridas pagaram os próprios custos? E a gasolina do dia inteiro?
+        assertEquals(
+            "✅ Corridas pagaram os próprios custos (R$ 16,18) e sobraram R$ 43,52\n" +
+                "⛽ Gasolina do dia (52,3 km) R$ 31,63: ✅ coberta pelo recebido",
+            f.coverage(page, commute),
+        )
+    }
+
+    @Test
+    fun `poucas corridas - mostra o que faltou para cobrir os custos e a gasolina do dia`() {
+        val day = LocalDate.of(2026, 11, 11)
+        val page = RideHistoryPage(
+            HistoryPeriod.DAY, DateRange(day, day.plusDays(1)), emptyList(),
+            // 1 corrida: R$ 8,00 recebidos, 4,1 km, gastos 2,46 + 1,03.
+            RideHistorySummary(1, BigDecimal("4.1"), BigDecimal("8.00"), BigDecimal("2.46"), BigDecimal("1.03"), BigDecimal("4.51"), 0),
+        )
+        val commute = CommuteCost.of(BigDecimal("30.0"), BigDecimal("4.1"), BigDecimal("6.30"), BigDecimal("10.5"))!!
+        assertEquals(
+            "✅ Corridas pagaram os próprios custos (R$ 3,49) e sobraram R$ 4,51\n" +
+                "⛽ Gasolina do dia (30 km) R$ 18,00: ⚠️ faltam R$ 10,00 de corrida para cobrir",
+            RideHistoryFormatter().coverage(page, commute),
+        )
     }
 
     @Test

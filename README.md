@@ -88,6 +88,11 @@ Voz em velocidade 1,4×.
 - Layout da aba: filtros Dia/Semana/Mês e a data ◀ ▶ ficam fixos; resumo, botão Registrar
   Corrida, "ⓘ Como as corridas entram" (toque abre/fecha a
   explicação) e os cards rolam juntos.
+- **Gasolina separada**: no Separar, "⛽ Gasolina das corridas (17,7 km)" e "🚗 Gasolina do deslocamento".
+  Abaixo, **as corridas se pagaram?** — "✅ Corridas pagaram os próprios custos (R$ 16,18) e sobraram
+  R$ 43,52" (ou "⚠️ … faltaram R$ x") e, com o controle de km ligado, "⛽ Gasolina do dia (52,3 km)
+  R$ 31,63: ✅ coberta pelo recebido" (ou "⚠️ faltam R$ x de corrida para cobrir"); na Semana/Mês, "da
+  semana"/"do mês". Serve para os dias de poucas corridas, mesmo sem bater a meta.
 - Resumo das realizadas: corridas e km; número grande **"Fica com você"** (lucro já sem
   combustível, manutenção, deslocamento e deduções) e **"Separar"** (a soma desses descontos, item a item).
 - Corridas com mais de **60 dias** são apagadas automaticamente.

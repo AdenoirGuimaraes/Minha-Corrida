@@ -725,6 +725,18 @@
                     android:textColor="@color/mc_text"
                     android:textSize="14sp" />
 
+                <!-- As corridas se pagaram? Custos das corridas e gasolina do período inteiro. -->
+                <TextView
+                    android:id="@+id/tvHistCoverage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="@color/mc_text"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
                 <!-- Meta do dia: preenchida pelo RideHistoryScreen (só no filtro Dia). -->
                 <LinearLayout
                     android:id="@+id/goalBox"
