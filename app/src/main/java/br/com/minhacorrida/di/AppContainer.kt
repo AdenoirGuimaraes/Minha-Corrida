@@ -44,6 +44,12 @@ class AppContainer(context: Context) {
     val fuelLog: br.com.minhacorrida.core.km.FuelLogRepository by lazy {
         br.com.minhacorrida.infra.SharedPrefsFuelLogRepository(context, logger)
     }
+    /** Relatório .md do período (corridas, resultados, deduções, km e abastecimentos). */
+    val rideReport: br.com.minhacorrida.core.report.RideReportUseCase by lazy {
+        br.com.minhacorrida.core.report.RideReportUseCase(
+            rideHistoryRepository, settings, goalSettings, kmSettings, kmLog, fuelLog, logger,
+        )
+    }
     /** Onde o carro ficou estacionado (início estimado do próximo trajeto). */
     val parking: br.com.minhacorrida.infra.ParkingStore by lazy { br.com.minhacorrida.infra.ParkingStore(context) }
     /** Trajetos do sensor de veículo: pendentes até o motorista Registrar ou Descartar. */

@@ -806,6 +806,19 @@
                     android:text="@string/hist_manual_button"
                     android:textSize="13sp" />
 
+                <Button
+                    android:id="@+id/btnRideReport"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/mc_green"
+                    android:maxLines="2"
+                    android:text="@string/report_button"
+                    android:textColor="@color/mc_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
             </LinearLayout>
 
             <!-- Explicação recolhida: um toque abre/fecha (RideHistoryScreen). -->

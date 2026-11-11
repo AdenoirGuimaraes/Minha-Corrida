@@ -27,7 +27,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import br.com.minhacorrida.R
 import br.com.minhacorrida.core.format.RideHistoryFormatter
+import br.com.minhacorrida.core.history.DateRange
 import br.com.minhacorrida.core.history.HistoryPeriod
+import br.com.minhacorrida.core.history.rangeOf
 import br.com.minhacorrida.core.history.RideHistoryPage
 import br.com.minhacorrida.core.history.RideHistoryUseCase
 import br.com.minhacorrida.core.history.RideRecord
@@ -55,6 +57,8 @@ class RideHistoryScreen(
     private val fuelLog: br.com.minhacorrida.core.km.FuelLogRepository,
     private val trips: br.com.minhacorrida.core.km.TripUseCase,
     private val parking: br.com.minhacorrida.infra.ParkingStore,
+    private val report: br.com.minhacorrida.core.report.RideReportUseCase,
+    private val appVersion: String,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val cardBinder = RideCardBinder(cardFormatter)
@@ -91,6 +95,7 @@ class RideHistoryScreen(
         activity.findViewById<View>(R.id.btnManualRide).setOnClickListener { openManualRide() }
         bindHintToggle()
         tvPendingTrips.setOnClickListener { showPendingTrips() }
+        activity.findViewById<View>(R.id.btnRideReport).setOnClickListener { chooseReportPeriod() }
     }
 
     /** "ⓘ Como as corridas entram": um toque mostra a explicação, outro esconde. */
@@ -373,6 +378,71 @@ class RideHistoryScreen(
     } catch (e: Exception) {
         android.util.Log.e("MC/RideHistoryScreen", "Falha ao calcular o deslocamento", e)
         null
+    }
+
+    // ---- Relatório .md do período ----
+
+    /** Esta semana, este mês, mês passado ou um período escolhido no calendário. */
+    private fun chooseReportPeriod() {
+        val today = LocalDate.now()
+        val options = arrayOf(
+            activity.getString(R.string.report_week),
+            activity.getString(R.string.report_month),
+            activity.getString(R.string.report_last_month),
+            activity.getString(R.string.report_custom),
+        )
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.report_title)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> exportReport(HistoryPeriod.WEEK.rangeOf(today))
+                    1 -> exportReport(HistoryPeriod.MONTH.rangeOf(today))
+                    2 -> exportReport(HistoryPeriod.MONTH.rangeOf(today.withDayOfMonth(1).minusDays(1)))
+                    else -> pickCustomRange(today)
+                }
+            }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    /** Dois calendários: data inicial e data final (incluída). */
+    private fun pickCustomRange(today: LocalDate) {
+        android.app.DatePickerDialog(activity, { _, y, m, d ->
+            val start = LocalDate.of(y, m + 1, d)
+            android.app.DatePickerDialog(activity, { _, y2, m2, d2 ->
+                val end = LocalDate.of(y2, m2 + 1, d2)
+                if (end < start) {
+                    toast(activity.getString(R.string.report_invalid_range))
+                } else {
+                    exportReport(DateRange(start, end.plusDays(1)))
+                }
+            }, today.year, today.monthValue - 1, today.dayOfMonth).apply {
+                setTitle(R.string.report_end)
+                datePicker.minDate = start.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            }.show()
+        }, today.year, today.monthValue - 1, 1).apply { setTitle(R.string.report_start) }.show()
+    }
+
+    /** Gera o .md fora da thread principal e abre o Compartilhar (ex.: anexar no Claude). */
+    private fun exportReport(range: DateRange) {
+        toast(activity.getString(R.string.report_generating))
+        try {
+            io.execute {
+                val markdown = report.markdown(range, appVersion, System.currentTimeMillis())
+                val name = "minha-corrida-relatorio-${range.start}-a-${range.endInclusive}.md"
+                main.post {
+                    try {
+                        MarkdownSharer.share(activity, name, markdown, activity.getString(R.string.report_title))
+                    } catch (e: Exception) {
+                        android.util.Log.e("MC/RideHistoryScreen", "Falha ao compartilhar relatório", e)
+                        toast(activity.getString(R.string.report_failed))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao gerar relatório", e)
+            toast(activity.getString(R.string.report_failed))
+        }
     }
 
     // ---- Trajetos pendentes (sensor de veículo) ----

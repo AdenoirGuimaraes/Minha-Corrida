@@ -143,6 +143,16 @@ Voz em velocidade 1,4×.
   **"⏸ Leitura pausada · toque para religar"** (ex.: conferir o histórico da Uber sem o leitor achar
   que são ofertas). Abrir o app não desfaz a pausa; só o mesmo toque religa.
 
+## Relatório de corridas (.md) para análise
+- Aba Corridas → **📄 Relatório** (ao lado de Registrar Corrida): **Esta semana**, **Este mês**, **Mês passado**
+  ou **Escolher período…** (data inicial e final no calendário).
+- Gera um Markdown e abre o Compartilhar do Android (ex.: anexar no app do Claude). Conteúdo:
+  configurações usadas (regras, custos do carro, meta, deduções, controle de km), resumo do período
+  (corridas, km, recebido, taxas, gasolina, manutenção, lucro, deslocamento, cada dedução, Separar, Fica
+  com você, médias, R$/km médio, meta batida em x de y dias, cores), **por app**, **por dia**, **cada corrida**
+  (valor, era, taxa, líquido, km de busca/viagem/total, R$/km, gasolina, manutenção, lucro, cor), corridas
+  não realizadas, **abastecimentos** do período com consumo real, e como cada conta é feita.
+
 ## Diagnóstico para calibrar a leitura
 - **Configurações → Diagnóstico da leitura** guarda as **200 leituras** mais recentes (telas e
   **toques** na Uber e no inDrive, inclusive toques sem texto, com classe, id e posição do botão).

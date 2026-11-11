@@ -137,7 +137,8 @@ class MainActivity : Activity() {
             this, container.rideHistory, container.historyFormatter, ioExecutor,
             container.evaluateRide, container.settings, container.formatter,
             container.goalSettings, container.goalFormatter, container.kmSettings, container.kmLog,
-            container.fuelLog, container.trips, container.parking,
+            container.fuelLog, container.trips, container.parking, container.rideReport,
+            "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
         )
         historyScreen.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
@@ -735,18 +736,8 @@ class MainActivity : Activity() {
                 generatedAtMillis = now,
             )
             val markdown = container.diagnosticsReport.markdown(header, entries)
-            val dir = File(cacheDir, "reports").apply { mkdirs() }
-            dir.listFiles()?.forEach { it.delete() } // só o relatório mais recente fica
             val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date(now))
-            val file = File(dir, "minha-corrida-diagnostico-$stamp.md").apply { writeText(markdown) }
-            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.updates", file)
-            val send = Intent(Intent.ACTION_SEND)
-                .setType("text/markdown")
-                .putExtra(Intent.EXTRA_STREAM, uri)
-                .putExtra(Intent.EXTRA_SUBJECT, file.name)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            send.clipData = android.content.ClipData.newRawUri(file.name, uri)
-            startActivity(Intent.createChooser(send, getString(R.string.diagnostics_export)))
+            MarkdownSharer.share(this, "minha-corrida-diagnostico-$stamp.md", markdown, getString(R.string.diagnostics_export))
         } catch (e: Exception) {
             android.util.Log.e("MC/MainActivity", "Falha ao exportar diagnóstico", e)
             toast(getString(R.string.diagnostics_export_failed))
