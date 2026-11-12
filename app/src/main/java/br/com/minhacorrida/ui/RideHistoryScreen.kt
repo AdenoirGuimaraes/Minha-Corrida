@@ -384,6 +384,128 @@ class RideHistoryScreen(
         }
     }
 
+    // ---- Relatório .md do período ----
+
+    /** Esta semana, este mês, mês passado ou um período escolhido no calendário. */
+    private fun chooseReportPeriod() {
+        val today = LocalDate.now()
+        val options = arrayOf(
+            activity.getString(R.string.report_week),
+            activity.getString(R.string.report_month),
+            activity.getString(R.string.report_last_month),
+            activity.getString(R.string.report_custom),
+        )
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.report_title)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> exportReport(HistoryPeriod.WEEK.rangeOf(today))
+                    1 -> exportReport(HistoryPeriod.MONTH.rangeOf(today))
+                    2 -> exportReport(HistoryPeriod.MONTH.rangeOf(today.withDayOfMonth(1).minusDays(1)))
+                    else -> pickCustomRange(today)
+                }
+            }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    /** Dois calendários: data inicial e data final (incluída). */
+    private fun pickCustomRange(today: LocalDate) {
+        android.app.DatePickerDialog(activity, { _, y, m, d ->
+            val start = LocalDate.of(y, m + 1, d)
+            android.app.DatePickerDialog(activity, { _, y2, m2, d2 ->
+                val end = LocalDate.of(y2, m2 + 1, d2)
+                if (end < start) {
+                    toast(activity.getString(R.string.report_invalid_range))
+                } else {
+                    exportReport(DateRange(start, end.plusDays(1)))
+                }
+            }, today.year, today.monthValue - 1, today.dayOfMonth).apply {
+                setTitle(R.string.report_end)
+                datePicker.minDate = start.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            }.show()
+        }, today.year, today.monthValue - 1, 1).apply { setTitle(R.string.report_start) }.show()
+    }
+
+    /** Gera o .md fora da thread principal e abre o Compartilhar (ex.: anexar no Claude). */
+    private fun exportReport(range: DateRange) {
+        toast(activity.getString(R.string.report_generating))
+        try {
+            io.execute {
+                val markdown = report.markdown(range, appVersion, System.currentTimeMillis())
+                val name = "minha-corrida-relatorio-${range.start}-a-${range.endInclusive}.md"
+                main.post {
+                    try {
+                        MarkdownSharer.share(activity, name, markdown, activity.getString(R.string.report_title))
+                    } catch (e: Exception) {
+                        android.util.Log.e("MC/RideHistoryScreen", "Falha ao compartilhar relatório", e)
+                        toast(activity.getString(R.string.report_failed))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao gerar relatório", e)
+            toast(activity.getString(R.string.report_failed))
+        }
+    }
+
+    // ---- Trajetos pendentes (sensor de veículo) ----
+
+    private fun renderPendingTrips() {
+        val count = trips.pending().size
+        tvPendingTrips.visibility = if (count > 0) View.VISIBLE else View.GONE
+        tvPendingTrips.text = activity.getString(R.string.trip_pending_banner, count)
+    }
+
+    /** Lista dos trajetos pendentes; tocar num deles pergunta Registrar ou Descartar. */
+    private fun showPendingTrips() {
+        val pending = trips.pending()
+        if (pending.isEmpty()) {
+            renderPendingTrips()
+            return
+        }
+        val day = DateTimeFormatter.ofPattern("dd/MM")
+        val zone = ZoneId.systemDefault()
+        val labels = pending.map { t ->
+            val start = java.time.Instant.ofEpochMilli(t.startMillis).atZone(zone)
+            val end = java.time.Instant.ofEpochMilli(t.endMillis).atZone(zone)
+            activity.getString(
+                R.string.trip_row, t.km.toPlainString().replace('.', ','), start.format(day), start.format(TIME), end.format(TIME),
+            )
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.trip_pending_title)
+            .setItems(labels.toTypedArray()) { _, which -> decideTrip(pending[which].id, labels[which]) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    private fun decideTrip(id: String, label: String) {
+        fun apply(keep: Boolean) {
+            try {
+                io.execute {
+                    if (keep) {
+                        trips.keep(id)
+                    } else {
+                        trips.discard(id)
+                        parking.revertIfFrom(id)
+                    }
+                    activity.getSystemService(android.app.NotificationManager::class.java).cancel(id.hashCode())
+                    main.post { refresh() }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MC/RideHistoryScreen", "Falha ao decidir o trajeto", e)
+            }
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(label)
+            .setMessage(R.string.trip_decide_message)
+            .setPositiveButton(R.string.trip_keep) { _, _ -> apply(true) }
+            .setNeutralButton(R.string.trip_discard) { _, _ -> apply(false) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
     /** Meta diária (só no filtro Dia): barra de progresso e quanto falta (no bolso e em lucro líquido). */
     private fun renderGoal(progress: br.com.minhacorrida.core.goal.GoalProgress) {
         try {
