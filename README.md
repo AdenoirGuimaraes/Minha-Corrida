@@ -169,6 +169,13 @@ Voz em velocidade 1,4×.
 - Filtro vazio (ou sem custos do carro) não conta; sem nenhum, vale só o R$/km.
 - Abas na ordem: **Corridas** (abre primeiro), **Configurações**, **Simulador**.
 
+## Campos de número
+- Todos os campos de valor têm **vírgula automática**: digite só os números (teclado numérico) e o campo
+  formata — 2 casas para R$ e nota ("060" → "0,60", "640" → "6,40", "470" → "4,70"); 1 casa para km, km/L e
+  porcentagem ("104" → "10,4", "100" → "10,0"). Tempo, minutos e km do painel ficam inteiros.
+- Card: os quadrados crescem quando o texto precisa de mais linhas (antes cortavam a 3ª linha, ex. "R$ 0,60/min"
+  do Mín. verde); os três ficam sempre da mesma altura.
+
 ## Lucro por minuto (R$/min)
 - **Configurações → "Lucro mínimo por minuto (R$/min)"** (vazio = sem filtro). Sugestão: R$ 0,60/min
   (meta de R$ 70 no bolso com dízimo de 10% = R$ 77,78 de lucro; 3–4 h à noite com ~60% do tempo com

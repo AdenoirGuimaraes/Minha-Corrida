@@ -42,12 +42,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
+        android:baselineAligned="false"
         android:orientation="horizontal">
 
         <!-- 1) R$/km -->
         <br.com.minhacorrida.ui.SquareLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:background="@drawable/bg_card_box"
@@ -74,7 +75,7 @@
         <!-- 2) Lucro -->
         <br.com.minhacorrida.ui.SquareLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:background="@drawable/bg_card_box"
@@ -101,7 +102,7 @@
         <!-- 3) Valor mínimo da corrida para o R$/km configurado -->
         <br.com.minhacorrida.ui.SquareLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="@drawable/bg_card_box"
             android:gravity="center"

@@ -126,13 +126,11 @@ class RideHistoryScreen(
             setTextColor(activity.getColor(R.color.mc_text_muted))
             setPadding(0, (10 * density).toInt(), 0, 0)
         }
-        fun number(hint: String) = EditText(activity).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            this.hint = hint
-        }
-        val etFare = number("25,00")
-        val etPickup = number("2,0")
-        val etTrip = number("8,0")
+        fun number(hint: String, decimals: Int) = EditText(activity).apply { this.hint = hint }
+            .let { DecimalMask.attach(it, decimals) }
+        val etFare = number("25,00", 2)
+        val etPickup = number("2,0", 1)
+        val etTrip = number("8,0", 1)
         val etTime = EditText(activity).apply {
             inputType = InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
             setText(LocalTime.now().format(TIME))
@@ -591,11 +589,9 @@ class RideHistoryScreen(
     /** "Corrigir km": km até o passageiro (opcional) e km da viagem. */
     private fun askNewKm(record: RideRecord) {
         val density = activity.resources.displayMetrics.density
-        fun field(hintRes: Int, value: BigDecimal?) = EditText(activity).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            hint = activity.getString(hintRes)
-            value?.let { setText(it.stripTrailingZeros().toPlainString().replace('.', ',')) }
-        }
+        fun field(hintRes: Int, value: BigDecimal?) = DecimalMask.attach(
+            EditText(activity).apply { hint = activity.getString(hintRes) }, 1,
+        ).also { DecimalMask.set(it, value) }
         val etPickup = field(R.string.hist_manual_pickup, record.pickupKm)
         val etTrip = field(R.string.hist_manual_trip, record.tripKm)
         val form = LinearLayout(activity).apply {
@@ -659,11 +655,8 @@ class RideHistoryScreen(
     private fun money(value: BigDecimal) = value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',')
 
     private fun askNewFare(record: RideRecord) {
-        val input = EditText(activity).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setText(record.fare.toPlainString().replace('.', ','))
-            setSelectAllOnFocus(true)
-        }
+        val input = DecimalMask.attach(EditText(activity).apply { setSelectAllOnFocus(true) }, 2)
+            .also { DecimalMask.set(it, record.fare) }
         AlertDialog.Builder(activity)
             .setTitle(R.string.hist_edit_title)
             .setMessage(activity.getString(R.string.hist_edit_message, record.platform.displayName))

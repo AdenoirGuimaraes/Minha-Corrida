@@ -63,15 +63,16 @@ class DeductionsEditor(
             setSingleLine()
             deduction?.let { setText(it.description) }
         }
-        val percent = EditText(activity).apply {
-            hint = activity.getString(R.string.deduction_percent_hint)
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789,.")
-            setTextColor(activity.getColor(R.color.mc_text))
-            setHintTextColor(activity.getColor(R.color.mc_text_muted))
-            gravity = Gravity.CENTER
-            deduction?.let { setText(it.percent.stripTrailingZeros().toPlainString().replace('.', ',')) }
-        }
+        // Vírgula automática com 1 casa: digita "100" → "10,0".
+        val percent = DecimalMask.attach(
+            EditText(activity).apply {
+                hint = activity.getString(R.string.deduction_percent_hint)
+                setTextColor(activity.getColor(R.color.mc_text))
+                setHintTextColor(activity.getColor(R.color.mc_text_muted))
+                gravity = Gravity.CENTER
+            },
+            1,
+        ).also { field -> deduction?.let { DecimalMask.set(field, it.percent) } }
         val line = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL

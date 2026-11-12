@@ -208,8 +208,8 @@ class MainActivity : Activity() {
             this, container.kmSettings, container.kmLog, container.fuelLog,
             onToggle = ::onKmTrackingToggled,
             onUseStats = { price, kmPerLiter ->
-                etFuelPrice.setText(decimalText(price))
-                etKmPerLiter.setText(decimalText(kmPerLiter))
+                DecimalMask.set(etFuelPrice, price)
+                DecimalMask.set(etKmPerLiter, kmPerLiter)
                 toast(getString(R.string.fuel_use_stats_done))
             },
         )
@@ -222,6 +222,8 @@ class MainActivity : Activity() {
         cbUber = findViewById(R.id.cbUber)
         cbInDrive = findViewById(R.id.cbInDrive)
         cbVoice = findViewById(R.id.cbVoice)
+        // Depois de todos os campos encontrados: vírgula automática.
+        attachDecimalMasks()
     }
 
     // ---- Abas ----
@@ -368,19 +370,19 @@ class MainActivity : Activity() {
 
     private fun loadSettings() {
         val settings = container.settings
-        etMinValue.setText(decimalText(settings.getMinValuePerKm()))
+        DecimalMask.set(etMinValue, settings.getMinValuePerKm())
         etTimeout.setText(settings.getOverlayTimeoutSeconds().toString())
         settings.getOperatingCost()?.let { cost ->
-            etFuelPrice.setText(decimalText(cost.fuelPricePerLiter))
-            etKmPerLiter.setText(decimalText(cost.kmPerLiter))
-            if (cost.otherCostPerKm.signum() > 0) etOtherCost.setText(decimalText(cost.otherCostPerKm))
+            DecimalMask.set(etFuelPrice, cost.fuelPricePerLiter)
+            DecimalMask.set(etKmPerLiter, cost.kmPerLiter)
+            if (cost.otherCostPerKm.signum() > 0) DecimalMask.set(etOtherCost, cost.otherCostPerKm)
         }
-        settings.getMinPassengerRating()?.let { etMinRating.setText(decimalText(it)) }
-        etInDriveFee.setText(decimalText(settings.getInDriveFeePercent()))
-        settings.getMinNetProfit()?.let { etMinProfit.setText(decimalText(it)) }
-        settings.getMinProfitPerMinute()?.let { etMinProfitPerMinute.setText(decimalText(it)) }
+        settings.getMinPassengerRating()?.let { DecimalMask.set(etMinRating, it) }
+        DecimalMask.set(etInDriveFee, settings.getInDriveFeePercent())
+        settings.getMinNetProfit()?.let { DecimalMask.set(etMinProfit, it) }
+        settings.getMinProfitPerMinute()?.let { DecimalMask.set(etMinProfitPerMinute, it) }
         val goals = container.goalSettings
-        goals.getDailyGoal()?.let { etDailyGoal.setText(decimalText(it)) }
+        goals.getDailyGoal()?.let { DecimalMask.set(etDailyGoal, it) }
         deductionsEditor.show(goals.getProfitDeductions())
         val platforms = settings.getEnabledPlatforms()
         cbUber.isChecked = Platform.UBER in platforms
@@ -554,6 +556,16 @@ class MainActivity : Activity() {
             toast(getString(R.string.update_allow_install))
             installer.openInstallPermissionSettings(this)
         }
+    }
+
+    /**
+     * Vírgula automática em todos os campos de valor: digita só números ("060" → "0,60").
+     * 2 casas para R$ e nota; 1 casa para km, km/L e porcentagem. Tempo e minutos ficam inteiros.
+     */
+    private fun attachDecimalMasks() {
+        listOf(etMinValue, etMinRating, etMinProfit, etMinProfitPerMinute, etFuelPrice, etOtherCost, etDailyGoal, etSimFare, etSimRating)
+            .forEach { DecimalMask.attach(it, 2) }
+        listOf(etInDriveFee, etKmPerLiter, etSimPickupKm, etSimTripKm).forEach { DecimalMask.attach(it, 1) }
     }
 
     // ---- Controle de km (GPS) ----

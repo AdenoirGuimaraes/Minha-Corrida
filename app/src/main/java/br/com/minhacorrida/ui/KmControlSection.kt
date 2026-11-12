@@ -120,10 +120,18 @@ class KmControlSection(
     private fun openEditor(entry: FuelEntry?) {
         val density = activity.resources.displayMetrics.density
         var date = entry?.date ?: LocalDate.now()
-        fun number(hintRes: Int, value: BigDecimal?) = EditText(activity).apply {
+        /** decimals 0 = inteiro (km do painel); 2 = litros e R$ com vírgula automática. */
+        fun number(hintRes: Int, value: BigDecimal?, decimals: Int) = EditText(activity).apply {
             hint = activity.getString(hintRes)
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            value?.let { setText(it.stripTrailingZeros().toPlainString().replace('.', ',')) }
+        }.let { field ->
+            if (decimals > 0) {
+                DecimalMask.attach(field, decimals).also { DecimalMask.set(it, value) }
+            } else {
+                field.apply {
+                    inputType = InputType.TYPE_CLASS_NUMBER
+                    value?.let { setText(it.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString()) }
+                }
+            }
         }
         val btnDate = Button(activity).apply { text = activity.getString(R.string.fuel_date, date.format(DAY_YEAR)) }
         btnDate.setOnClickListener {
@@ -132,9 +140,9 @@ class KmControlSection(
                 btnDate.text = activity.getString(R.string.fuel_date, date.format(DAY_YEAR))
             }, date.year, date.monthValue - 1, date.dayOfMonth).show()
         }
-        val etOdo = number(R.string.fuel_odometer, entry?.odometerKm)
-        val etLiters = number(R.string.fuel_liters, entry?.liters)
-        val etPrice = number(R.string.fuel_price, entry?.totalPrice)
+        val etOdo = number(R.string.fuel_odometer, entry?.odometerKm, 0)
+        val etLiters = number(R.string.fuel_liters, entry?.liters, 2)
+        val etPrice = number(R.string.fuel_price, entry?.totalPrice, 2)
         val cbFull = CheckBox(activity).apply {
             text = activity.getString(R.string.fuel_full_tank)
             isChecked = entry?.fullTank ?: true
