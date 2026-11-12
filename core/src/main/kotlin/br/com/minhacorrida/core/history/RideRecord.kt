@@ -35,7 +35,16 @@ data class RideRecord(
     val originalFare: BigDecimal? = null,
     val feePercent: BigDecimal = BigDecimal.ZERO,
     val lowProfit: Boolean = false,
+    /** Minutos da corrida (busca + viagem) do card; null nas antigas e nas registradas à mão. */
+    val minutes: Int? = null,
+    /** true quando algum trecho não tinha minutos na tela e foi estimado pelos km. */
+    val minutesEstimated: Boolean = false,
 ) {
+    /** Lucro por minuto (lucro ÷ minutos); null sem minutos ou sem custos. */
+    val profitPerMinute: BigDecimal?
+        get() = minutes?.takeIf { it > 0 && totalCost != null }
+            ?.let { netProfit.divide(BigDecimal(it), 2, RoundingMode.HALF_UP) }
+
     /** O que fica com o motorista: valor − taxa da plataforma. */
     val netFare: BigDecimal
         get() = br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase.netOf(fare, feePercent)

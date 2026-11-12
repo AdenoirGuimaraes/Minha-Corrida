@@ -88,6 +88,12 @@ Voz em velocidade 1,4×.
 - Layout da aba: filtros Dia/Semana/Mês e a data ◀ ▶ ficam fixos; resumo, botão Registrar
   Corrida, "ⓘ Como as corridas entram" (toque abre/fecha a
   explicação) e os cards rolam juntos.
+- **Check "Descontar a gasolina do deslocamento deste dia (34,6 km · R$ 20,76)"** (filtro Dia, só em dia com corrida
+  realizada e controle de km ligado; padrão desmarcado). Desmarcado: Separar e Fica com você só com a gasolina das
+  corridas e as deduções; a linha do deslocamento aparece "(não descontada)". Marcado: o deslocamento entra em linha
+  separada e sai do lucro antes das deduções. Semana/Mês e relatório somam só os dias marcados.
+- **Minutos no histórico** (desde a 0.2.45): cada corrida gravada guarda os minutos do card (≈ se estimados); o card
+  do histórico mostra "R$ 0,77/min · 11 min" e o relatório traz as colunas Min e Lucro/min e o lucro por minuto do período.
 - **Gasolina separada**: no Separar, "⛽ Gasolina das corridas (17,7 km)" e "🚗 Gasolina do deslocamento".
   Abaixo, **as corridas se pagaram?** — "✅ Corridas pagaram os próprios custos (R$ 16,18) e sobraram
   R$ 43,52" (ou "⚠️ … faltaram R$ x") e, com o controle de km ligado, "⛽ Gasolina do dia (52,3 km)

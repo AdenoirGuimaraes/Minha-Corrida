@@ -59,6 +59,8 @@ class RideHistoryScreen(
     private val parking: br.com.minhacorrida.infra.ParkingStore,
     private val report: br.com.minhacorrida.core.report.RideReportUseCase,
     private val appVersion: String,
+    private val dailyCommute: br.com.minhacorrida.core.km.DailyCommuteUseCase,
+    private val commuteChoices: br.com.minhacorrida.core.km.CommuteChoiceRepository,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val cardBinder = RideCardBinder(cardFormatter)
@@ -80,6 +82,9 @@ class RideHistoryScreen(
     private val tvGoalStatus: TextView = activity.findViewById(R.id.tvGoalStatus)
     private val tvPendingTrips: TextView = activity.findViewById(R.id.tvPendingTrips)
     private val tvCoverage: TextView = activity.findViewById(R.id.tvHistCoverage)
+    private val cbCommuteDay: CheckBox = activity.findViewById(R.id.cbCommuteDay)
+    /** Última página mostrada: o check do dia recalcula o resumo sem recarregar a lista. */
+    private var lastPage: RideHistoryPage? = null
 
     private var period = HistoryPeriod.DAY
     private var reference: LocalDate = LocalDate.now()
@@ -317,9 +322,12 @@ class RideHistoryScreen(
      * Atualiza na hora ao marcar/desmarcar corridas.
      */
     private fun renderSummary(page: RideHistoryPage) {
+        lastPage = page
         renderPendingTrips()
         tvCountKm.text = formatter.countAndKm(page)
-        val commute = commuteOf(page)
+        val period = periodCommute(page)
+        val commute = period.included
+        renderCommuteCheck(page, period)
         val progress = try {
             val goal = if (page.period == HistoryPeriod.DAY) goals.getDailyGoal() else null
             // Gasolina do deslocamento sem passageiro também sai do lucro (antes do dízimo).
@@ -332,172 +340,48 @@ class RideHistoryScreen(
         }
         tvProfit.text = formatter.kept(progress)
         tvCost.text = formatter.setAside(page, progress, commute)
-        tvCostDetail.text = formatter.setAsideDetails(page, progress, commute)
+        tvCostDetail.text = formatter.setAsideDetails(page, progress, commute, period.excluded)
         // Mesmo sem bater a meta: as corridas pagaram os custos delas e a gasolina do período?
-        val coverage = formatter.coverage(page, commute)
+        val coverage = formatter.coverage(
+            page, br.com.minhacorrida.core.km.DailyCommuteUseCase.sum(listOfNotNull(period.included, period.excluded)),
+        )
         tvCoverage.text = coverage.orEmpty()
         tvCoverage.visibility = if (coverage == null) View.GONE else View.VISIBLE
         renderGoal(progress)
     }
 
     /**
-     * Controle de km ligado: km do GPS no período − km das corridas realizadas = deslocamento,
-     * com a gasolina pelos custos do carro. null com o controle desligado ou sem km no período.
+     * Deslocamento de cada dia com corrida realizada (GPS do dia ou média do painel), separado
+     * pelos checks: marcados entram nas contas; desmarcados só aparecem para saber o valor.
      */
-    private fun commuteOf(page: RideHistoryPage): br.com.minhacorrida.core.km.CommuteCost? = try {
-        if (!kmSettings.isKmTrackingEnabled()) {
-            null
-        } else {
-            val cost = settings.getOperatingCost()
-            val gpsKm = kmLog.kmBetween(page.range.start, page.range.endExclusive)
-            val stats = br.com.minhacorrida.core.km.FuelStatsCalculator.of(fuelLog.all())
-            if (gpsKm.signum() > 0) {
-                // Km do GPS ajustados pelo painel (diferença medida entre os tanques cheios).
-                val correction = if (stats.from != null && stats.to != null) {
-                    br.com.minhacorrida.core.km.KmCorrection.factor(stats, kmLog.kmBetween(stats.from!!, stats.to!!))
-                } else {
-                    null
-                }
-                br.com.minhacorrida.core.km.CommuteCost.of(
-                    gpsKm, page.summary.totalKm, cost?.fuelPricePerLiter, cost?.kmPerLiter, correction,
-                )
-            } else {
-                // Sem km de GPS no período: média do painel entre os tanques cheios.
-                val perDay = if (stats.from != null && stats.to != null) {
-                    br.com.minhacorrida.core.km.OdometerCommute.kmPerDay(stats, history.doneKmBetween(stats.from!!, stats.to!!))
-                } else {
-                    null
-                }
-                val lastDay = minOf(page.range.endExclusive, LocalDate.now().plusDays(1))
-                val days = java.time.temporal.ChronoUnit.DAYS.between(page.range.start, lastDay)
-                br.com.minhacorrida.core.km.CommuteCost.averaged(perDay, days, cost?.fuelPricePerLiter, cost?.kmPerLiter)
-            }
-        }
-    } catch (e: Exception) {
-        android.util.Log.e("MC/RideHistoryScreen", "Falha ao calcular o deslocamento", e)
-        null
-    }
-
-    // ---- Relatório .md do período ----
-
-    /** Esta semana, este mês, mês passado ou um período escolhido no calendário. */
-    private fun chooseReportPeriod() {
-        val today = LocalDate.now()
-        val options = arrayOf(
-            activity.getString(R.string.report_week),
-            activity.getString(R.string.report_month),
-            activity.getString(R.string.report_last_month),
-            activity.getString(R.string.report_custom),
-        )
-        AlertDialog.Builder(activity)
-            .setTitle(R.string.report_title)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> exportReport(HistoryPeriod.WEEK.rangeOf(today))
-                    1 -> exportReport(HistoryPeriod.MONTH.rangeOf(today))
-                    2 -> exportReport(HistoryPeriod.MONTH.rangeOf(today.withDayOfMonth(1).minusDays(1)))
-                    else -> pickCustomRange(today)
-                }
-            }
-            .setNegativeButton(R.string.diagnostics_close, null)
-            .show()
-    }
-
-    /** Dois calendários: data inicial e data final (incluída). */
-    private fun pickCustomRange(today: LocalDate) {
-        android.app.DatePickerDialog(activity, { _, y, m, d ->
-            val start = LocalDate.of(y, m + 1, d)
-            android.app.DatePickerDialog(activity, { _, y2, m2, d2 ->
-                val end = LocalDate.of(y2, m2 + 1, d2)
-                if (end < start) {
-                    toast(activity.getString(R.string.report_invalid_range))
-                } else {
-                    exportReport(DateRange(start, end.plusDays(1)))
-                }
-            }, today.year, today.monthValue - 1, today.dayOfMonth).apply {
-                setTitle(R.string.report_end)
-                datePicker.minDate = start.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            }.show()
-        }, today.year, today.monthValue - 1, 1).apply { setTitle(R.string.report_start) }.show()
-    }
-
-    /** Gera o .md fora da thread principal e abre o Compartilhar (ex.: anexar no Claude). */
-    private fun exportReport(range: DateRange) {
-        toast(activity.getString(R.string.report_generating))
-        try {
-            io.execute {
-                val markdown = report.markdown(range, appVersion, System.currentTimeMillis())
-                val name = "minha-corrida-relatorio-${range.start}-a-${range.endInclusive}.md"
-                main.post {
-                    try {
-                        MarkdownSharer.share(activity, name, markdown, activity.getString(R.string.report_title))
-                    } catch (e: Exception) {
-                        android.util.Log.e("MC/RideHistoryScreen", "Falha ao compartilhar relatório", e)
-                        toast(activity.getString(R.string.report_failed))
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("MC/RideHistoryScreen", "Falha ao gerar relatório", e)
-            toast(activity.getString(R.string.report_failed))
-        }
-    }
-
-    // ---- Trajetos pendentes (sensor de veículo) ----
-
-    private fun renderPendingTrips() {
-        val count = trips.pending().size
-        tvPendingTrips.visibility = if (count > 0) View.VISIBLE else View.GONE
-        tvPendingTrips.text = activity.getString(R.string.trip_pending_banner, count)
-    }
-
-    /** Lista dos trajetos pendentes; tocar num deles pergunta Registrar ou Descartar. */
-    private fun showPendingTrips() {
-        val pending = trips.pending()
-        if (pending.isEmpty()) {
-            renderPendingTrips()
-            return
-        }
-        val day = DateTimeFormatter.ofPattern("dd/MM")
+    private fun periodCommute(page: RideHistoryPage): br.com.minhacorrida.core.km.PeriodCommute {
         val zone = ZoneId.systemDefault()
-        val labels = pending.map { t ->
-            val start = java.time.Instant.ofEpochMilli(t.startMillis).atZone(zone)
-            val end = java.time.Instant.ofEpochMilli(t.endMillis).atZone(zone)
-            activity.getString(
-                R.string.trip_row, t.km.toPlainString().replace('.', ','), start.format(day), start.format(TIME), end.format(TIME),
-            )
-        }
-        AlertDialog.Builder(activity)
-            .setTitle(R.string.trip_pending_title)
-            .setItems(labels.toTypedArray()) { _, which -> decideTrip(pending[which].id, labels[which]) }
-            .setNegativeButton(R.string.diagnostics_close, null)
-            .show()
+        val ridesKmByDay = page.rides.filter { it.done }
+            .groupBy { java.time.Instant.ofEpochMilli(it.timestampMillis).atZone(zone).toLocalDate() }
+            .mapValues { (_, list) -> list.fold(BigDecimal.ZERO) { acc, r -> acc + r.totalKm } }
+        return dailyCommute.forPeriod(ridesKmByDay) { from, to -> history.doneKmBetween(from, to) }
     }
 
-    private fun decideTrip(id: String, label: String) {
-        fun apply(keep: Boolean) {
+    /** Check "Descontar o deslocamento deste dia": só no filtro Dia e com deslocamento calculado. */
+    private fun renderCommuteCheck(page: RideHistoryPage, period: br.com.minhacorrida.core.km.PeriodCommute) {
+        val entry = period.days[page.range.start]
+        val show = page.period == HistoryPeriod.DAY && entry != null
+        cbCommuteDay.setOnCheckedChangeListener(null)
+        cbCommuteDay.visibility = if (show) View.VISIBLE else View.GONE
+        if (!show) return
+        cbCommuteDay.isChecked = entry!!.second
+        cbCommuteDay.text = activity.getString(
+            R.string.commute_check, entry.first.commuteKm.toPlainString().replace('.', ','),
+            entry.first.fuelCost.setScale(2).toPlainString().replace('.', ','),
+        )
+        cbCommuteDay.setOnCheckedChangeListener { _, checked ->
             try {
-                io.execute {
-                    if (keep) {
-                        trips.keep(id)
-                    } else {
-                        trips.discard(id)
-                        parking.revertIfFrom(id)
-                    }
-                    activity.getSystemService(android.app.NotificationManager::class.java).cancel(id.hashCode())
-                    main.post { refresh() }
-                }
+                commuteChoices.setIncluded(page.range.start, checked)
+                lastPage?.let(::renderSummary)
             } catch (e: Exception) {
-                android.util.Log.e("MC/RideHistoryScreen", "Falha ao decidir o trajeto", e)
+                android.util.Log.e("MC/RideHistoryScreen", "Falha ao marcar o deslocamento do dia", e)
             }
         }
-        AlertDialog.Builder(activity)
-            .setTitle(label)
-            .setMessage(R.string.trip_decide_message)
-            .setPositiveButton(R.string.trip_keep) { _, _ -> apply(true) }
-            .setNeutralButton(R.string.trip_discard) { _, _ -> apply(false) }
-            .setNegativeButton(R.string.diagnostics_close, null)
-            .show()
     }
 
     /** Meta diária (só no filtro Dia): barra de progresso e quanto falta (no bolso e em lucro líquido). */

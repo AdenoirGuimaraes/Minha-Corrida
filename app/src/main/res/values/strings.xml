@@ -130,6 +130,7 @@
     <string name="report_invalid_range">A data final não pode ser antes da inicial.</string>
     <string name="report_generating">Gerando relatório…</string>
     <string name="report_failed">Não foi possível gerar o relatório. Tente de novo.</string>
+    <string name="commute_check">Descontar a gasolina do deslocamento deste dia (%1$s km · R$ %2$s)</string>
     <string name="hist_card_done">✅ Realizada · toque para desmarcar</string>
     <string name="hist_card_not_done">⬜ Toque para marcar como realizada</string>
     <string name="hist_hint">Entram sozinhas só as corridas que ficaram com você (Uber: tela "Encontro com…"; inDrive: passageiro aceitou), com o valor combinado, e ficam marcadas ✅ quando você avalia o passageiro no fim. Toque no card marca ou desmarca; toque longo corrige o valor. Faltou alguma? Use Registrar Corrida.</string>

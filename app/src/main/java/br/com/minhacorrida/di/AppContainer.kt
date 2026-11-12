@@ -44,10 +44,18 @@ class AppContainer(context: Context) {
     val fuelLog: br.com.minhacorrida.core.km.FuelLogRepository by lazy {
         br.com.minhacorrida.infra.SharedPrefsFuelLogRepository(context, logger)
     }
+    /** Check de cada dia: descontar ou não a gasolina do deslocamento. */
+    val commuteChoices: br.com.minhacorrida.core.km.CommuteChoiceRepository by lazy {
+        br.com.minhacorrida.infra.SharedPrefsCommuteChoiceRepository(context)
+    }
+    /** Deslocamento por dia (GPS ou média do painel), separado pelos checks. */
+    val dailyCommute: br.com.minhacorrida.core.km.DailyCommuteUseCase by lazy {
+        br.com.minhacorrida.core.km.DailyCommuteUseCase(settings, kmSettings, kmLog, fuelLog, commuteChoices, logger)
+    }
     /** Relatório .md do período (corridas, resultados, deduções, km e abastecimentos). */
     val rideReport: br.com.minhacorrida.core.report.RideReportUseCase by lazy {
         br.com.minhacorrida.core.report.RideReportUseCase(
-            rideHistoryRepository, settings, goalSettings, kmSettings, kmLog, fuelLog, logger,
+            rideHistoryRepository, settings, goalSettings, kmSettings, kmLog, fuelLog, dailyCommute, logger,
         )
     }
     /** Onde o carro ficou estacionado (início estimado do próximo trajeto). */

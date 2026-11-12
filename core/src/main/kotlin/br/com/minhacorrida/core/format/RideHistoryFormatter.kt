@@ -63,21 +63,21 @@ class RideHistoryFormatter(
      * "⛽ Combustível R$ 10,87\n🔧 Manutenção R$ 5,31\n📌 Dízimo (10%) R$ 4,35\n
      * Recebido R$ 59,70 · fica com você R$ 39,17" (+ aviso de corridas sem custo).
      */
-    fun setAsideDetails(page: RideHistoryPage, progress: GoalProgress, commute: CommuteCost? = null): String {
+    fun setAsideDetails(
+        page: RideHistoryPage,
+        progress: GoalProgress,
+        commute: CommuteCost? = null,
+        /** Deslocamento dos dias SEM o check: aparece para saber o valor, mas não entra nas contas. */
+        excluded: CommuteCost? = null,
+    ): String {
         val s = page.summary
         val lines = mutableListOf(
             "⛽ Gasolina das corridas (${km(s.totalKm)} km) R$ ${money(s.fuelCost)}",
             "🔧 Manutenção das corridas R$ ${money(s.maintenanceCost)}",
         )
         // Controle de km ligado: gasolina dos km rodados sem passageiro (mantém o tanque cheio).
-        commute?.let { c ->
-            lines += if (c.averagePerDay != null) {
-                "🚗 Gasolina do deslocamento (média do painel ${km(c.averagePerDay)} km/dia) R$ ${money(c.fuelCost)}"
-            } else {
-                val adjust = c.correction?.let { ", painel ${br.com.minhacorrida.core.km.KmCorrection.percentLabel(it)}" }.orEmpty()
-                "🚗 Gasolina do deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km$adjust) R$ ${money(c.fuelCost)}"
-            }
-        }
+        commute?.let { lines += commuteLine(it) }
+        excluded?.let { lines += commuteLine(it) + " (não descontada)" }
         progress.deductions.forEach { d ->
             lines += "📌 ${d.deduction.label} (${percent(d.deduction.percent)}%) R$ ${money(d.amount)}"
         }
@@ -118,6 +118,14 @@ class RideHistoryFormatter(
             }
         }
         return lines.joinToString("\n")
+    }
+
+    /** "🚗 Gasolina do deslocamento 34,6 km (rodou 52,3 km, painel +3,5%) R$ 20,76". */
+    private fun commuteLine(c: CommuteCost): String = if (c.averagePerDay != null) {
+        "🚗 Gasolina do deslocamento (média do painel ${km(c.averagePerDay)} km/dia) R$ ${money(c.fuelCost)}"
+    } else {
+        val adjust = c.correction?.let { ", painel ${br.com.minhacorrida.core.km.KmCorrection.percentLabel(it)}" }.orEmpty()
+        "🚗 Gasolina do deslocamento ${km(c.commuteKm)} km (rodou ${km(c.totalKm)} km$adjust) R$ ${money(c.fuelCost)}"
     }
 
     private fun periodName(period: HistoryPeriod) = when (period) {
@@ -185,11 +193,18 @@ class RideHistoryFormatter(
             kmDetails = kmDetails,
             profitLabel = if (cost != null && record.netProfit.signum() < 0) "Prejuízo" else "Lucro",
             profitValue = if (cost != null) money(record.netProfit.abs()) else "—",
-            profitDetails = if (cost != null) "$fareLine\nGasto R$ ${money(cost)}" else "$fareLine\nSem custos",
+            profitDetails = if (cost != null) "${perMinuteLine(record)}$fareLine\nGasto R$ ${money(cost)}" else "$fareLine\nSem custos",
             minimumValue = money(green),
             minimumLabel = "R$ ${money(minValuePerKm)}/km" +
                 effectiveMinProfit?.let { "\nLucro R$ ${money(it)}" }.orEmpty(),
         )
+    }
+
+    /** "R$ 0,77/min · 11 min\n" (com "≈" se estimado), como no card da oferta; "" sem minutos. */
+    private fun perMinuteLine(record: RideRecord): String {
+        val perMinute = record.profitPerMinute ?: return ""
+        val approx = if (record.minutesEstimated) "≈ " else ""
+        return "${approx}R$ ${money(perMinute)}/min · $approx${record.minutes} min\n"
     }
 
     private fun money(value: BigDecimal) = DecimalFormat("#,##0.00", DecimalFormatSymbols(locale)).format(value)

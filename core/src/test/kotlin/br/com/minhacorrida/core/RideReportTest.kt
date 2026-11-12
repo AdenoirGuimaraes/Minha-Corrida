@@ -48,7 +48,15 @@ class RideReportTest {
         override fun save(entry: FuelEntry) = Unit
         override fun delete(id: String) = Unit
     }
-    private val report = RideReportUseCase(repo, settings, goals, kmSettings, kmLog, fuel, NoOpLogger, zone)
+    private val choices = object : br.com.minhacorrida.core.km.CommuteChoiceRepository {
+        override fun isIncluded(date: LocalDate) = false
+        override fun setIncluded(date: LocalDate, included: Boolean) = Unit
+    }
+    private val report = RideReportUseCase(
+        repo, settings, goals, kmSettings, kmLog, fuel,
+        br.com.minhacorrida.core.km.DailyCommuteUseCase(settings, kmSettings, kmLog, fuel, choices, NoOpLogger),
+        NoOpLogger, zone,
+    )
 
     @Test
     fun `relatorio traz configuracoes, resumo, por app, por dia, corridas e abastecimentos`() {

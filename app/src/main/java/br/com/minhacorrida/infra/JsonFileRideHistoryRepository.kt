@@ -108,6 +108,8 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         if (r.lowProfit) put("lowProfit", true)
         r.originalFare?.let { put("originalFare", it.toPlainString()) }
         if (r.feePercent.signum() > 0) put("feePercent", r.feePercent.toPlainString())
+        r.minutes?.let { put("minutes", it) }
+        if (r.minutesEstimated) put("minutesEst", true)
     }
 
     private fun fromJson(o: JSONObject) = RideRecord(
@@ -126,6 +128,8 @@ class JsonFileRideHistoryRepository(context: Context, private val logger: AppLog
         lowProfit = o.optBoolean("lowProfit", false),
         originalFare = o.optString("originalFare").takeIf { it.isNotEmpty() }?.let(::BigDecimal),
         feePercent = o.optString("feePercent").takeIf { it.isNotEmpty() }?.let(::BigDecimal) ?: BigDecimal.ZERO,
+        minutes = if (o.has("minutes")) o.optInt("minutes") else null,
+        minutesEstimated = o.optBoolean("minutesEst", false),
     )
 
     private companion object {

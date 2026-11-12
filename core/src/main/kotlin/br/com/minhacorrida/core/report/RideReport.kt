@@ -55,6 +55,7 @@ class RideReportUseCase(
     private val kmSettings: KmSettingsRepository,
     private val kmLog: KmLogRepository,
     private val fuelLog: FuelLogRepository,
+    private val dailyCommute: br.com.minhacorrida.core.km.DailyCommuteUseCase,
     private val logger: AppLogger,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val locale: Locale = Locale("pt", "BR"),
@@ -85,16 +86,19 @@ class RideReportUseCase(
             null
         }
 
+        // Deslocamento por dia, igual à aba Corridas: só entra nas contas nos dias com o check marcado.
+        val ridesKmByDay = all.filter { it.done }.groupBy(::dateOf)
+            .mapValues { (_, list) -> sum(list.map { it.totalKm }) }
+        val commutes = dailyCommute.forPeriod(ridesKmByDay) { from, to ->
+            sum(rides.between(DateRange(from, to).startMillis(zone), DateRange(from, to).endMillis(zone)).filter { it.done }.map { it.totalKm })
+        }.days
+
         // Um resultado por dia do período (as deduções e a meta são diárias, como na aba Corridas).
         val days = generateSequence(range.start) { it.plusDays(1) }.takeWhile { it < range.endExclusive }.map { day ->
             val dayRides = all.filter { dateOf(it) == day }
             val summary = RideHistoryUseCase.summarize(dayRides)
             val gps = if (tracking) kmLog.kmOn(day) else BigDecimal.ZERO
-            val commute = if (tracking) {
-                CommuteCost.of(gps, summary.totalKm, cost?.fuelPricePerLiter, cost?.kmPerLiter, correction)
-            } else {
-                null
-            }
+            val commute = commutes[day]?.takeIf { it.second }?.first
             val progress = DailyGoalCalculator.progress(
                 summary.netProfit - (commute?.fuelCost ?: BigDecimal.ZERO), deductions, dailyGoal,
             )
@@ -209,6 +213,16 @@ class RideReportUseCase(
             appendLine("| Média por corrida: recebido / lucro / km | ${money(fare.divide(count, 2, RoundingMode.HALF_UP))} / ${money(profit.divide(count, 2, RoundingMode.HALF_UP))} / ${km(ridesKm.divide(count, 1, RoundingMode.HALF_UP))} |")
             if (ridesKm.signum() > 0) appendLine("| R$/km médio (recebido ÷ km das corridas) | ${money(fare.divide(ridesKm, 2, RoundingMode.HALF_UP))} |")
         }
+        // Minutos (corridas gravadas a partir da 0.2.45; as manuais e antigas não têm).
+        val timed = done.filter { it.minutes != null && it.totalCost != null }
+        if (timed.isNotEmpty()) {
+            val minutes = timed.sumOf { it.minutes!! }
+            val timedProfit = sum(timed.map { it.netProfit })
+            appendLine(
+                "| Minutos de corrida (busca + viagem) / lucro por minuto | $minutes min em ${timed.size} corrida(s) / " +
+                    "${money(timedProfit.divide(BigDecimal(minutes.coerceAtLeast(1)), 2, RoundingMode.HALF_UP))}/min |",
+            )
+        }
         if (worked.isNotEmpty()) {
             val workedCount = BigDecimal(worked.size)
             appendLine("| Média por dia trabalhado: recebido / fica com você | ${money(fare.divide(workedCount, 2, RoundingMode.HALF_UP))} / ${money(sum(worked.map { it.progress.kept }).divide(workedCount, 2, RoundingMode.HALF_UP))} |")
@@ -249,7 +263,7 @@ class RideReportUseCase(
         appendLine("|---|---|---|${if (tracking) "---|---|" else ""}---|---|---|---|---|${if (dailyGoal != null) "---|" else ""}")
         active.forEach { d ->
             val s = d.summary
-            val trackingCols = if (tracking) "${km(d.gpsKm)} | ${money(d.commute?.fuelCost ?: BigDecimal.ZERO)} | " else ""
+            val trackingCols = if (tracking) "${km(d.gpsKm)} | ${d.commute?.let { money(it.fuelCost) } ?: "não descontado"} | " else ""
             val goalCol = if (dailyGoal != null) " ${if (d.progress.reached) "✅" else "${d.progress.progressPercent}%"} |" else ""
             appendLine(
                 "| ${d.date.format(DAY_NAME)} | ${d.done.size} | ${km(s.totalKm)} | $trackingCols${money(s.totalFare)} | " +
@@ -268,8 +282,8 @@ class RideReportUseCase(
             appendLine()
             return
         }
-        appendLine("| Data | Hora | App | Valor | Era (contraproposta) | Taxa | Líquido | Busca km | Viagem km | Total km | R$/km | Gasolina | Manut. | Lucro | Cor |")
-        appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+        appendLine("| Data | Hora | App | Valor | Era (contraproposta) | Taxa | Líquido | Busca km | Viagem km | Total km | Min | R$/km | Gasolina | Manut. | Lucro | Lucro/min | Cor |")
+        appendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
         list.forEach { r ->
             val at = Instant.ofEpochMilli(r.timestampMillis).atZone(zone)
             val color = when (r.rating) {
@@ -281,8 +295,9 @@ class RideReportUseCase(
                 "| ${at.format(DATE_SHORT)} | ${at.format(TIME)} | ${r.platform.displayName} | ${money(r.fare)} | " +
                     "${r.originalFare?.let(::money) ?: "—"} | ${if (r.feePercent.signum() > 0) decimal(r.feePercent) + "%" else "—"} | " +
                     "${money(r.netFare)} | ${r.pickupKm?.let(::km) ?: "—"} | ${km(r.tripKm)} | ${km(r.totalKm)} | " +
+                    "${r.minutes?.let { (if (r.minutesEstimated) "≈" else "") + it } ?: "—"} | " +
                     "${money(r.valuePerKm)} | ${r.fuelCost?.let(::money) ?: "—"} | ${r.maintenanceCost?.let(::money) ?: "—"} | " +
-                    "${if (r.totalCost != null) money(r.netProfit) else "—"} | $color |",
+                    "${if (r.totalCost != null) money(r.netProfit) else "—"} | ${r.profitPerMinute?.let(::money) ?: "—"} | $color |",
             )
         }
         appendLine()
@@ -313,12 +328,12 @@ class RideReportUseCase(
         appendLine("- **Recebido (líquido)**: Uber = valor do card (já é o ganho do motorista); inDrive = valor − taxa configurada.")
         appendLine("- **Gasolina/manutenção da corrida**: km total (busca até o passageiro + viagem) × custo por km do carro no momento da corrida.")
         appendLine("- **Lucro da corrida** = líquido − gasolina − manutenção. Não desconta deduções nem deslocamento.")
-        appendLine("- **Deslocamento**: com o controle de km ligado, (km do GPS dos trajetos registrados × ajuste do painel − km das corridas) × preço do litro ÷ km/L.")
+        appendLine("- **Deslocamento**: com o controle de km ligado, (km do GPS dos trajetos registrados × ajuste do painel − km das corridas) × preço do litro ÷ km/L; sem GPS no dia, média do painel. Só entra nas contas nos dias em que o motorista marcou \"Descontar a gasolina do deslocamento\".")
         appendLine("- **Deduções** (ex.: dízimo): % sobre o lucro POSITIVO de cada dia, depois do deslocamento; somadas no período.")
         appendLine("- **Fica com você** = lucro − deslocamento − deduções. **Separar** = gasolina + manutenção + deslocamento + deduções.")
         appendLine("- **Cores**: 🔴 R$/km abaixo do mínimo ou nota baixa; 🟡 R$/km ok mas lucro ou lucro/minuto abaixo do mínimo; 🟢 passa em tudo. Cores e valores guardados no momento da corrida.")
         appendLine("- Corridas entram sozinhas quando confirmadas na tela do app (Uber: \"Encontro com…\"; inDrive: passageiro aceitou) e são marcadas como realizadas na avaliação do passageiro; as manuais entram pelo botão Registrar Corrida.")
-        appendLine("- Minutos das corridas não são guardados no histórico (só aparecem no card da oferta).")
+        appendLine("- **Minutos** (busca + viagem) vêm do card da oferta; \"≈\" = estimados a 25 km/h quando a tela não mostrou. Corridas registradas à mão e as gravadas antes da versão 0.2.45 não têm minutos.")
         appendLine()
     }
 

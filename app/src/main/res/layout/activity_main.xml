@@ -725,6 +725,13 @@
                     android:textColor="@color/mc_text"
                     android:textSize="14sp" />
 
+                <!-- Check do dia: descontar a gasolina do deslocamento (padrão: desmarcado). -->
+                <CheckBox
+                    android:id="@+id/cbCommuteDay"
+                    style="@style/CheckItem"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
                 <!-- As corridas se pagaram? Custos das corridas e gasolina do período inteiro. -->
                 <TextView
                     android:id="@+id/tvHistCoverage"

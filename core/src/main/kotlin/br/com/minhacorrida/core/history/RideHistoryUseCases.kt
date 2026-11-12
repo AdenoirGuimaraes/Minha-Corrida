@@ -62,6 +62,8 @@ class RecordRideUseCase(
                     originalFare = originalFare
                         ?.setScale(2, RoundingMode.HALF_UP)
                         ?.takeIf { it.compareTo(offer.fare) != 0 },
+                    minutes = analysis.time.minutes,
+                    minutesEstimated = analysis.time.estimated,
                 )
             repository.add(saved)
             saved

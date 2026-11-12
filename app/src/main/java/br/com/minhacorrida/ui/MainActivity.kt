@@ -138,6 +138,7 @@ class MainActivity : Activity() {
             container.evaluateRide, container.settings, container.formatter,
             container.goalSettings, container.goalFormatter, container.kmSettings, container.kmLog,
             container.fuelLog, container.trips, container.parking, container.rideReport,
+            container.dailyCommute, container.commuteChoices,
             "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
         )
         historyScreen.bind()
