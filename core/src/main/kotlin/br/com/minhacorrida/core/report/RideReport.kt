@@ -59,6 +59,10 @@ class RideReportUseCase(
     private val logger: AppLogger,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val locale: Locale = Locale("pt", "BR"),
+    /** Manutenções anotadas (com comprovante); null = não mostra a seção. */
+    private val maintenanceLog: br.com.minhacorrida.core.receipt.MaintenanceLogRepository? = null,
+    /** Quais registros têm foto do comprovante. */
+    private val receipts: br.com.minhacorrida.core.receipt.ReceiptStore = br.com.minhacorrida.core.receipt.ReceiptStore.NONE,
 ) {
     /**
      * @param range dias do relatório [start, endExclusive).
@@ -117,6 +121,7 @@ class RideReportUseCase(
             val notDone = all.filterNot { it.done }
             if (notDone.isNotEmpty()) rideTable("Corridas NÃO marcadas como realizadas (fora das contas)", notDone)
             fuel(range, fuelEntries, stats)
+            maintenance(range)
             notes()
         }
     }
@@ -327,12 +332,12 @@ class RideReportUseCase(
         appendLine("## Abastecimentos no período (${inRange.size})")
         appendLine()
         if (inRange.isNotEmpty()) {
-            appendLine("| Data | Km do painel | Litros | Valor | R$/L | Tanque cheio |")
-            appendLine("|---|---|---|---|---|---|")
+            appendLine("| Data | Km do painel | Litros | Valor | R$/L | Tanque cheio | Comprovante |")
+            appendLine("|---|---|---|---|---|---|---|")
             inRange.forEach { e ->
-                appendLine("| ${e.date.format(DATE)} | ${km(e.odometerKm)} | ${decimal(e.liters)} | ${money(e.totalPrice)} | ${money(e.pricePerLiter)} | ${if (e.fullTank) "sim" else "não"} |")
+                appendLine("| ${e.date.format(DATE)} | ${km(e.odometerKm)} | ${decimal(e.liters)} | ${money(e.totalPrice)} | ${money(e.pricePerLiter)} | ${if (e.fullTank) "sim" else "não"} | ${receipt(e.id)} |")
             }
-            appendLine("| **Total** | | ${decimal(sum(inRange.map { it.liters }))} | ${money(sum(inRange.map { it.totalPrice }))} | | |")
+            appendLine("| **Total** | | ${decimal(sum(inRange.map { it.liters }))} | ${money(sum(inRange.map { it.totalPrice }))} | | | |")
             appendLine()
         }
         if (stats.kmPerLiter != null) {
@@ -340,6 +345,27 @@ class RideReportUseCase(
             appendLine()
         }
     }
+
+    /** Manutenções do período com valor e se há foto do comprovante. */
+    private fun StringBuilder.maintenance(range: DateRange) {
+        val log = maintenanceLog ?: return
+        val inRange = try {
+            log.all().filter { it.date >= range.start && it.date < range.endExclusive }.sortedBy { it.date }
+        } catch (e: Exception) {
+            logger.error(TAG, "Falha ao ler manutenções", e)
+            emptyList()
+        }
+        if (inRange.isEmpty()) return
+        appendLine("## Manutenções no período (${inRange.size})")
+        appendLine()
+        appendLine("| Data | Descrição | Valor | Comprovante |")
+        appendLine("|---|---|---|---|")
+        inRange.forEach { m -> appendLine("| ${m.date.format(DATE)} | ${m.description.replace("|", "/")} | ${money(m.value)} | ${receipt(m.id)} |") }
+        appendLine("| **Total** | | ${money(sum(inRange.map { it.value }))} | |")
+        appendLine()
+    }
+
+    private fun receipt(id: String) = if (runCatching { receipts.has(id) }.getOrDefault(false)) "📷 sim" else "não"
 
     private fun StringBuilder.notes() {
         appendLine("## Como as contas são feitas")

@@ -23,10 +23,14 @@ object BackupPolicy {
         "minha_corrida_fuel_log",
         "minha_corrida_trips",
         "minha_corrida_parking",
+        "minha_corrida_maintenance_log",
     )
 
     /** Arquivos da pasta do app que vão no backup. */
     val FILES: List<String> = listOf("historico_corridas.json")
+
+    /** Pasta das fotos de comprovante (vão no backup, em base64). */
+    const val RECEIPTS_DIR = "comprovantes"
 
     private val NAME_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmm")
 
@@ -49,6 +53,7 @@ object BackupPolicy {
     /** Só restaura o que está na lista (um arquivo adulterado não grava onde não deve). */
     fun canRestorePreference(name: String) = name in PREFERENCES
     fun canRestoreFile(name: String) = name in FILES
+    fun canRestoreReceipt(name: String) = br.com.minhacorrida.core.receipt.ReceiptImage.isSafeName(name)
 }
 
 /**
@@ -61,10 +66,12 @@ data class BackupSummary(
     val rides: Int,
     val fuelEntries: Int,
     val trips: Int,
+    val photos: Int = 0,
 ) {
     fun describe(): String {
         val date = createdAt?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) ?: "data desconhecida"
         val version = appVersion?.let { " (versão $it)" }.orEmpty()
-        return "Backup de $date$version: $rides corrida(s), $fuelEntries abastecimento(s), $trips trajeto(s)."
+        val photoText = if (photos > 0) ", $photos foto(s) de comprovante" else ""
+        return "Backup de $date$version: $rides corrida(s), $fuelEntries abastecimento(s), $trips trajeto(s)$photoText."
     }
 }

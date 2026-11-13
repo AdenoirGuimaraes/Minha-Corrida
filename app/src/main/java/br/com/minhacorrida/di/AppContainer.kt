@@ -56,6 +56,7 @@ class AppContainer(context: Context) {
     val rideReport: br.com.minhacorrida.core.report.RideReportUseCase by lazy {
         br.com.minhacorrida.core.report.RideReportUseCase(
             rideHistoryRepository, settings, goalSettings, kmSettings, kmLog, fuelLog, dailyCommute, logger,
+            maintenanceLog = maintenanceLog, receipts = receiptPhotos,
         )
     }
     /** Ofertas lidas (só números, 60 dias, arquivo separado): mínimos × município. */
@@ -65,6 +66,11 @@ class AppContainer(context: Context) {
     val offerLog: br.com.minhacorrida.core.market.OfferLogUseCase by lazy {
         br.com.minhacorrida.core.market.OfferLogUseCase(offerLogRepository, logger)
     }
+    /** Manutenções e fotos de comprovante (item 12). */
+    val maintenanceLog: br.com.minhacorrida.core.receipt.MaintenanceLogRepository by lazy {
+        br.com.minhacorrida.infra.SharedPrefsMaintenanceLog(context, logger)
+    }
+    val receiptPhotos: br.com.minhacorrida.infra.ReceiptPhotos by lazy { br.com.minhacorrida.infra.ReceiptPhotos(context, logger) }
     /** Destino da corrida: base, distância de "longe" e bairros a evitar (Configurações). */
     val destinationSettings: br.com.minhacorrida.core.destination.DestinationSettingsRepository by lazy {
         br.com.minhacorrida.infra.SharedPrefsDestinationSettings(context, logger)

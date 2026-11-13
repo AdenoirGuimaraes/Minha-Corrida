@@ -369,6 +369,23 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
+
+                    <!-- Manutenções com foto do comprovante: MaintenanceSection. -->
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/maintenance_title" />
+
+                    <Button
+                        android:id="@+id/btnAddMaintenance"
+                        style="@style/YellowButton"
+                        android:text="@string/maintenance_add" />
+
+                    <LinearLayout
+                        android:id="@+id/maintenanceList"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
                 </LinearLayout>
 
                 <!-- Checklist: apps lidos e voz (verde = ligado, vermelho = desligado) -->

@@ -39,6 +39,8 @@ class KmControlSection(
     private val onToggle: (Boolean) -> Unit,
     /** "Usar nos custos": preço médio do litro e km/L real para os campos de custos. */
     private val onUseStats: (pricePerLiter: BigDecimal, kmPerLiter: BigDecimal) -> Unit,
+    /** Foto do cupom do posto (comprovante). */
+    private val receipts: ReceiptPicker,
 ) {
     private val cbEnabled: CheckBox = activity.findViewById(R.id.cbKmTracking)
     private val tvToday: TextView = activity.findViewById(R.id.tvKmToday)
@@ -111,15 +113,27 @@ class KmControlSection(
                 textSize = 14f
                 val pad = (8 * activity.resources.displayMetrics.density).toInt()
                 setPadding(0, pad, 0, pad)
+                if (receiptMarker(entry.id)) append(" · 🧾")
                 setOnClickListener { openEditor(entry) }
             })
         }
     }
 
-    /** Novo abastecimento (entry null) ou edição: data, km do painel, litros, valor, tanque cheio. */
+    private fun receiptMarker(id: String) = receipts.label(id) == activity.getString(R.string.receipt_attached)
+
+    /** Novo abastecimento (entry null) ou edição: data, km do painel, litros, valor, tanque cheio e foto do cupom. */
     private fun openEditor(entry: FuelEntry?) {
         val density = activity.resources.displayMetrics.density
         var date = entry?.date ?: LocalDate.now()
+        // Id já na abertura: a foto do cupom pode ser tirada antes de salvar.
+        val id = entry?.id ?: UUID.randomUUID().toString()
+        val btnReceipt = Button(activity).apply { text = receipts.label(id) }
+        btnReceipt.setOnClickListener {
+            receipts.choose(id) {
+                btnReceipt.text = receipts.label(id)
+                refresh()
+            }
+        }
         /** decimals 0 = inteiro (km do painel); 2 = litros e R$ com vírgula automática. */
         fun number(hintRes: Int, value: BigDecimal?, decimals: Int) = EditText(activity).apply {
             hint = activity.getString(hintRes)
@@ -156,6 +170,7 @@ class KmControlSection(
             addView(TextView(activity).apply { setText(R.string.fuel_liters) }); addView(etLiters)
             addView(TextView(activity).apply { setText(R.string.fuel_price) }); addView(etPrice)
             addView(cbFull)
+            addView(btnReceipt)
         }
         val dialog = AlertDialog.Builder(activity)
             .setTitle(if (entry == null) R.string.fuel_new else R.string.fuel_edit)
@@ -163,7 +178,7 @@ class KmControlSection(
             .setPositiveButton(R.string.save) { _, _ ->
                 val saved = runCatching {
                     FuelEntry(
-                        id = entry?.id ?: UUID.randomUUID().toString(),
+                        id = id,
                         date = date,
                         odometerKm = NumberParser.parse(etOdo.text.toString())!!,
                         liters = NumberParser.parse(etLiters.text.toString())!!,
@@ -183,7 +198,11 @@ class KmControlSection(
             dialog.setNeutralButton(R.string.hist_delete_confirm) { _, _ ->
                 AlertDialog.Builder(activity)
                     .setMessage(R.string.fuel_delete_message)
-                    .setPositiveButton(R.string.hist_delete_confirm) { _, _ -> fuelLog.delete(entry.id); refresh() }
+                    .setPositiveButton(R.string.hist_delete_confirm) { _, _ ->
+                        fuelLog.delete(entry.id)
+                        receipts.remove(entry.id)
+                        refresh()
+                    }
                     .setNegativeButton(R.string.diagnostics_close, null)
                     .show()
             }

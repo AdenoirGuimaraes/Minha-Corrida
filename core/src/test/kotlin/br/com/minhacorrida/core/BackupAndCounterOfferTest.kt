@@ -37,6 +37,10 @@ class BackupAndCounterOfferTest {
             "Backup de 13/11/2026 01:04 (versão 0.2.50): 120 corrida(s), 5 abastecimento(s), 40 trajeto(s).",
             BackupSummary(LocalDateTime.of(2026, 11, 13, 1, 4), "0.2.50", 120, 5, 40).describe(),
         )
+        assertEquals(
+            "Backup de 13/11/2026 01:04 (versão 0.2.55): 3 corrida(s), 1 abastecimento(s), 2 trajeto(s), 1 foto(s) de comprovante.",
+            BackupSummary(LocalDateTime.of(2026, 11, 13, 1, 4), "0.2.55", 3, 1, 2, photos = 1).describe(),
+        )
     }
 
     @Test

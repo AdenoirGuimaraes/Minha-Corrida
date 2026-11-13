@@ -38,7 +38,13 @@ class AppBackup(context: Context, private val logger: AppLogger) {
                 val file = File(appContext.filesDir, name)
                 if (file.exists()) files.put(name, file.readText())
             }
+            // Fotos de comprovante (já reduzidas, ~200 KB cada) em base64.
+            val photos = JSONObject()
+            File(appContext.filesDir, BackupPolicy.RECEIPTS_DIR).listFiles()
+                ?.filter { BackupPolicy.canRestoreReceipt(it.name) }
+                ?.forEach { photos.put(it.name, android.util.Base64.encodeToString(it.readBytes(), android.util.Base64.NO_WRAP)) }
             return JSONObject()
+                .put("photos", photos)
                 .put("format", BackupPolicy.FORMAT)
                 .put("version", BackupPolicy.VERSION)
                 .put("createdAt", LocalDateTime.now().toString())
@@ -61,7 +67,9 @@ class AppBackup(context: Context, private val logger: AppLogger) {
         val prefs = root.optJSONObject("prefs") ?: JSONObject()
         val rides = root.optJSONObject("files")?.optString("historico_corridas.json")
             ?.let { runCatching { JSONArray(it).length() }.getOrDefault(0) } ?: 0
+        val photos = root.optJSONObject("photos")?.length() ?: 0
         return BackupSummary(
+            photos = photos,
             createdAt = runCatching { LocalDateTime.parse(root.optString("createdAt")) }.getOrNull(),
             appVersion = root.optString("appVersion").takeIf { it.isNotBlank() },
             rides = rides,
@@ -92,6 +100,14 @@ class AppBackup(context: Context, private val logger: AppLogger) {
                 if (!tmp.renameTo(target)) {
                     target.writeText(tmp.readText())
                     tmp.delete()
+                }
+            }
+            val photos = root.optJSONObject("photos") ?: JSONObject()
+            if (photos.length() > 0) {
+                val dir = File(appContext.filesDir, BackupPolicy.RECEIPTS_DIR).apply { mkdirs() }
+                photos.keys().forEach { name ->
+                    if (!BackupPolicy.canRestoreReceipt(name)) return@forEach
+                    File(dir, name).writeBytes(android.util.Base64.decode(photos.getString(name), android.util.Base64.NO_WRAP))
                 }
             }
             logger.debug(TAG, "Backup restaurado")

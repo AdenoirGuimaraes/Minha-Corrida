@@ -86,6 +86,8 @@ class MainActivity : Activity() {
     private lateinit var kmControl: KmControlSection
     private lateinit var backupSection: BackupSection
     private lateinit var destinationSection: DestinationSection
+    private lateinit var receiptPicker: ReceiptPicker
+    private lateinit var maintenanceSection: MaintenanceSection
     private lateinit var etTimeout: EditText
     private lateinit var etFuelPrice: EditText
     private lateinit var etKmPerLiter: EditText
@@ -185,7 +187,16 @@ class MainActivity : Activity() {
     /** Resultado da escolha de pasta/arquivo do backup (Activity simples, sem AndroidX). */
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (::backupSection.isInitialized && backupSection.onActivityResult(requestCode, resultCode, data)) return
+        if (::receiptPicker.isInitialized && receiptPicker.onActivityResult(requestCode, resultCode, data)) return
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    /** Fotos de comprovante sem registro (abastecimento/manutenção cancelado) somem depois de um dia. */
+    private fun purgeOrphanReceipts() {
+        ioExecutor.execute {
+            val ids = container.fuelLog.all().map { it.id }.toSet() + container.maintenanceLog.all().map { it.id }
+            container.receiptPhotos.purgeOrphans(ids)
+        }
     }
 
     override fun onDestroy() {
@@ -219,6 +230,7 @@ class MainActivity : Activity() {
         etMinProfit = findViewById(R.id.etMinProfit)
         etDailyGoal = findViewById(R.id.etDailyGoal)
         deductionsEditor = DeductionsEditor(this, findViewById(R.id.deductionsList), findViewById(R.id.btnAddDeduction))
+        receiptPicker = ReceiptPicker(this, container.receiptPhotos, ioExecutor)
         kmControl = KmControlSection(
             this, container.kmSettings, container.kmLog, container.fuelLog,
             onToggle = ::onKmTrackingToggled,
@@ -227,8 +239,12 @@ class MainActivity : Activity() {
                 DecimalMask.set(etKmPerLiter, kmPerLiter)
                 toast(getString(R.string.fuel_use_stats_done))
             },
+            receipts = receiptPicker,
         )
         kmControl.bind()
+        maintenanceSection = MaintenanceSection(this, container.maintenanceLog, receiptPicker) { purgeOrphanReceipts() }
+        maintenanceSection.bind()
+        purgeOrphanReceipts()
         etTimeout = findViewById(R.id.etTimeout)
         etFuelPrice = findViewById(R.id.etFuelPrice)
         etKmPerLiter = findViewById(R.id.etKmPerLiter)

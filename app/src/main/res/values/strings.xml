@@ -209,4 +209,24 @@
     <string name="dest_far_label">Avisar "destino longe" com volta acima de (km)</string>
     <string name="dest_avoid_label">Bairros a evitar (separados por vírgula)</string>
     <string name="dest_avoid_hint">Ex.: Guarujá, Santa Mônica</string>
+    <!-- Comprovantes e manutenções -->
+    <string name="receipt_title">Foto do comprovante</string>
+    <string name="receipt_add">📷 Adicionar foto do comprovante</string>
+    <string name="receipt_attached">🧾 Comprovante anexado · ver / trocar</string>
+    <string name="receipt_camera">Tirar foto</string>
+    <string name="receipt_gallery">Escolher da galeria</string>
+    <string name="receipt_view">Ver foto</string>
+    <string name="receipt_remove">Remover foto</string>
+    <string name="receipt_saved">Comprovante guardado ✅</string>
+    <string name="receipt_failed">Não foi possível usar a foto. Tente de novo.</string>
+    <string name="maintenance_title">🔧 Manutenções</string>
+    <string name="maintenance_add">+ Registrar manutenção</string>
+    <string name="maintenance_new">Nova manutenção</string>
+    <string name="maintenance_edit">Editar manutenção</string>
+    <string name="maintenance_description">O que foi feito</string>
+    <string name="maintenance_description_hint">Ex.: troca de óleo e filtro</string>
+    <string name="maintenance_value">Valor (R$)</string>
+    <string name="maintenance_invalid">Informe o que foi feito e o valor.</string>
+    <string name="maintenance_delete_message">Excluir esta manutenção? A foto do comprovante também sai.</string>
+    <string name="maintenance_row">🔧 %1$s · %2$s · R$ %3$s</string>
 </resources>

@@ -8,7 +8,9 @@
         <include domain="sharedpref" path="minha_corrida_fuel_log.xml" />
         <include domain="sharedpref" path="minha_corrida_trips.xml" />
         <include domain="sharedpref" path="minha_corrida_parking.xml" />
+        <include domain="sharedpref" path="minha_corrida_maintenance_log.xml" />
         <include domain="file" path="historico_corridas.json" />
+        <include domain="file" path="comprovantes/" />
     </cloud-backup>
     <device-transfer>
         <include domain="sharedpref" path="minha_corrida_prefs.xml" />
@@ -17,6 +19,8 @@
         <include domain="sharedpref" path="minha_corrida_fuel_log.xml" />
         <include domain="sharedpref" path="minha_corrida_trips.xml" />
         <include domain="sharedpref" path="minha_corrida_parking.xml" />
+        <include domain="sharedpref" path="minha_corrida_maintenance_log.xml" />
         <include domain="file" path="historico_corridas.json" />
+        <include domain="file" path="comprovantes/" />
     </device-transfer>
 </data-extraction-rules>

@@ -5,4 +5,7 @@
     <cache-path name="reports" path="reports/" />
     <!-- Backup enviado pelo Compartilhar (Gmail, WhatsApp…). -->
     <cache-path name="backups" path="backups/" />
+    <!-- Foto da câmera (temporária) e comprovantes guardados (para ver a foto). -->
+    <cache-path name="camera" path="camera/" />
+    <files-path name="comprovantes" path="comprovantes/" />
 </paths>
