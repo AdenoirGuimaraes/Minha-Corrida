@@ -58,6 +58,13 @@ class AppContainer(context: Context) {
             rideHistoryRepository, settings, goalSettings, kmSettings, kmLog, fuelLog, dailyCommute, logger,
         )
     }
+    /** Ofertas lidas (só números, 60 dias, arquivo separado): mínimos × município. */
+    val offerLogRepository: br.com.minhacorrida.core.market.OfferLogRepository by lazy {
+        br.com.minhacorrida.infra.JsonLinesOfferLogRepository(context, logger)
+    }
+    val offerLog: br.com.minhacorrida.core.market.OfferLogUseCase by lazy {
+        br.com.minhacorrida.core.market.OfferLogUseCase(offerLogRepository, logger)
+    }
     /** Onde o carro ficou estacionado (início estimado do próximo trajeto). */
     val parking: br.com.minhacorrida.infra.ParkingStore by lazy { br.com.minhacorrida.infra.ParkingStore(context) }
     /** Trajetos do sensor de veículo: pendentes até o motorista Registrar ou Descartar. */

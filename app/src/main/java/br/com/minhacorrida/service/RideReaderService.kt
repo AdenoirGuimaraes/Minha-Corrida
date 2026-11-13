@@ -466,6 +466,8 @@ class RideReaderService : AccessibilityService() {
         if (analysis != lastAnalysis) {
             lastAnalysis = analysis
             container.logger.debug(TAG, "Oferta: $analysis")
+            // Só números, uma vez por oferta, em arquivo separado: mínimos × município (Análises).
+            container.offerLog.seen(analysis, System.currentTimeMillis())
         }
         // Nada é guardado só por aparecer: a corrida entra no histórico quando a tela do app
         // confirma que ela é sua (followRide / RideLifecycleUseCase).

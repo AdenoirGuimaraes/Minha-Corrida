@@ -140,7 +140,7 @@ class MainActivity : Activity() {
             container.goalSettings, container.goalFormatter, container.kmSettings, container.kmLog,
             container.fuelLog, container.trips, container.parking, container.rideReport,
             "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-            container.dailyCommute, container.commuteChoices,
+            container.dailyCommute, container.commuteChoices, container.offerLogRepository,
         )
         historyScreen.bind()
         backupSection = BackupSection(

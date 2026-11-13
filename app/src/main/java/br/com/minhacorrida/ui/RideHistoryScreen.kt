@@ -61,6 +61,8 @@ class RideHistoryScreen(
     private val appVersion: String,
     private val dailyCommute: br.com.minhacorrida.core.km.DailyCommuteUseCase,
     private val commuteChoices: br.com.minhacorrida.core.km.CommuteChoiceRepository,
+    /** Ofertas lidas (só números), para comparar os mínimos com o município. */
+    private val offerLog: br.com.minhacorrida.core.market.OfferLogRepository,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private val cardBinder = RideCardBinder(cardFormatter)
@@ -408,7 +410,12 @@ class RideHistoryScreen(
         try {
             io.execute {
                 val text = try {
-                    br.com.minhacorrida.core.insights.RideInsights.text(history.lastDays(days), ZoneId.systemDefault(), label)
+                    val since = System.currentTimeMillis() - days * 24 * 3_600_000L
+                    val minPerKm = settings.getMinValuePerKm()
+                    val minProfit = settings.getMinNetProfit()
+                    val market = br.com.minhacorrida.core.market.OfferMarket.check(offerLog.since(since), minPerKm, minProfit)
+                    br.com.minhacorrida.core.insights.RideInsights.text(history.lastDays(days), ZoneId.systemDefault(), label) +
+                        "\n\n" + br.com.minhacorrida.core.market.OfferMarket.text(market, minPerKm, minProfit, label.lowercase())
                 } catch (e: Exception) {
                     android.util.Log.e("MC/RideHistoryScreen", "Falha nas análises", e)
                     null
