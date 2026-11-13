@@ -192,4 +192,10 @@
     <string name="backup_restore_message">%1$s\n\nOs dados de agora (corridas, abastecimentos, trajetos e configurações) serão TROCADOS pelos do backup. O app reinicia em seguida.</string>
     <string name="backup_restore_confirm">Restaurar</string>
     <string name="backup_restored">Backup restaurado ✅ Reiniciando…</string>
+    <!-- Análises -->
+    <string name="insights_button">📊 Melhores horários, dias e Uber × inDrive</string>
+    <string name="insights_title">Análises</string>
+    <string name="insights_7">Últimos 7 dias</string>
+    <string name="insights_30">Últimos 30 dias</string>
+    <string name="insights_60">Últimos 60 dias (tudo)</string>
 </resources>

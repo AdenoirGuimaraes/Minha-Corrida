@@ -139,6 +139,16 @@ class RideHistoryUseCase(
         return RideHistoryPage(period, range, rides, summarize(rides))
     }
 
+    /** Corridas dos últimos [days] dias até hoje (análises da aba Corridas). */
+    fun lastDays(days: Long): List<RideRecord> = try {
+        val end = today().plusDays(1)
+        val range = DateRange(end.minusDays(days), end)
+        repository.between(range.startMillis(zone), range.endMillis(zone))
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao ler o histórico para as análises", e)
+        emptyList()
+    }
+
     fun setDone(id: String, done: Boolean) {
         try {
             repository.setDone(id, done)

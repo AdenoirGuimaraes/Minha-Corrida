@@ -889,6 +889,18 @@
 
             </LinearLayout>
 
+            <!-- Análises: melhores horários, dias da semana e Uber × inDrive. -->
+            <Button
+                android:id="@+id/btnInsights"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="@color/mc_surface"
+                android:text="@string/insights_button"
+                android:textColor="@color/mc_yellow"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
             <!-- Explicação recolhida: um toque abre/fecha (RideHistoryScreen). -->
             <TextView
                 android:id="@+id/tvHistHintToggle"

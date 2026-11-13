@@ -103,6 +103,7 @@ class RideHistoryScreen(
         tvPendingTrips.setOnClickListener { showPendingTrips() }
         tvDayTrips.setOnClickListener { showDayTrips() }
         activity.findViewById<View>(R.id.btnRideReport).setOnClickListener { chooseReportPeriod() }
+        activity.findViewById<View>(R.id.btnInsights).setOnClickListener { chooseInsightsPeriod() }
     }
 
     /** "ⓘ Como as corridas entram": um toque mostra a explicação, outro esconde. */
@@ -390,6 +391,53 @@ class RideHistoryScreen(
     // ---- Relatório .md do período ----
 
     /** Esta semana, este mês, mês passado ou um período escolhido no calendário. */
+    /** "📊 Análises": escolhe o período e mostra horários, dias da semana e Uber × inDrive. */
+    private fun chooseInsightsPeriod() {
+        val labels = arrayOf(
+            activity.getString(R.string.insights_7), activity.getString(R.string.insights_30), activity.getString(R.string.insights_60),
+        )
+        val days = longArrayOf(7, 30, 60)
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.insights_title)
+            .setItems(labels) { _, which -> showInsights(days[which], labels[which]) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    private fun showInsights(days: Long, label: String) {
+        try {
+            io.execute {
+                val text = try {
+                    br.com.minhacorrida.core.insights.RideInsights.text(history.lastDays(days), ZoneId.systemDefault(), label)
+                } catch (e: Exception) {
+                    android.util.Log.e("MC/RideHistoryScreen", "Falha nas análises", e)
+                    null
+                }
+                main.post {
+                    if (text == null) {
+                        toast(activity.getString(R.string.report_failed))
+                        return@post
+                    }
+                    val view = TextView(activity).apply {
+                        this.text = text
+                        setTextColor(activity.getColor(R.color.mc_text))
+                        textSize = 14f
+                        setTextIsSelectable(true)
+                        val pad = (20 * activity.resources.displayMetrics.density).toInt()
+                        setPadding(pad, pad / 2, pad, 0)
+                    }
+                    AlertDialog.Builder(activity)
+                        .setTitle(R.string.insights_title)
+                        .setView(android.widget.ScrollView(activity).apply { addView(view) })
+                        .setPositiveButton(R.string.diagnostics_close, null)
+                        .show()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao abrir as análises", e)
+        }
+    }
+
     private fun chooseReportPeriod() {
         val today = LocalDate.now()
         val options = arrayOf(

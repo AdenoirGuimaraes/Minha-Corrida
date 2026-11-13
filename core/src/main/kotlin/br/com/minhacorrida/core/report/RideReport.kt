@@ -110,6 +110,8 @@ class RideReportUseCase(
             configuration(cost, deductions, dailyGoal, tracking, correction)
             totals(days, dailyGoal, deductions.isNotEmpty())
             byPlatform(all.filter { it.done })
+            insights("Por horário", br.com.minhacorrida.core.insights.RideInsights.byTimeBand(all, zone))
+            insights("Por dia da semana", br.com.minhacorrida.core.insights.RideInsights.byWeekday(all, zone))
             byDay(days, dailyGoal, tracking)
             rideTable("Corridas realizadas", all.filter { it.done })
             val notDone = all.filterNot { it.done }
@@ -249,6 +251,23 @@ class RideReportUseCase(
             appendLine(
                 "| ${platform.displayName} | ${list.size} | ${km(s.totalKm)} | ${money(s.totalFare)} | ${money(s.netProfit)} | $perKm | " +
                     "${money(s.netProfit.divide(BigDecimal(list.size), 2, RoundingMode.HALF_UP))} |",
+            )
+        }
+        appendLine()
+    }
+
+    /** Tabela de uma análise (horário ou dia da semana); ⭐ = melhor R$/km com amostra mínima. */
+    private fun StringBuilder.insights(title: String, rows: List<br.com.minhacorrida.core.insights.InsightRow>) {
+        if (rows.isEmpty()) return
+        val best = br.com.minhacorrida.core.insights.RideInsights.best(rows)
+        appendLine("## $title")
+        appendLine()
+        appendLine("| ${title.removePrefix("Por ").replaceFirstChar { it.uppercase() }} | Corridas | Km | R$/km | Lucro médio | Lucro/hora em corrida |")
+        appendLine("|---|---|---|---|---|---|")
+        rows.forEach { r ->
+            appendLine(
+                "| ${r.label}${if (r == best) " ⭐" else ""} | ${r.rides} | ${km(r.km)} | ${money(r.perKm)} | " +
+                    "${r.avgProfit?.let(::money) ?: "—"} | ${r.profitPerHour?.let(::money) ?: "—"} |",
             )
         }
         appendLine()
