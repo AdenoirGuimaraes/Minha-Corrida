@@ -200,6 +200,39 @@ Voz em velocidade 1,4×.
   Configurações) sai depois. O app desconta essa taxa no R$/km, no lucro ("Líquido R$ x") e no
   histórico, e o **Mín. verde** do card passa a ser o valor que o passageiro precisa pagar já com a taxa.
 
+## Trajetos do dia e conferência dos km (0.2.48–0.2.49)
+
+- Filtro **Dia** → "🚗 Trajetos do dia: N · X km registrados · toque para ver": ✅ registrado / com corrida, ❌ descartado, ⏳ pendente. Tocar troca a decisão (os km do dia acompanham).
+- Cada trajeto com corrida mostra os km das corridas no app; no fim, "📏 Corridas: x km no app × y km no GPS" (✅ bate até 5%).
+- GPS: parado (semáforo, embarque) atualiza a hora da referência, para o trecho seguinte não parecer "a pé" e ser perdido.
+
+## Destino da corrida e volta vazia (0.2.54)
+
+- O card ganha uma linha com o destino lido da oferta (Uber: endereço depois da 2ª distância; inDrive: 2º endereço com parênteses): 📍 bairro, ⚠️ fora de Lages, ⚠️ destino longe, ⛔ bairro a evitar.
+- Com o endereço localizado (Geocoder do Android, em segundo plano), "Volta vazia ≈ X km · R$ Y → lucro c/ volta R$ Z" (linha reta × 1,3 até a base). A cor do card não muda.
+- Configurações → Destino da corrida: liga/desliga, base (localização atual; padrão centro de Lages), "longe" acima de X km e bairros a evitar.
+
+## Análises (0.2.52–0.2.53)
+
+- Botão "📊 Melhores horários, dias e Uber × inDrive" (últimos 7, 30 ou 60 dias): R$/km, lucro médio e lucro/hora em corrida por faixa de 3 h, por dia da semana e por app (com a taxa paga); ⭐ = melhor R$/km com pelo menos 3 corridas. O relatório .md tem as mesmas tabelas.
+- **Seus mínimos × ofertas**: cada oferta lida é guardada só com números (hora, app, valor, km, R$/km, lucro, minutos) em `ofertas.jsonl`, separado do histórico e fora do backup, apagada após 60 dias (~30 KB/dia). Mostra a mediana do R$/km das ofertas, quantas atingem seus mínimos e se eles estão altos, equilibrados ou folgados para o município.
+
+## Mín. verde no inDrive (0.2.50)
+
+No inDrive o Mín. verde aparece arredondado para cima em reais (R$ 13,42 → R$ 14,00), base da contraproposta. A cor do card usa o valor exato.
+
+## Backup (0.2.50)
+
+- Configurações → Backup: "Salvar backup" (o Android pergunta onde: Google Drive → pasta Minha Corrida, ou o celular), "Enviar backup" (Gmail, WhatsApp…) e "Restaurar backup" (mostra o conteúdo, confirma, troca os dados e reinicia).
+- Entram: configurações, metas, histórico, km, abastecimentos, manutenções, trajetos, checks do deslocamento, estacionamento e as fotos de comprovante. Não entram: leitura pausada, trajeto em andamento, diagnóstico e ofertas lidas.
+- Também ligado o backup automático do Android (conta Google), com as mesmas regras.
+
+## Comprovantes e manutenções (0.2.55)
+
+- Abastecimento: botão "📷 Adicionar foto do comprovante" (câmera ou galeria; ver, trocar, remover). Foto reduzida (lado maior 1600 px, JPEG 75) em `comprovantes/<id>.jpg`.
+- "🔧 Manutenções": data, o que foi feito, valor e foto da nota. Não muda o custo por km do card.
+- O relatório .md mostra se cada abastecimento/manutenção tem comprovante.
+
 ## Encerrar
 O botão **Encerrar** pausa a leitura (serviço ocioso, sem OCR nem leitor na tela) e fecha o app.
 A acessibilidade continua ativada, porque o Android não deixa o app religá-la sozinho;
