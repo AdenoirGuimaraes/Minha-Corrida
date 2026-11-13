@@ -84,6 +84,7 @@ class MainActivity : Activity() {
     private lateinit var etDailyGoal: EditText
     private lateinit var deductionsEditor: DeductionsEditor
     private lateinit var kmControl: KmControlSection
+    private lateinit var backupSection: BackupSection
     private lateinit var etTimeout: EditText
     private lateinit var etFuelPrice: EditText
     private lateinit var etKmPerLiter: EditText
@@ -142,6 +143,11 @@ class MainActivity : Activity() {
             container.dailyCommute, container.commuteChoices,
         )
         historyScreen.bind()
+        backupSection = BackupSection(
+            this, br.com.minhacorrida.infra.AppBackup(this, container.logger), ioExecutor,
+            "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+        )
+        backupSection.bind()
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
 
         watchFieldsForPreview()
@@ -172,6 +178,12 @@ class MainActivity : Activity() {
         }
         // Toda vez que o app é aberto (ou volta para a frente), procura versão nova.
         checkForUpdate()
+    }
+
+    /** Resultado da escolha de pasta/arquivo do backup (Activity simples, sem AndroidX). */
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (::backupSection.isInitialized && backupSection.onActivityResult(requestCode, resultCode, data)) return
+        super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onDestroy() {

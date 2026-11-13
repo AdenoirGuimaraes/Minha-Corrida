@@ -71,6 +71,6 @@ class InDriveFeeTest {
         assertEquals("1,57", card.valuePerKm)
         // Sem minutos na oferta: estimados pelos km (3,1 → 8 min, 5,5 → 14 min) e marcados com "≈".
         assertEquals("≈ R$ 0,28/min · ≈ 22 min\nLíquido R$ 13,50\nGasto R$ 7,31", card.profitDetails)
-        assertEquals("19,12", card.minimumValue)
+        assertEquals("20,00", card.minimumValue)               // 19,12 → para cima (contraproposta)
     }
 }

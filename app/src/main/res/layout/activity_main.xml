@@ -345,6 +345,55 @@
                         android:text="@string/voice_label" />
                 </LinearLayout>
 
+                <!-- Backup: salvar no Drive/celular, enviar (Gmail…) e restaurar. -->
+                <LinearLayout
+                    style="@style/Section"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:text="@string/backup_title" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/backup_help"
+                        android:textColor="@color/mc_text_muted"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/tvBackupLast"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="@color/mc_text"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnBackupSave"
+                        style="@style/YellowButton"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/backup_save" />
+
+                    <Button
+                        android:id="@+id/btnBackupShare"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="@color/mc_surface"
+                        android:text="@string/backup_share"
+                        android:textColor="@color/mc_yellow" />
+
+                    <Button
+                        android:id="@+id/btnBackupRestore"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:backgroundTint="@color/mc_surface"
+                        android:text="@string/backup_restore"
+                        android:textColor="@color/mc_yellow" />
+                </LinearLayout>
+
                 <!-- Ações -->
                 <Button
                     android:id="@+id/btnSave"

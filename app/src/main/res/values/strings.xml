@@ -176,4 +176,20 @@
     <string name="diagnostics_summary">%1$d leituras guardadas (até %2$d; as mais antigas saem). Faça a corrida e toque em Exportar relatório para enviar o arquivo .md no chat.\n\nÚltimas leituras:</string>
     <string name="diagnostics_cleared">Diagnóstico apagado. As próximas leituras começam do zero.</string>
     <string name="diagnostics_export_failed">Não foi possível gerar o relatório. Tente de novo.</string>
+    <!-- Backup -->
+    <string name="backup_title">Backup</string>
+    <string name="backup_help">Guarda corridas, abastecimentos, trajetos, km e configurações num arquivo. Salve no Google Drive (pasta Minha Corrida) ou envie para o seu e-mail. No celular novo, use Restaurar.</string>
+    <string name="backup_never">Nenhum backup feito ainda.</string>
+    <string name="backup_last">Último backup: %1$s</string>
+    <string name="backup_save">💾 Salvar backup (Drive ou celular)</string>
+    <string name="backup_share">✉️ Enviar backup (Gmail, WhatsApp…)</string>
+    <string name="backup_restore">♻️ Restaurar backup</string>
+    <string name="backup_share_title">Enviar backup</string>
+    <string name="backup_email_subject">Backup Minha Corrida — %1$s</string>
+    <string name="backup_saved">Backup salvo ✅</string>
+    <string name="backup_failed">Não foi possível fazer o backup. Tente de novo.</string>
+    <string name="backup_restore_title">Restaurar backup?</string>
+    <string name="backup_restore_message">%1$s\n\nOs dados de agora (corridas, abastecimentos, trajetos e configurações) serão TROCADOS pelos do backup. O app reinicia em seguida.</string>
+    <string name="backup_restore_confirm">Restaurar</string>
+    <string name="backup_restored">Backup restaurado ✅ Reiniciando…</string>
 </resources>

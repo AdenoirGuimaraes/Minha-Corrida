@@ -79,7 +79,7 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
             profitValue = profit?.let { money(it.netProfit.abs()) } ?: "—",
             profitDetails = profit?.let { "${perMinuteLine(analysis)}$fare\nGasto R$ ${money(it.cost)}" }
                 ?: "$fare\nInforme os custos",
-            minimumValue = money(analysis.minimum.greenFare),
+            minimumValue = money(CounterOffer.displayGreenFare(analysis.minimum.greenFare, offer.platform)),
             minimumLabel = minimumLabel(analysis),
         )
     }

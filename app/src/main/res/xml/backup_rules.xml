@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup automático do Android (até o Android 11): os mesmos dados do botão "Salvar backup". -->
+<full-backup-content>
+    <include domain="sharedpref" path="minha_corrida_prefs.xml" />
+    <include domain="sharedpref" path="minha_corrida_commute_days.xml" />
+    <include domain="sharedpref" path="minha_corrida_km_log.xml" />
+    <include domain="sharedpref" path="minha_corrida_fuel_log.xml" />
+    <include domain="sharedpref" path="minha_corrida_trips.xml" />
+    <include domain="sharedpref" path="minha_corrida_parking.xml" />
+    <include domain="file" path="historico_corridas.json" />
+</full-backup-content>

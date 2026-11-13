@@ -194,7 +194,7 @@ class RideHistoryFormatter(
             profitLabel = if (cost != null && record.netProfit.signum() < 0) "Prejuízo" else "Lucro",
             profitValue = if (cost != null) money(record.netProfit.abs()) else "—",
             profitDetails = if (cost != null) "${perMinuteLine(record)}$fareLine\nGasto R$ ${money(cost)}" else "$fareLine\nSem custos",
-            minimumValue = money(green),
+            minimumValue = money(CounterOffer.displayGreenFare(green, record.platform)),
             minimumLabel = "R$ ${money(minValuePerKm)}/km" +
                 effectiveMinProfit?.let { "\nLucro R$ ${money(it)}" }.orEmpty(),
         )

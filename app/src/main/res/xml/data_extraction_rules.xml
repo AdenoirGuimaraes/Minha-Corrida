@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup automático do Android 12+ (conta Google) e cópia para um celular novo. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="minha_corrida_prefs.xml" />
+        <include domain="sharedpref" path="minha_corrida_commute_days.xml" />
+        <include domain="sharedpref" path="minha_corrida_km_log.xml" />
+        <include domain="sharedpref" path="minha_corrida_fuel_log.xml" />
+        <include domain="sharedpref" path="minha_corrida_trips.xml" />
+        <include domain="sharedpref" path="minha_corrida_parking.xml" />
+        <include domain="file" path="historico_corridas.json" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="minha_corrida_prefs.xml" />
+        <include domain="sharedpref" path="minha_corrida_commute_days.xml" />
+        <include domain="sharedpref" path="minha_corrida_km_log.xml" />
+        <include domain="sharedpref" path="minha_corrida_fuel_log.xml" />
+        <include domain="sharedpref" path="minha_corrida_trips.xml" />
+        <include domain="sharedpref" path="minha_corrida_parking.xml" />
+        <include domain="file" path="historico_corridas.json" />
+    </device-transfer>
+</data-extraction-rules>

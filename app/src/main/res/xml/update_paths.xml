@@ -3,4 +3,6 @@
     <cache-path name="updates" path="updates/" />
     <!-- Relatório de diagnóstico (.md) compartilhado com o chat de calibração. -->
     <cache-path name="reports" path="reports/" />
+    <!-- Backup enviado pelo Compartilhar (Gmail, WhatsApp…). -->
+    <cache-path name="backups" path="backups/" />
 </paths>

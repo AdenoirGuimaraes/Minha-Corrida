@@ -207,7 +207,7 @@ class RideHistoryTest {
         assertEquals("4,5 km\n(1,2 + 3,3)", card.kmDetails)
         assertEquals("7,87", card.profitValue)                          // 11,70 − 3,83
         assertEquals("Líquido R$ 11,70\nGasto R$ 3,83", card.profitDetails)
-        assertEquals("12,04", card.minimumValue)                        // (3,83 + 7,00) ÷ 0,9
+        assertEquals("13,00", card.minimumValue)                        // (3,83 + 7,00) ÷ 0,9 = 12,04 → para cima (inDrive)
         assertEquals("R$ 2,00/km\nLucro R$ 7,00", card.minimumLabel)
     }
 
