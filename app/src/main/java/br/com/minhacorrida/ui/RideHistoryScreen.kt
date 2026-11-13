@@ -660,16 +660,31 @@ class RideHistoryScreen(
     private fun at(record: RideRecord) = java.time.Instant.ofEpochMilli(record.timestampMillis).atZone(java.time.ZoneId.systemDefault())
     private fun money(value: BigDecimal) = value.setScale(2, java.math.RoundingMode.HALF_UP).toPlainString().replace('.', ',')
 
+    /**
+     * "Corrigir valor": campo vazio (o valor atual aparece no fundo), teclado já aberto.
+     * Digita "2550" ou "25,50" → R$ 25,50. Salvar com o campo vazio não muda nada.
+     */
     private fun askNewFare(record: RideRecord) {
-        val input = DecimalMask.attach(EditText(activity).apply { setSelectAllOnFocus(true) }, 2)
-            .also { DecimalMask.set(it, record.fare) }
-        AlertDialog.Builder(activity)
+        val density = activity.resources.displayMetrics.density
+        val input = DecimalMask.attach(EditText(activity).apply { hint = money(record.fare) }, 2)
+        val form = LinearLayout(activity).apply {
+            val pad = (20 * density).toInt()
+            setPadding(pad, 0, pad, 0)
+            addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        val dialog = AlertDialog.Builder(activity)
             .setTitle(R.string.hist_edit_title)
-            .setMessage(activity.getString(R.string.hist_edit_message, record.platform.displayName))
-            .setView(input)
-            .setPositiveButton(R.string.save) { _, _ -> saveNewFare(record.id, input.text.toString()) }
+            .setMessage(activity.getString(R.string.hist_edit_message, record.platform.displayName, money(record.fare)))
+            .setView(form)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val text = input.text.toString()
+                if (text.isNotBlank()) saveNewFare(record.id, text)
+            }
             .setNegativeButton(R.string.diagnostics_close, null)
-            .show()
+            .create()
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+        dialog.show()
+        input.requestFocus()
     }
 
     private fun saveNewFare(id: String, text: String) {

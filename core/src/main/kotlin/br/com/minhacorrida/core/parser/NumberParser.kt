@@ -13,7 +13,7 @@ object NumberParser {
      * @return o valor, ou null se o texto não for um número válido.
      */
     fun parse(raw: String): BigDecimal? {
-        val s = raw.trim().replace(" ", "").replace(" ", "")
+        val s = raw.trim().replace(" ", "").replace(" ", "").trimEnd(',', '.') // "25," (vírgula sem centavos) vale 25
         if (s.isEmpty() || s.none(Char::isDigit)) return null
 
         val lastComma = s.lastIndexOf(',')

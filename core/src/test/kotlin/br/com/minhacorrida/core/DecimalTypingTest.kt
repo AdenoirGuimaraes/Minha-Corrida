@@ -36,4 +36,31 @@ class DecimalTypingTest {
         // E reformatar o próprio texto não muda nada.
         assertEquals("2,00", DecimalTyping.format(DecimalTyping.of(BigDecimal("2"), 2), 2))
     }
+
+    /** Simula o motorista digitando tecla por tecla, como o TextWatcher do app faz. */
+    private fun type(keys: String, decimals: Int = 2): String {
+        var text = ""
+        var manual = false
+        for (key in keys) {
+            val typed = if (key == '<') text.dropLast(1) else text + key
+            val next = DecimalTyping.next(text, typed, decimals, manual)
+            text = next.text
+            manual = next.manual
+        }
+        return text
+    }
+
+    @Test
+    fun `pedido de 12-11 - corrigir valor aceita a virgula digitada e a automatica`() {
+        assertEquals("25,50", type("2550"))       // automática
+        assertEquals("25,5", type("25,5"))        // vírgula digitada
+        assertEquals("25,50", type("25,505"))     // no máximo 2 casas depois da vírgula
+        assertEquals("25,", type("25,"))
+        assertEquals("0,5", type(",5"))
+        assertEquals("8,5", type("8.5", 1))       // ponto também vale
+        assertEquals("25", type("25,<"))          // apagou a vírgula: fica 25
+        assertEquals("", type("25,<<<"))          // apagou tudo: volta ao automático
+        assertEquals("0,03", type("25,<<<3"))
+        assertEquals(0, BigDecimal("25").compareTo(NumberParser.parse(type("25,"))))
+    }
 }
