@@ -22,7 +22,7 @@ class RideInsightsTest {
         id = id,
         timestampMillis = at.atZone(zone).toInstant().toEpochMilli(),
         platform = platform,
-        fare = BigDecimal(fare),
+        fare = BigDecimal(fare).setScale(2), // como o app grava (2 casas)
         pickupKm = null,
         tripKm = BigDecimal(km),
         totalKm = BigDecimal(km),
