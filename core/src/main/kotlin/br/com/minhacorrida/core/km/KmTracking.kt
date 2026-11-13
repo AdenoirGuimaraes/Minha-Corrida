@@ -21,15 +21,18 @@ data class GeoPoint(
 /**
  * Soma a distância percorrida de CARRO a partir das posições do GPS, filtrando o ruído:
  * - posição com erro maior que [maxAccuracyMeters] é descartada;
- * - movimento menor que [minStepMeters] não conta (GPS "tremendo" parado);
- * - trecho abaixo de [minSpeedMps] (≈ 9 km/h, a pé) não conta, mas a referência anda;
+ * - movimento menor que [minStepMeters] não conta (GPS "tremendo" parado), mas a HORA da
+ *   referência é atualizada: assim, depois de um semáforo ou de esperar o passageiro, a
+ *   velocidade é medida desde a última posição parada (antes, a espera entrava no cálculo,
+ *   o trecho parecia "a pé" e era perdido — o GPS somava menos que as corridas);
+ * - trecho abaixo de [minSpeedMps] (≈ 7 km/h, a pé) não conta, mas a referência anda;
  * - salto acima de [maxSpeedMps] (≈ 200 km/h) é erro do GPS e não conta.
  * Não é thread-safe: um acumulador por serviço.
  */
 class DistanceAccumulator(
     private val maxAccuracyMeters: Float = 35f,
     private val minStepMeters: Double = 25.0,
-    private val minSpeedMps: Double = 2.5,
+    private val minSpeedMps: Double = 2.0,
     private val maxSpeedMps: Double = 55.0,
 ) {
     private var anchor: GeoPoint? = null
@@ -42,7 +45,11 @@ class DistanceAccumulator(
         if (point.accuracyMeters > maxAccuracyMeters) return 0.0
         val last = anchor ?: run { anchor = point; return 0.0 }
         val meters = haversineMeters(last, point)
-        if (meters < minStepMeters) return 0.0
+        if (meters < minStepMeters) {
+            // Parado (ou quase): mesmo lugar, hora nova.
+            if (point.timeMillis > last.timeMillis) anchor = last.copy(timeMillis = point.timeMillis)
+            return 0.0
+        }
         anchor = point
         val seconds = (point.timeMillis - last.timeMillis) / 1000.0
         if (seconds <= 0) return 0.0

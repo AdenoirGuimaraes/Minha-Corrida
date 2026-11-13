@@ -488,9 +488,13 @@ class RideHistoryScreen(
             renderDayTrips(lastPage ?: return)
             return
         }
-        val labels = list.map { br.com.minhacorrida.core.km.TripListFormatter.row(it, zone) }
+        // Km das corridas realizadas (app) × km do GPS dos trajetos em que elas aconteceram.
+        val rides = lastPage?.rides.orEmpty().filter { it.done }.map { it.timestampMillis to it.totalKm }
+        val check = br.com.minhacorrida.core.km.RideKmComparison.check(list, rides)
+        val labels = list.map { br.com.minhacorrida.core.km.TripListFormatter.row(it, zone, check.perTrip[it.id]) }
+        val comparison = br.com.minhacorrida.core.km.RideKmComparison.summary(check)
         val footer = TextView(activity).apply {
-            setText(R.string.trip_day_footer)
+            text = listOfNotNull(comparison, activity.getString(R.string.trip_day_footer)).joinToString("\n\n")
             setTextColor(activity.getColor(R.color.mc_text_muted))
             val pad = (20 * activity.resources.displayMetrics.density).toInt()
             setPadding(pad, pad / 2, pad, 0)

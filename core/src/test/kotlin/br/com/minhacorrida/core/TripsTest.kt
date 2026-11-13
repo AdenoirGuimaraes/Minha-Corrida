@@ -113,4 +113,36 @@ class TripsTest {
         assertNull(useCase.change("volta", TripStatus.PENDING))
         assertNull(useCase.change("nao-existe", TripStatus.KEPT))
     }
+
+    @Test
+    fun `pedido de 12-11 - km das corridas no app x km do GPS`() {
+        val h = 3_600_000L
+        useCase.finish("trabalho", start, end, 3_700.0, hadRide = false); useCase.keep("trabalho")
+        useCase.finish("t1", start + 10 * h, start + 11 * h, 8_000.0, hadRide = true)
+        useCase.finish("t2", start + 12 * h, start + 13 * h, 11_900.0, hadRide = true)
+        val rides = listOf(
+            start + 10 * h + 60_000 to BigDecimal("4.2"),
+            start + 10 * h + 1_800_000 to BigDecimal("5.0"),
+            start + 12 * h - 300_000 to BigDecimal("12.1"),         // aceitou parado: vai para o t2
+            start + 15 * h to BigDecimal("3.0"),                    // sem trajeto (GPS não ligou)
+        )
+        val check = br.com.minhacorrida.core.km.RideKmComparison.check(useCase.onDay(day), rides)
+        assertEquals(2, check.perTrip["t1"]!!.count)
+        assertEquals(BigDecimal("9.2"), check.perTrip["t1"]!!.km)
+        assertEquals(BigDecimal("12.1"), check.perTrip["t2"]!!.km)
+        assertNull(check.perTrip["trabalho"])                         // trajeto do trabalho não entra
+        assertEquals(BigDecimal("24.3"), check.ridesKm)
+        assertEquals(BigDecimal("19.9"), check.gpsKm)
+        assertEquals(1, check.outside)
+        assertEquals(
+            "📏 Corridas: 24,3 km no app × 19,9 km no GPS (−4,4 km · −18%) ⚠️ GPS somou menos\n" +
+                "1 corrida(s) fora de trajeto (GPS não ligou)",
+            br.com.minhacorrida.core.km.RideKmComparison.summary(check),
+        )
+        val t1 = useCase.onDay(day).first { it.id == "t1" }
+        assertEquals(
+            "✅ 8,0 km · 17:42–18:42 · com corrida\n     2 corrida(s): 9,2 km no app",
+            br.com.minhacorrida.core.km.TripListFormatter.row(t1, zone, check.perTrip["t1"]),
+        )
+    }
 }

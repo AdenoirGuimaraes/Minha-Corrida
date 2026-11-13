@@ -169,13 +169,90 @@ class TripUseCase(
 }
 
 /**
+ * Confere os km das corridas (o que o Uber/inDrive informou) com os km do GPS.
+ * Cada corrida realizada vai para o trajeto em que foi registrada; se foi registrada com o
+ * carro parado (entre trajetos), vai para o próximo trajeto que começou até [GRACE_MS] depois.
+ */
+object RideKmComparison {
+    const val GRACE_MS = 15 * 60_000L
+
+    /** Km das corridas de um trajeto. */
+    data class TripRides(val count: Int, val km: BigDecimal)
+
+    /** Resultado do dia: por trajeto, os totais e as corridas que não caíram em trajeto nenhum. */
+    data class DayCheck(
+        val perTrip: Map<String, TripRides>,
+        val ridesKm: BigDecimal,
+        val gpsKm: BigDecimal,
+        val outside: Int,
+    ) {
+        /** GPS − corridas (negativo: o GPS somou menos). */
+        val differenceKm: BigDecimal get() = gpsKm - ridesKm
+    }
+
+    /**
+     * @param trips trajetos do dia (só os registrados entram no GPS).
+     * @param rides corridas REALIZADAS do dia (timestamp, km total do app).
+     */
+    fun check(trips: List<Trip>, rides: List<Pair<Long, BigDecimal>>): DayCheck {
+        val kept = trips.filter { it.status == TripStatus.KEPT }.sortedBy { it.startMillis }
+        val perTrip = mutableMapOf<String, TripRides>()
+        var outside = 0
+        var ridesKm = BigDecimal.ZERO
+        for ((at, km) in rides) {
+            ridesKm += km
+            val trip = kept.firstOrNull { at in it.startMillis..it.endMillis }
+                ?: kept.firstOrNull { it.startMillis in at..(at + GRACE_MS) }
+            if (trip == null) {
+                outside++
+                continue
+            }
+            val current = perTrip[trip.id] ?: TripRides(0, BigDecimal.ZERO)
+            perTrip[trip.id] = TripRides(current.count + 1, current.km + km)
+        }
+        // GPS só dos trajetos onde houve corrida: os do trabalho/particulares não entram na conta.
+        val gps = kept.filter { it.id in perTrip }.fold(BigDecimal.ZERO) { acc, t -> acc + t.km }
+        return DayCheck(perTrip, ridesKm.setScale(1, RoundingMode.HALF_UP), gps.setScale(1, RoundingMode.HALF_UP), outside)
+    }
+
+    /**
+     * "📏 Corridas: 45,4 km no app × 38,1 km no GPS (−7,3 km · −16%)" + aviso das corridas fora de trajeto.
+     * @return null sem corridas no dia.
+     */
+    fun summary(check: DayCheck): String? {
+        if (check.ridesKm.signum() == 0) return null
+        val diff = check.differenceKm
+        val percent = if (check.ridesKm.signum() > 0) {
+            diff.multiply(BigDecimal(100)).divide(check.ridesKm, 0, RoundingMode.HALF_UP)
+        } else {
+            BigDecimal.ZERO
+        }
+        val verdict = when {
+            percent.abs() <= BigDecimal(5) -> "✅ bate"
+            diff.signum() < 0 -> "⚠️ GPS somou menos"
+            else -> "GPS somou mais (inclui ir até o passageiro e voltas sem corrida)"
+        }
+        val line = "📏 Corridas: ${km(check.ridesKm)} km no app × ${km(check.gpsKm)} km no GPS " +
+            "(${signed(diff)} km · ${signed(percent)}%) $verdict"
+        return if (check.outside > 0) "$line\n${check.outside} corrida(s) fora de trajeto (GPS não ligou)" else line
+    }
+
+    private fun km(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toPlainString().replace('.', ',')
+    private fun signed(value: BigDecimal): String {
+        val text = value.abs().toPlainString().replace('.', ',')
+        return when (value.signum()) { -1 -> "−$text"; 1 -> "+$text"; else -> text }
+    }
+}
+
+/**
  * Textos da lista "Trajetos do dia" na aba Corridas.
  * Ex.: "✅ 4,6 km · 07:42–08:05 · com corrida", "❌ 9,1 km · 12:10–12:31 · descartado".
  */
 object TripListFormatter {
     private val TIME = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
 
-    fun row(trip: Trip, zone: ZoneId): String {
+    /** @param rides corridas do trajeto (comparação com o GPS), se houver. */
+    fun row(trip: Trip, zone: ZoneId, rides: RideKmComparison.TripRides? = null): String {
         val start = Instant.ofEpochMilli(trip.startMillis).atZone(zone).format(TIME)
         val end = Instant.ofEpochMilli(trip.endMillis).atZone(zone).format(TIME)
         val (icon, label) = when (trip.status) {
@@ -183,7 +260,12 @@ object TripListFormatter {
             TripStatus.DISCARDED -> "❌" to "descartado"
             TripStatus.PENDING -> "⏳" to "esperando você decidir"
         }
-        return "$icon ${km(trip.km)} km · $start–$end · $label"
+        val base = "$icon ${km(trip.km)} km · $start–$end · $label"
+        return if (rides == null || trip.status != TripStatus.KEPT) {
+            base
+        } else {
+            "$base\n     ${rides.count} corrida(s): ${km(rides.km)} km no app"
+        }
     }
 
     /** Linha do resumo: "🚗 Trajetos do dia: 6 · 49,2 km registrados · toque para ver". */

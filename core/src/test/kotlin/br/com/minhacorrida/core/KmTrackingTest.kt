@@ -38,6 +38,16 @@ class KmTrackingTest {
         assertTrue(acc.add(p(-27.901, 150)) > 100.0)                    // volta a contar
     }
 
+    @Test
+    fun `pedido de 12-11 - depois do semaforo o trecho conta (antes a espera fazia parecer a pe)`() {
+        val acc = DistanceAccumulator()
+        acc.add(p(-27.800, 0))
+        assertTrue(acc.add(p(-27.801, 10)) > 100.0)                     // andando
+        for (t in 14L..74L step 4) assertEquals(0.0, acc.add(p(-27.80101, t)))  // 60 s no semáforo
+        val saiu = acc.add(p(-27.80155, 80))                            // 60 m em 6 s depois do verde
+        assertTrue(saiu in 55.0..65.0, "trecho depois do semáforo: $saiu")
+    }
+
     private fun entry(id: String, day: Int, odo: String, liters: String, price: String, full: Boolean = true) =
         FuelEntry(id, LocalDate.of(2026, 11, day), BigDecimal(odo), BigDecimal(liters), BigDecimal(price), full)
 

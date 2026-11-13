@@ -275,7 +275,8 @@ class KmTrackerService : Service(), LocationListener {
         private const val ACTION_START = "br.com.minhacorrida.TRIP_START"
         private const val ACTION_END = "br.com.minhacorrida.TRIP_END"
         private const val MIN_TIME_MS = 4_000L
-        private const val MIN_DISTANCE_M = 15f
+        /** 0: posições a cada 4 s também parado (o acumulador precisa saber quando o carro parou). */
+        private const val MIN_DISTANCE_M = 0f
         private const val NOTIFY_EVERY_METERS = 500.0
         private const val IDLE_TIMEOUT_MS = 10 * 60_000L
         private const val IDLE_CHECK_MS = 60_000L
