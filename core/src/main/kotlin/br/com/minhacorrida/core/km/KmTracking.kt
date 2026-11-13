@@ -113,6 +113,7 @@ object KmCorrection {
 
 /** Km rodados por dia (somados pelo GPS). */
 interface KmLogRepository {
+    /** Soma metros no dia; negativo desfaz (trajeto registrado que foi descartado depois). */
     fun addMeters(date: LocalDate, meters: Double)
 
     /** Km de cada dia do intervalo [start, endExclusive). */

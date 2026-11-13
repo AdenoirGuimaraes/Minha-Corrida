@@ -30,6 +30,7 @@ class TripsTest {
         override fun save(trip: Trip) { map[trip.id] = trip }
         override fun find(id: String) = map[id]
         override fun pending() = map.values.filter { it.status == TripStatus.PENDING }.sortedBy { it.startMillis }
+        override fun all() = map.values.toList()
     }
 
     private class FakeKmLog : KmLogRepository {
@@ -82,5 +83,34 @@ class TripsTest {
         val commute = CommuteCost.averaged(perDay, 1, BigDecimal("6.30"), BigDecimal("10.5"))!!
         assertEquals("22.80", commute.fuelCost.toPlainString())        // 38 × 6,30 ÷ 10,5
         assertNull(OdometerCommute.kmPerDay(FuelStats(null, null, null, null, null), BigDecimal.ZERO))
+    }
+
+    @Test
+    fun `pedido de 12-11 - trajetos do dia aparecem na lista e da para trocar de ideia`() {
+        useCase.finish("ida", start, end, 4_600.0, hadRide = false)
+        useCase.keep("ida")
+        useCase.finish("volta", start + 9 * 3_600_000, end + 9 * 3_600_000, 4_400.0, hadRide = false)
+        useCase.finish("corrida", start + 12 * 3_600_000, end + 12 * 3_600_000, 8_000.0, hadRide = true)
+
+        val list = useCase.onDay(day)
+        assertEquals(listOf("ida", "volta", "corrida"), list.map { it.id })
+        assertEquals("✅ 4,6 km · 07:42–08:05 · registrado", br.com.minhacorrida.core.km.TripListFormatter.row(list[0], zone))
+        assertEquals("⏳ 4,4 km · 16:42–17:05 · esperando você decidir", br.com.minhacorrida.core.km.TripListFormatter.row(list[1], zone))
+        assertEquals("✅ 8,0 km · 19:42–20:05 · com corrida", br.com.minhacorrida.core.km.TripListFormatter.row(list[2], zone))
+        assertEquals(
+            "🚗 Trajetos do dia: 3 · 12,6 km registrados · toque para ver",
+            br.com.minhacorrida.core.km.TripListFormatter.summary(list),
+        )
+        assertEquals(BigDecimal("12.6"), kmLog.kmOn(day))
+
+        // Registrou a ida sem querer: descartar tira os km; registrar de novo devolve.
+        useCase.change("ida", TripStatus.DISCARDED)
+        assertEquals(BigDecimal("8.0"), kmLog.kmOn(day))
+        useCase.change("ida", TripStatus.DISCARDED)                    // repetir não tira 2x
+        assertEquals(BigDecimal("8.0"), kmLog.kmOn(day))
+        useCase.change("volta", TripStatus.KEPT)                       // pendente → registrado
+        assertEquals(BigDecimal("12.4"), kmLog.kmOn(day))
+        assertNull(useCase.change("volta", TripStatus.PENDING))
+        assertNull(useCase.change("nao-existe", TripStatus.KEPT))
     }
 }

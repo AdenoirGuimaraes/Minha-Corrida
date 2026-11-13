@@ -795,6 +795,18 @@
                 android:textStyle="bold"
                 android:visibility="gone" />
 
+            <!-- Trajetos do dia (filtro Dia): registrados, descartados e pendentes; toque para ver. -->
+            <TextView
+                android:id="@+id/tvDayTrips"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_section"
+                android:padding="12dp"
+                android:textColor="@color/mc_text"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
             <!-- Ações do histórico: lado a lado (uma linha só). -->
             <LinearLayout
                 android:layout_width="match_parent"

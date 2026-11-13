@@ -118,6 +118,9 @@
     <string name="trip_pending_banner">⏳ %1$d trajeto(s) esperando você decidir · toque aqui</string>
     <string name="trip_pending_title">Trajetos para confirmar</string>
     <string name="trip_row">%1$s km · %2$s %3$s–%4$s</string>
+    <string name="trip_day_title">Trajetos de %1$s</string>
+    <string name="trip_day_footer">Toque num trajeto para Registrar (soma nos km do dia) ou Descartar. Trajetos com menos de 0,5 km não aparecem.</string>
+    <string name="trip_change_message">Registrar soma os km no dia; Descartar tira (ex.: carro do trabalho). Pode trocar quando quiser.</string>
     <string name="trip_decide_message">Registrar soma os km na data do trajeto. Descartar ignora (ex.: carro do trabalho).</string>
     <string name="report_button">📄 Relatório</string>
     <string name="report_title">Relatório de corridas (.md)</string>

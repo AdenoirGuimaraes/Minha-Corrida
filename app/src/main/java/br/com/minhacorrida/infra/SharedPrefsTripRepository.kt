@@ -34,7 +34,8 @@ class SharedPrefsTripRepository(context: Context, private val logger: AppLogger)
     @Synchronized
     override fun pending(): List<Trip> = all().filter { it.status == TripStatus.PENDING }.sortedBy { it.startMillis }
 
-    private fun all(): List<Trip> = try {
+    @Synchronized
+    override fun all(): List<Trip> = try {
         val array = JSONArray(prefs.getString(KEY, "[]"))
         (0 until array.length()).mapNotNull { i -> runCatching { fromJson(array.getJSONObject(i)) }.getOrNull() }
     } catch (e: Exception) {

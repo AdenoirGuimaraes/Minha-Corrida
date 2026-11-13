@@ -46,6 +46,9 @@ interface TripRepository {
 
     /** Pendentes, do mais antigo para o mais recente. */
     fun pending(): List<Trip>
+
+    /** Todos os trajetos guardados (registrados, descartados e pendentes). */
+    fun all(): List<Trip>
 }
 
 /** O que aconteceu com o trajeto que acabou de terminar. */
@@ -117,6 +120,37 @@ class TripUseCase(
         emptyList()
     }
 
+    /** Trajetos que começaram em [date] (registrados, descartados e pendentes), em ordem de hora. */
+    fun onDay(date: LocalDate): List<Trip> = try {
+        trips.all().filter { it.date(zone) == date }.sortedBy { it.startMillis }
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao ler os trajetos do dia", e)
+        emptyList()
+    }
+
+    /**
+     * Trocar de ideia depois de decidir: registrado ↔ descartado. Os km do dia acompanham
+     * (descartar um registrado tira os km; registrar um descartado soma).
+     * @return o trajeto com a nova situação, ou null se não existir ou [status] for PENDING.
+     */
+    fun change(id: String, status: TripStatus): Trip? = try {
+        val trip = trips.find(id)
+        when {
+            trip == null || status == TripStatus.PENDING -> null
+            trip.status == status -> trip
+            else -> trip.copy(status = status).also { changed ->
+                trips.save(changed)
+                val date = changed.date(zone)
+                if (status == TripStatus.KEPT) kmLog.addMeters(date, changed.meters)
+                if (trip.status == TripStatus.KEPT) kmLog.addMeters(date, -changed.meters)
+                logger.debug(TAG, "Trajeto ${changed.km} km: ${trip.status} → $status")
+            }
+        }
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao trocar a decisão do trajeto $id", e)
+        null
+    }
+
     private fun decide(id: String, status: TripStatus): Trip? = try {
         val trip = trips.find(id)?.takeIf { it.status == TripStatus.PENDING }
         trip?.copy(status = status)?.also { decided ->
@@ -132,6 +166,35 @@ class TripUseCase(
         private const val TAG = "Trips"
         const val MIN_TRIP_METERS = 500.0
     }
+}
+
+/**
+ * Textos da lista "Trajetos do dia" na aba Corridas.
+ * Ex.: "✅ 4,6 km · 07:42–08:05 · com corrida", "❌ 9,1 km · 12:10–12:31 · descartado".
+ */
+object TripListFormatter {
+    private val TIME = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+
+    fun row(trip: Trip, zone: ZoneId): String {
+        val start = Instant.ofEpochMilli(trip.startMillis).atZone(zone).format(TIME)
+        val end = Instant.ofEpochMilli(trip.endMillis).atZone(zone).format(TIME)
+        val (icon, label) = when (trip.status) {
+            TripStatus.KEPT -> "✅" to if (trip.withRide) "com corrida" else "registrado"
+            TripStatus.DISCARDED -> "❌" to "descartado"
+            TripStatus.PENDING -> "⏳" to "esperando você decidir"
+        }
+        return "$icon ${km(trip.km)} km · $start–$end · $label"
+    }
+
+    /** Linha do resumo: "🚗 Trajetos do dia: 6 · 49,2 km registrados · toque para ver". */
+    fun summary(trips: List<Trip>): String? {
+        if (trips.isEmpty()) return null
+        val kept = trips.filter { it.status == TripStatus.KEPT }
+            .fold(BigDecimal.ZERO) { acc, t -> acc + t.km }
+        return "🚗 Trajetos do dia: ${trips.size} · ${km(kept)} km registrados · toque para ver"
+    }
+
+    private fun km(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toPlainString().replace('.', ',')
 }
 
 /**

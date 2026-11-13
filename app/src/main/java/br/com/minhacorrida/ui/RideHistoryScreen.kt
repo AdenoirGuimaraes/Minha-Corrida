@@ -81,6 +81,7 @@ class RideHistoryScreen(
     private val pbGoal: android.widget.ProgressBar = activity.findViewById(R.id.pbGoal)
     private val tvGoalStatus: TextView = activity.findViewById(R.id.tvGoalStatus)
     private val tvPendingTrips: TextView = activity.findViewById(R.id.tvPendingTrips)
+    private val tvDayTrips: TextView = activity.findViewById(R.id.tvDayTrips)
     private val tvCoverage: TextView = activity.findViewById(R.id.tvHistCoverage)
     private val cbCommuteDay: CheckBox = activity.findViewById(R.id.cbCommuteDay)
     /** Última página mostrada: o check do dia recalcula o resumo sem recarregar a lista. */
@@ -100,6 +101,7 @@ class RideHistoryScreen(
         activity.findViewById<View>(R.id.btnManualRide).setOnClickListener { openManualRide() }
         bindHintToggle()
         tvPendingTrips.setOnClickListener { showPendingTrips() }
+        tvDayTrips.setOnClickListener { showDayTrips() }
         activity.findViewById<View>(R.id.btnRideReport).setOnClickListener { chooseReportPeriod() }
     }
 
@@ -324,6 +326,7 @@ class RideHistoryScreen(
     private fun renderSummary(page: RideHistoryPage) {
         lastPage = page
         renderPendingTrips()
+        renderDayTrips(page)
         tvCountKm.text = formatter.countAndKm(page)
         val period = periodCommute(page)
         val commute = period.included
@@ -455,6 +458,72 @@ class RideHistoryScreen(
         val count = trips.pending().size
         tvPendingTrips.visibility = if (count > 0) View.VISIBLE else View.GONE
         tvPendingTrips.text = activity.getString(R.string.trip_pending_banner, count)
+    }
+
+    /** Filtro Dia: "🚗 Trajetos do dia: 6 · 49,2 km registrados · toque para ver". */
+    private fun renderDayTrips(page: RideHistoryPage) {
+        try {
+            val text = if (page.period == HistoryPeriod.DAY) {
+                br.com.minhacorrida.core.km.TripListFormatter.summary(trips.onDay(page.range.start))
+            } else {
+                null
+            }
+            tvDayTrips.visibility = if (text == null) View.GONE else View.VISIBLE
+            tvDayTrips.text = text.orEmpty()
+        } catch (e: Exception) {
+            android.util.Log.e("MC/RideHistoryScreen", "Falha ao mostrar os trajetos do dia", e)
+            tvDayTrips.visibility = View.GONE
+        }
+    }
+
+    /**
+     * Lista dos trajetos do dia (✅ registrado, ❌ descartado, ⏳ pendente). Tocar num deles
+     * permite Registrar ou Descartar — também para trocar uma decisão já tomada.
+     */
+    private fun showDayTrips() {
+        val day = lastPage?.range?.start ?: return
+        val zone = ZoneId.systemDefault()
+        val list = trips.onDay(day)
+        if (list.isEmpty()) {
+            renderDayTrips(lastPage ?: return)
+            return
+        }
+        val labels = list.map { br.com.minhacorrida.core.km.TripListFormatter.row(it, zone) }
+        val footer = TextView(activity).apply {
+            setText(R.string.trip_day_footer)
+            setTextColor(activity.getColor(R.color.mc_text_muted))
+            val pad = (20 * activity.resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(activity.getString(R.string.trip_day_title, day.format(DateTimeFormatter.ofPattern("dd/MM"))))
+            .setItems(labels.toTypedArray()) { _, which -> changeTrip(list[which].id, labels[which]) }
+            .setView(footer)
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
+    }
+
+    /** Registrar/Descartar um trajeto do dia (pendente ou já decidido); os km do dia acompanham. */
+    private fun changeTrip(id: String, label: String) {
+        fun apply(status: br.com.minhacorrida.core.km.TripStatus) {
+            try {
+                io.execute {
+                    trips.change(id, status)
+                    if (status == br.com.minhacorrida.core.km.TripStatus.DISCARDED) parking.revertIfFrom(id)
+                    activity.getSystemService(android.app.NotificationManager::class.java).cancel(id.hashCode())
+                    main.post { refresh() }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MC/RideHistoryScreen", "Falha ao trocar a decisão do trajeto", e)
+            }
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(label)
+            .setMessage(R.string.trip_change_message)
+            .setPositiveButton(R.string.trip_keep) { _, _ -> apply(br.com.minhacorrida.core.km.TripStatus.KEPT) }
+            .setNeutralButton(R.string.trip_discard) { _, _ -> apply(br.com.minhacorrida.core.km.TripStatus.DISCARDED) }
+            .setNegativeButton(R.string.diagnostics_close, null)
+            .show()
     }
 
     /** Lista dos trajetos pendentes; tocar num deles pergunta Registrar ou Descartar. */

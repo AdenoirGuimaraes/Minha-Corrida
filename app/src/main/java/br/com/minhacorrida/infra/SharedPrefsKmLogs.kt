@@ -21,10 +21,11 @@ class SharedPrefsKmLogRepository(context: Context, private val logger: AppLogger
 
     @Synchronized
     override fun addMeters(date: LocalDate, meters: Double) {
-        if (meters <= 0) return
+        if (meters == 0.0) return
         try {
             val key = date.toString()
-            val total = (prefs.getString(key, null)?.toDoubleOrNull() ?: 0.0) + meters
+            // Negativo desfaz um trajeto descartado depois de registrado (nunca abaixo de zero).
+            val total = ((prefs.getString(key, null)?.toDoubleOrNull() ?: 0.0) + meters).coerceAtLeast(0.0)
             prefs.edit().putString(key, total.toString()).apply()
             purgeOld(date)
         } catch (e: Exception) {
