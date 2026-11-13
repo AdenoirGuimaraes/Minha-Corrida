@@ -54,6 +54,7 @@ class RideOverlayController(
 
             if (!analysis.offer.sameRideAs(shownOffer)) {
                 shownOffer = analysis.offer
+                setDestinationText(current, null) // oferta nova: a linha do destino é refeita
                 handler.removeCallbacks(autoCloseTask)
                 handler.postDelayed(autoCloseTask, autoCloseSeconds * 1_000L)
             }
@@ -62,6 +63,23 @@ class RideOverlayController(
         } catch (e: Exception) {
             logger.error(TAG, "Não foi possível exibir o leitor", e)
             view = null
+        }
+    }
+
+    /**
+     * Linha do destino (bairro, aviso de longe/evitar e volta vazia). Chega depois do card,
+     * quando o endereço é localizado; só vale se a mesma oferta ainda estiver na tela.
+     */
+    fun setDestination(offer: RideOffer, text: String?) {
+        val current = view ?: return
+        if (!offer.sameRideAs(shownOffer)) return
+        setDestinationText(current, text)
+    }
+
+    private fun setDestinationText(root: View, text: String?) {
+        root.findViewById<android.widget.TextView>(R.id.tvDestination)?.apply {
+            this.text = text.orEmpty()
+            visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
         }
     }
 

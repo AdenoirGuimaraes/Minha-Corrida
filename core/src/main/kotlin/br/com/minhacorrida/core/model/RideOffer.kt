@@ -11,6 +11,8 @@ import java.math.BigDecimal
  * @property passengerRating nota do passageiro (1 a 5); null quando não aparece (ex.: novo).
  * @property pickupMinutes minutos até o passageiro ("5 min (1.8 km)"); null quando a tela não mostra.
  * @property tripMinutes minutos da viagem ("6 minutos (2.3 km)"); null quando a tela não mostra.
+ * @property destination destino (bairro/cidade) lido na oferta; null quando não deu para ler.
+ *   Não entra no [sameRideAs] (a leitura do endereço pode variar entre uma tela e outra).
  */
 data class RideOffer(
     val platform: Platform,
@@ -20,6 +22,7 @@ data class RideOffer(
     val passengerRating: BigDecimal? = null,
     val pickupMinutes: Int? = null,
     val tripMinutes: Int? = null,
+    val destination: Place? = null,
 ) {
     init {
         require(fare.signum() > 0) { "Valor da corrida deve ser positivo: $fare" }

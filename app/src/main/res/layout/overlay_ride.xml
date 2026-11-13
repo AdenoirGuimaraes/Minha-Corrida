@@ -126,6 +126,20 @@
         </br.com.minhacorrida.ui.SquareLayout>
     </LinearLayout>
 
+    <!-- Destino (bairro, longe/evitar) e volta vazia: preenchido depois, quando o endereço é localizado. -->
+    <TextView
+        android:id="@+id/tvDestination"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="#66000000"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="4dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/tvTapToClose"
         android:layout_width="match_parent"

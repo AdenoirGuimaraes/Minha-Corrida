@@ -34,6 +34,7 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
                 passengerRating = reading.rating,
                 pickupMinutes = reading.distances[0].minutes,
                 tripMinutes = reading.distances[1].minutes,
+                destination = br.com.minhacorrida.core.destination.DestinationReader.uber(texts),
             )
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta da Uber", e)

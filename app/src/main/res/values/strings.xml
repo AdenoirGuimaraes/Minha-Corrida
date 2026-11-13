@@ -198,4 +198,15 @@
     <string name="insights_7">Últimos 7 dias</string>
     <string name="insights_30">Últimos 30 dias</string>
     <string name="insights_60">Últimos 60 dias (tudo)</string>
+    <!-- Destino da corrida -->
+    <string name="dest_title">Destino da corrida</string>
+    <string name="dest_enabled">Mostrar o destino no card (bairro, longe, a evitar e volta vazia)</string>
+    <string name="dest_base_default">Base: centro de Lages (padrão). A volta vazia é calculada até a base.</string>
+    <string name="dest_base_set">Base marcada: %1$s, %2$s. A volta vazia é calculada até aqui.</string>
+    <string name="dest_base_button">📍 Usar minha localização atual como base</string>
+    <string name="dest_base_saved">Base marcada ✅</string>
+    <string name="dest_base_failed">Não consegui sua localização agora. Ligue o GPS e tente de novo.</string>
+    <string name="dest_far_label">Avisar "destino longe" com volta acima de (km)</string>
+    <string name="dest_avoid_label">Bairros a evitar (separados por vírgula)</string>
+    <string name="dest_avoid_hint">Ex.: Guarujá, Santa Mônica</string>
 </resources>

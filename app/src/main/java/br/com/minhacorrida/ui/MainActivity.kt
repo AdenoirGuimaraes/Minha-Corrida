@@ -85,6 +85,7 @@ class MainActivity : Activity() {
     private lateinit var deductionsEditor: DeductionsEditor
     private lateinit var kmControl: KmControlSection
     private lateinit var backupSection: BackupSection
+    private lateinit var destinationSection: DestinationSection
     private lateinit var etTimeout: EditText
     private lateinit var etFuelPrice: EditText
     private lateinit var etKmPerLiter: EditText
@@ -148,6 +149,7 @@ class MainActivity : Activity() {
             "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
         )
         backupSection.bind()
+        destinationSection = DestinationSection(this, container.destinationSettings).also { it.bind() }
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
 
         watchFieldsForPreview()
@@ -452,6 +454,10 @@ class MainActivity : Activity() {
                 return
             }
 
+            if (!destinationSection.save()) {
+                toast(getString(R.string.invalid_value))
+                return
+            }
             // Tudo validado: grava de uma vez.
             val settings = container.settings
             settings.setMinValuePerKm(minValue)

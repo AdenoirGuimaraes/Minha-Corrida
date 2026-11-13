@@ -65,6 +65,10 @@ class AppContainer(context: Context) {
     val offerLog: br.com.minhacorrida.core.market.OfferLogUseCase by lazy {
         br.com.minhacorrida.core.market.OfferLogUseCase(offerLogRepository, logger)
     }
+    /** Destino da corrida: base, distância de "longe" e bairros a evitar (Configurações). */
+    val destinationSettings: br.com.minhacorrida.core.destination.DestinationSettingsRepository by lazy {
+        br.com.minhacorrida.infra.SharedPrefsDestinationSettings(context, logger)
+    }
     /** Onde o carro ficou estacionado (início estimado do próximo trajeto). */
     val parking: br.com.minhacorrida.infra.ParkingStore by lazy { br.com.minhacorrida.infra.ParkingStore(context) }
     /** Trajetos do sensor de veículo: pendentes até o motorista Registrar ou Descartar. */

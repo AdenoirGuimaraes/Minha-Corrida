@@ -46,6 +46,7 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
                 // Bolha "8 min 3,1 km": minutos só quando o OCR juntou os dois no mesmo texto.
                 pickupMinutes = pickup.minutes,
                 tripMinutes = trip.minutes,
+                destination = br.com.minhacorrida.core.destination.DestinationReader.inDrive(texts),
             )
         } catch (e: Exception) {
             logger.error(TAG, "Falha ao ler oferta do inDrive", e)

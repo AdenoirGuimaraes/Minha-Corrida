@@ -261,6 +261,60 @@
                         android:textSize="13sp" />
                 </LinearLayout>
 
+                <!-- Destino da corrida (itens 1 e 2): DestinationSection. -->
+                <LinearLayout
+                    style="@style/Section"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/SectionTitle"
+                        android:text="@string/dest_title" />
+
+                    <CheckBox
+                        android:id="@+id/cbDestination"
+                        style="@style/CheckItem"
+                        android:text="@string/dest_enabled" />
+
+                    <TextView
+                        android:id="@+id/tvDestBase"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="@color/mc_text"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnDestBase"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:backgroundTint="@color/mc_surface"
+                        android:text="@string/dest_base_button"
+                        android:textColor="@color/mc_yellow" />
+
+                    <TextView
+                        style="@style/FieldLabel"
+                        android:text="@string/dest_far_label" />
+
+                    <EditText
+                        android:id="@+id/etDestFar"
+                        style="@style/NumberField" />
+
+                    <TextView
+                        style="@style/FieldLabel"
+                        android:text="@string/dest_avoid_label" />
+
+                    <EditText
+                        android:id="@+id/etDestAvoid"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="@string/dest_avoid_hint"
+                        android:importantForAutofill="no"
+                        android:inputType="textCapWords"
+                        android:textColor="@color/mc_text"
+                        android:textColorHint="@color/mc_text_muted" />
+                </LinearLayout>
+
                 <!-- Km rodados (GPS) e abastecimentos (tanque cheio): KmControlSection. -->
                 <LinearLayout style="@style/Section">
 

@@ -39,6 +39,7 @@ class RideReaderService : AccessibilityService() {
     private lateinit var extractor: ScreenTextExtractor
     private lateinit var ocrReader: ScreenOcrReader
     private lateinit var overlay: RideOverlayController
+    private lateinit var destinationHints: DestinationHints
     private var voice: VoiceAnnouncer? = null
 
 
@@ -87,6 +88,10 @@ class RideReaderService : AccessibilityService() {
             ocrReader = ScreenOcrReader(this, container.logger)
             overlay = RideOverlayController(this, container.formatter, container.logger) { dismissed ->
                 visibility.onDismissed(dismissed.offer)
+            }
+            // Linha do destino (bairro, longe/evitar, volta vazia), preenchida depois do card.
+            destinationHints = DestinationHints(this, container.destinationSettings, container.logger) { offer, text ->
+                overlay.setDestination(offer, text)
             }
             // Motor de voz preparado já na conexão, para não atrasar o primeiro card.
             voice = runCatching { VoiceAnnouncer(this, container.logger) }
@@ -239,6 +244,7 @@ class RideReaderService : AccessibilityService() {
                     counterOfferHoldUntil = SystemClock.elapsedRealtime() + seconds * 1_000L
                     lastAnalysis = result.analysis
                     overlay.show(result.analysis, seconds)
+                    destinationHints.onOfferShown(result.analysis)
                     announceIfGood(result.analysis)
                 }
                 br.com.minhacorrida.core.usecase.InDriveTap.Skipped -> {
@@ -474,6 +480,7 @@ class RideReaderService : AccessibilityService() {
         // Oferta já fechada (toque ou tempo) não reabre até surgir outra.
         if (visibility.shouldShow(analysis.offer)) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
+            destinationHints.onOfferShown(analysis)
             announceIfGood(analysis)
         }
     }
