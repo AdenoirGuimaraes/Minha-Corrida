@@ -111,7 +111,7 @@ class ProfitAndFiltersTest {
         assertTrue(comNota.sameRideAs(semNota))
         val policy = OverlayVisibilityPolicy()
         policy.onDismissed(semNota)
-        assertFalse(policy.shouldShow(comNota))
+        assertFalse(policy.shouldShow(comNota, 0))
     }
 
     @Test
