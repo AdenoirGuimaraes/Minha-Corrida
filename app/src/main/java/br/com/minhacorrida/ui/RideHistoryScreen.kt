@@ -661,7 +661,9 @@ class RideHistoryScreen(
     private fun rowView(record: RideRecord, period: HistoryPeriod): View {
         val card = activity.layoutInflater.inflate(R.layout.overlay_ride, list, false)
         try {
-            val text = formatter.card(record, period, settings.getMinValuePerKm(), settings.getMinNetProfit())
+            val text = formatter.card(
+                record, period, settings.getMinValuePerKm(), settings.getMinNetProfit(), settings.getMinProfitPerMinute(),
+            )
             cardBinder.bindTexts(card, text, record.platform, record.rating)
         } catch (e: Exception) {
             android.util.Log.e("MC/RideHistoryScreen", "Falha ao montar o card da corrida ${record.id}", e)

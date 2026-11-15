@@ -86,12 +86,15 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
 
     /**
      * Texto de baixo do 3º quadrado ("Mín. verde"): os mínimos que o valor de cima atende.
-     * Ex.: "R$ 2,00/km\nLucro R$ 6,00". Sem lucro mínimo (ou sem custos): "R$ 2,00/km".
+     * Ex.: "R$ 2,00/km\nLucro R$ 6,00\nR$ 0,48/min". Sem lucro mínimo (ou sem custos): "R$ 2,00/km".
+     * A linha R$/min é o que a corrida daria por minuto se paga no Mín. verde (≈ se estimado).
      */
     private fun minimumLabel(analysis: RideAnalysis): String {
         val lines = mutableListOf("R$ ${money(analysis.minimum.minValuePerKm)}/km")
         analysis.minimum.minNetProfit?.let { lines += "Lucro R$ ${money(it)}" }
-        analysis.minimum.minProfitPerMinute?.let { lines += "R$ ${money(it)}/min" }
+        analysis.minimum.profitPerMinuteAtGreen?.let {
+            lines += "${if (analysis.time.estimated) "≈ " else ""}R$ ${money(it)}/min"
+        }
         return lines.joinToString("\n")
     }
 

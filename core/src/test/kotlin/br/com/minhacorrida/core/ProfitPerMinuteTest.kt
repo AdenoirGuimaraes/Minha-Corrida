@@ -41,13 +41,14 @@ class ProfitPerMinuteTest {
     }
 
     @Test
-    fun `minimo verde inclui o lucro por minuto`() {
+    fun `pedido de 15-11 - minimo verde so pelo R$ por km e lucro, e a linha mostra o R$ por minuto nesse valor`() {
         val lenta = evaluate(offer(10, 15), rules)
-        // gasto 3,49 + 0,60 × 25 min = R$ 18,49
-        assertEquals("18.49", lenta.minimum.greenFare.toPlainString())
-        assertEquals(RideRating.GOOD, evaluate(offer(10, 15).copy(fare = BigDecimal("18.49")), rules).rating)
+        // Só o R$/km: 1,50 × 4,1 km = R$ 6,15 (o R$/min configurado não sobe mais o Mín. verde).
+        assertEquals("6.15", lenta.minimum.greenFare.toPlainString())
+        // Pago R$ 6,15: (6,15 − 3,49) ÷ 25 min = R$ 0,11/min — abaixo dos 0,60 configurados, e aparece assim mesmo.
+        assertEquals("0.11", lenta.minimum.profitPerMinuteAtGreen!!.toPlainString())
         val card = RideAnalysisFormatter().card(lenta)
-        assertEquals("R$ 1,50/km\nR$ 0,60/min", card.minimumLabel)
+        assertEquals("R$ 1,50/km\nR$ 0,11/min", card.minimumLabel)
         assertTrue(card.profitDetails.startsWith("R$ 0,34/min · 25 min\n"))
     }
 

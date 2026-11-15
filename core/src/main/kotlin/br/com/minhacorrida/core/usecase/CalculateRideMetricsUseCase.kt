@@ -71,6 +71,7 @@ class CalculateRideMetricsUseCase {
         profit: RideProfit?,
         minNetProfit: BigDecimal?,
         minutes: Int = 0,
+        /** Só decide se a linha R$/min aparece (mínimo por minuto configurado); não muda o valor. */
         minProfitPerMinute: BigDecimal? = null,
     ): MinimumFare {
         val byKm = minimumFare(metrics, minValuePerKm)
@@ -80,10 +81,10 @@ class CalculateRideMetricsUseCase {
             val byProfit = grossFor(profit.cost + minNetProfit, metrics.feePercent)
             result = result.copy(minNetProfit = minNetProfit, greenFare = result.greenFare.max(byProfit))
         }
+        // Pedido de 15/11: o R$/min NÃO entra no Mín. verde; mostra quanto dá por minuto se a
+        // corrida for paga no Mín. verde (mesmo abaixo do mínimo por minuto configurado).
         if (minProfitPerMinute != null && minutes > 0) {
-            // Lucro mínimo pelo tempo: gasto + (mínimo por minuto × minutos), com a taxa.
-            val byMinute = grossFor(profit.cost + minProfitPerMinute * BigDecimal(minutes), metrics.feePercent)
-            result = result.copy(minProfitPerMinute = minProfitPerMinute, greenFare = result.greenFare.max(byMinute))
+            result = result.copy(profitPerMinuteAtGreen = perMinuteAt(result.greenFare, metrics.feePercent, profit.cost, minutes))
         }
         return result
     }
@@ -115,6 +116,10 @@ class CalculateRideMetricsUseCase {
             if (cost == null || minNetProfit == null) return byKm
             return byKm.max(grossFor(cost + minNetProfit, feePercent))
         }
+
+        /** Lucro por minuto se a corrida for paga [fare]: (líquido − gasto) ÷ minutos. */
+        fun perMinuteAt(fare: BigDecimal, feePercent: BigDecimal, cost: BigDecimal, minutes: Int): BigDecimal =
+            (netOf(fare, feePercent) - cost).divide(BigDecimal(minutes), 2, RoundingMode.HALF_UP)
 
         /** Valor que fica com o motorista depois da taxa da plataforma (2 casas). */
         fun netOf(gross: BigDecimal, feePercent: BigDecimal): BigDecimal =

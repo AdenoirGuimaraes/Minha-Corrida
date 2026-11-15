@@ -466,6 +466,7 @@ class RideReaderService : AccessibilityService() {
         }
         if (analysis == null) {
             lastAnalysis = null
+            visibility.onOfferGone(SystemClock.elapsedRealtime())
             overlay.scheduleHide()
             return
         }
@@ -477,8 +478,8 @@ class RideReaderService : AccessibilityService() {
         }
         // Nada é guardado só por aparecer: a corrida entra no histórico quando a tela do app
         // confirma que ela é sua (followRide / RideLifecycleUseCase).
-        // Oferta já fechada (toque ou tempo) não reabre até surgir outra.
-        if (visibility.shouldShow(analysis.offer)) {
+        // Oferta fechada (toque ou tempo) não reabre enquanto está na tela; reaberta, volta a aparecer.
+        if (visibility.shouldShow(analysis.offer, SystemClock.elapsedRealtime())) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
             destinationHints.onOfferShown(analysis)
             announceIfGood(analysis)

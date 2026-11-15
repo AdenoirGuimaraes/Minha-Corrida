@@ -166,6 +166,8 @@ class RideHistoryFormatter(
         period: HistoryPeriod,
         minValuePerKm: BigDecimal,
         minNetProfit: BigDecimal?,
+        /** Mínimo por minuto configurado: só decide se a linha R$/min do Mín. verde aparece. */
+        minProfitPerMinute: BigDecimal? = null,
     ): RideCardText {
         val at = Instant.ofEpochMilli(record.timestampMillis).atZone(zone)
         val whenText = if (period == HistoryPeriod.DAY) at.format(time) else "${at.format(dayMonth)} ${at.format(time)}"
@@ -196,8 +198,17 @@ class RideHistoryFormatter(
             profitDetails = if (cost != null) "${perMinuteLine(record)}$fareLine\nGasto R$ ${money(cost)}" else "$fareLine\nSem custos",
             minimumValue = money(CounterOffer.displayGreenFare(green, record.platform)),
             minimumLabel = "R$ ${money(minValuePerKm)}/km" +
-                effectiveMinProfit?.let { "\nLucro R$ ${money(it)}" }.orEmpty(),
+                effectiveMinProfit?.let { "\nLucro R$ ${money(it)}" }.orEmpty() +
+                (if (minProfitPerMinute != null) greenPerMinuteLine(record, green, cost) else ""),
         )
+    }
+
+    /** "\nR$ 0,48/min": lucro por minuto se paga no Mín. verde (como no card da oferta); "" sem minutos/custos. */
+    private fun greenPerMinuteLine(record: RideRecord, green: BigDecimal, cost: BigDecimal?): String {
+        val minutes = record.minutes?.takeIf { it > 0 } ?: return ""
+        if (cost == null) return ""
+        val perMinute = br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase.perMinuteAt(green, record.feePercent, cost, minutes)
+        return "\n${if (record.minutesEstimated) "≈ " else ""}R$ ${money(perMinute)}/min"
     }
 
     /** "R$ 0,77/min · 11 min\n" (com "≈" se estimado), como no card da oferta; "" sem minutos. */
