@@ -49,6 +49,8 @@ inDrive verde-limão com letras pretas) e a nota do passageiro. Três quadrados:
 **R$/km** (com km total e a soma), **Lucro** (com valor da corrida e gasto; "Prejuízo" se negativo)
 e **Mín. verde** (menor valor da corrida que deixa o card verde: atinge o mínimo de R$/km **e** o lucro líquido mínimo — vale o maior dos dois; embaixo aparecem os dois mínimos). Fundo verde = boa, amarelo = lucro baixo, vermelho = abaixo.
 Voz em velocidade 1,4×.
+Card fechado (toque ou tempo) não reaparece enquanto a oferta continua na tela; se a oferta sair da tela
+(2,5 s ou mais, ou outra oferta aparecer) e for reaberta, o card aparece de novo (0.2.57).
 
 ## Tela do app (tema preto e amarelo)
 - Abas **Configurações** e **Simulador**. O simulador mostra o mesmo card da leitura real, recalculado a cada número digitado
@@ -189,8 +191,10 @@ Voz em velocidade 1,4×.
 - Minutos = busca + viagem lidos da tela (Uber: "5 min (1.8 km)" e "6 minutos (2.3 km)"; inDrive: bolha
   "8 min 3,1 km" quando o OCR junta). Trecho sem minutos na tela é estimado a 25 km/h (2,4 min/km) e o
   card mostra "≈".
-- Card, quadrado **Lucro**, 1ª linha: "R$ 0,77/min · 11 min". **Mín. verde** passa a considerar também
-  gasto + mínimo por minuto × minutos (linha "R$ 0,60/min").
+- Card, quadrado **Lucro**, 1ª linha: "R$ 0,77/min · 11 min".
+- **Mín. verde** (desde 0.2.57) usa só o R$/km e o lucro mínimos. A linha "R$/min" embaixo dele (quando o
+  mínimo por minuto está configurado) mostra quanto a corrida daria por minuto se paga no Mín. verde —
+  mesmo abaixo do mínimo configurado. A cor do card continua considerando o R$/min (amarelo se abaixo).
 - Simulador: campo "Minutos totais (busca + viagem)" (vazio = estimado pelos km).
 
 ## Taxas das plataformas
