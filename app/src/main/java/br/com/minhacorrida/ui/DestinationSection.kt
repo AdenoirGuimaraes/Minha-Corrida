@@ -26,10 +26,13 @@ class DestinationSection(
     private val tvBase: TextView = activity.findViewById(R.id.tvDestBase)
     private val etFar: EditText = activity.findViewById(R.id.etDestFar)
     private val etAvoid: EditText = activity.findViewById(R.id.etDestAvoid)
+    private val etPickupMax: EditText = activity.findViewById(R.id.etPickupMax)
 
     fun bind() {
         DecimalMask.attach(etFar, 1)
+        DecimalMask.attach(etPickupMax, 1)
         val current = settings.get()
+        DecimalMask.set(etPickupMax, current.maxPickupKm)
         cbEnabled.isChecked = current.enabled
         DecimalMask.set(etFar, current.farKm)
         etAvoid.setText(current.avoid.joinToString(", "))
@@ -45,7 +48,16 @@ class DestinationSection(
     fun save(): Boolean {
         val far = NumberParser.parse(etFar.text.toString())?.takeIf { it.signum() > 0 } ?: return false
         val avoid = etAvoid.text.toString().split(',').map { it.trim() }.filter { it.isNotEmpty() }
-        settings.save(settings.get().copy(farKm = far.setScale(1, java.math.RoundingMode.HALF_UP), avoid = avoid))
+        // Busca máxima: vazio desliga o aviso; valor inválido não salva.
+        val pickupText = etPickupMax.text.toString().trim()
+        val maxPickup = if (pickupText.isEmpty()) {
+            null
+        } else {
+            NumberParser.parse(pickupText)?.takeIf { it.signum() > 0 }?.setScale(1, java.math.RoundingMode.HALF_UP) ?: return false
+        }
+        settings.save(
+            settings.get().copy(farKm = far.setScale(1, java.math.RoundingMode.HALF_UP), avoid = avoid, maxPickupKm = maxPickup),
+        )
         return true
     }
 

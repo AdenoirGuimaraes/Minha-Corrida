@@ -72,4 +72,16 @@ class DestinationTest {
         val south = GeoPoint(base.latitude - 0.01, base.longitude, 0f, 0)      // ~1,11 km em linha reta
         assertEquals("1.4", DestinationAdvisor.returnKm(south, base).toPlainString())
     }
+
+    @Test
+    fun `pedido de 15-11 - busca longa so avisa`() {
+        assertEquals(
+            "⚠️ Busca longa: 6,9 km (viagem 2,6 km)",
+            DestinationAdvisor.pickupWarning(BigDecimal("6.9"), BigDecimal("2.6"), BigDecimal("4.0")),
+        )
+        assertNull(DestinationAdvisor.pickupWarning(BigDecimal("2.6"), BigDecimal("1.4"), BigDecimal("4.0")))   // dentro do limite
+        assertNull(DestinationAdvisor.pickupWarning(BigDecimal("6.9"), BigDecimal("2.6"), null))               // aviso desligado
+        assertNull(DestinationAdvisor.pickupWarning(null, BigDecimal("2.6"), BigDecimal("4.0")))               // sem busca na tela
+        assertEquals(BigDecimal("4.0"), DestinationSettings().maxPickupKm)                                    // padrão
+    }
 }

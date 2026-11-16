@@ -78,6 +78,7 @@ object DestinationReader {
  * @property base ponto de onde o motorista costuma trabalhar (para a volta vazia).
  * @property farKm acima disso (volta até a base), o destino é "longe".
  * @property avoid bairros que o motorista quer evitar (aviso ⛔).
+ * @property maxPickupKm acima disso, aviso "Busca longa" no card (só avisa; null = desligado).
  */
 data class DestinationSettings(
     val enabled: Boolean = true,
@@ -86,6 +87,7 @@ data class DestinationSettings(
     val baseCity: String = "Lages",
     val farKm: BigDecimal = BigDecimal("5.0"),
     val avoid: List<String> = emptyList(),
+    val maxPickupKm: BigDecimal? = BigDecimal("4.0"),
 ) {
     companion object {
         /** Centro de Lages (Praça João Costa), usado enquanto o motorista não marca a base dele. */
@@ -152,6 +154,15 @@ object DestinationAdvisor {
             "Volta vazia ≈ ${km1(km)} km · R$ ${money(cost)}$result"
         }
         return DestinationHint(listOfNotNull(headline, back).joinToString("\n"), avoid || outside || far)
+    }
+
+    /**
+     * Aviso de busca longa (pedido de 15/11, só informa; a cor do card não muda):
+     * "⚠️ Busca longa: 6,9 km (viagem 2,6 km)". null se a busca está dentro do limite ou sem limite.
+     */
+    fun pickupWarning(pickupKm: BigDecimal?, tripKm: BigDecimal, maxPickupKm: BigDecimal?): String? {
+        if (pickupKm == null || maxPickupKm == null || pickupKm <= maxPickupKm) return null
+        return "⚠️ Busca longa: ${km1(pickupKm)} km (viagem ${km1(tripKm)} km)"
     }
 
     /** Compara nomes sem acento e sem maiúsculas ("guaruja" = "Guarujá"). */

@@ -302,6 +302,15 @@
 
                     <TextView
                         style="@style/FieldLabel"
+                        android:text="@string/dest_pickup_label" />
+
+                    <EditText
+                        android:id="@+id/etPickupMax"
+                        style="@style/NumberField"
+                        android:hint="@string/dest_pickup_hint" />
+
+                    <TextView
+                        style="@style/FieldLabel"
                         android:text="@string/dest_avoid_label" />
 
                     <EditText

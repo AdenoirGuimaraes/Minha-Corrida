@@ -23,6 +23,8 @@ class SharedPrefsDestinationSettings(context: Context, private val logger: AppLo
             baseCity = prefs.getString(KEY_CITY, null) ?: default.baseCity,
             farKm = prefs.getString(KEY_FAR, null)?.toBigDecimalOrNull() ?: default.farKm,
             avoid = prefs.getString(KEY_AVOID, null).orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() },
+            // Sem a chave: padrão 4,0 km; gravado vazio: aviso desligado.
+            maxPickupKm = if (prefs.contains(KEY_MAX_PICKUP)) prefs.getString(KEY_MAX_PICKUP, null)?.toBigDecimalOrNull() else default.maxPickupKm,
         )
     } catch (e: Exception) {
         logger.error(TAG, "Falha ao ler configurações do destino", e)
@@ -36,6 +38,7 @@ class SharedPrefsDestinationSettings(context: Context, private val logger: AppLo
                 .putString(KEY_CITY, settings.baseCity)
                 .putString(KEY_FAR, settings.farKm.toPlainString())
                 .putString(KEY_AVOID, settings.avoid.joinToString(", "))
+                .putString(KEY_MAX_PICKUP, settings.maxPickupKm?.toPlainString().orEmpty())
             if (settings.baseIsDefault) {
                 editor.remove(KEY_LAT).remove(KEY_LNG)
             } else {
@@ -56,5 +59,6 @@ class SharedPrefsDestinationSettings(context: Context, private val logger: AppLo
         const val KEY_CITY = "dest_base_city"
         const val KEY_FAR = "dest_far_km"
         const val KEY_AVOID = "dest_avoid"
+        const val KEY_MAX_PICKUP = "dest_max_pickup_km"
     }
 }

@@ -48,14 +48,18 @@ class DestinationHints(
             val config = settings.get()
             val place = offer.destination
             val profit = analysis.profit
+            // Busca longa (só avisa) vem antes da linha do destino.
+            val pickup = DestinationAdvisor.pickupWarning(offer.pickupKm, offer.tripKm, config.maxPickupKm)
+            fun join(destination: String?) = listOfNotNull(pickup, destination).joinToString("\n").ifEmpty { null }
             val first = DestinationAdvisor.advise(place, null, profit?.costPerKm, profit?.netProfit, config)
-            lastText = first?.text
-            show(offer, first?.text)
+            lastText = join(first?.text)
+            show(offer, lastText)
             if (first == null || place == null || geocoder == null) return
             worker.execute {
                 val point = locate(place, config.baseCity)
                 val returnKm = point?.let { DestinationAdvisor.returnKm(it, config.base) }
                 val full = DestinationAdvisor.advise(place, returnKm, profit?.costPerKm, profit?.netProfit, config)
+                    ?.let { it.copy(text = join(it.text) ?: it.text) }
                 if (returnKm != null) logger.debug(TAG, "Destino ${place.neighborhood}: volta ≈ $returnKm km")
                 main.post {
                     if (offer.sameRideAs(lastOffer)) lastText = full?.text
