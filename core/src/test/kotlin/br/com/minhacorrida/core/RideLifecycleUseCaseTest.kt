@@ -154,13 +154,14 @@ class RideLifecycleUseCaseTest {
             listOf("Como foi sua viagem?"),
             listOf("Fernanda", "Avaliar passageiro"),
             listOf("Avalie o usuário"),
-        ).forEach { screen ->
-            lifecycle.onOffer(fernanda)
+        ).forEachIndexed { i, screen ->
+            // Uma oferta diferente por rodada (a mesma corrida não é gravada duas vezes).
+            lifecycle.onOffer(offer(Platform.UBER, "${10 + i}.00", "1.5", "1.3"))
             assertIs<RideLifecycleEvent.Confirmed>(lifecycle.onScreen(Platform.UBER, uberIndoBuscar))
             assertIs<RideLifecycleEvent.Completed>(lifecycle.onScreen(Platform.UBER, screen), "não reconheceu: $screen")
         }
         // Tela de corrida comum não conclui.
-        lifecycle.onOffer(fernanda)
+        lifecycle.onOffer(offer(Platform.UBER, "20.00", "1.5", "1.3"))
         lifecycle.onScreen(Platform.UBER, uberIndoBuscar)
         assertNull(lifecycle.onScreen(Platform.UBER, uberEmViagem))
     }
