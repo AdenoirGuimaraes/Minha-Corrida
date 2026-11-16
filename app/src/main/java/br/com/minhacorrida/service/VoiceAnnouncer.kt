@@ -2,6 +2,7 @@ package br.com.minhacorrida.service
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import br.com.minhacorrida.core.port.AppLogger
 import java.util.Locale
 
@@ -39,6 +40,34 @@ class VoiceAnnouncer(context: Context, private val logger: AppLogger) {
         }
     }
 
+    /**
+     * Fala a frase DEPOIS do que estiver tocando (sem interromper). [onSpoken] é chamado quando
+     * ela termina — se uma oferta nova interromper antes, não é chamado (quem chama repete).
+     */
+    fun queue(text: String, onSpoken: () -> Unit = {}) {
+        if (!ready) {
+            logger.warn(TAG, "Voz ainda não está pronta; frase ignorada")
+            return
+        }
+        try {
+            queuedDone = onSpoken
+            tts.speak(text, TextToSpeech.QUEUE_ADD, null, QUEUED_ID)
+        } catch (e: Exception) {
+            logger.error(TAG, "Falha ao falar", e)
+        }
+    }
+
+    @Volatile private var queuedDone: () -> Unit = {}
+
+    private val listener = object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) = Unit
+        override fun onDone(utteranceId: String?) {
+            if (utteranceId == QUEUED_ID) runCatching { queuedDone() }
+        }
+        @Deprecated("Exigido pela API antiga")
+        override fun onError(utteranceId: String?) = Unit
+    }
+
     fun stop() = runCatching { tts.stop() }
 
     fun shutdown() = runCatching {
@@ -47,6 +76,7 @@ class VoiceAnnouncer(context: Context, private val logger: AppLogger) {
     }
 
     private fun configureLanguage(): Boolean {
+        tts.setOnUtteranceProgressListener(listener)
         val result = tts.setLanguage(Locale("pt", "BR"))
         // Mais rápido que o normal (1.0): a frase termina antes de a oferta expirar.
         tts.setSpeechRate(SPEECH_RATE)
@@ -56,6 +86,7 @@ class VoiceAnnouncer(context: Context, private val logger: AppLogger) {
     private companion object {
         const val TAG = "VoiceAnnouncer"
         const val UTTERANCE_ID = "minha_corrida_oferta"
+        const val QUEUED_ID = "minha_corrida_meta"
         const val SPEECH_RATE = 1.4f
     }
 }

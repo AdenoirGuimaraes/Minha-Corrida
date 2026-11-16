@@ -104,6 +104,10 @@
     <string name="fuel_full">tanque cheio</string>
     <string name="fuel_partial">parcial</string>
     <string name="fuel_row">⛽ %1$s · %2$s km · %3$s L · R$ %4$s (R$ %5$s/L) · %6$s</string>
+    <string name="fuel_check_title">Conferir o valor</string>
+    <string name="fuel_check_message">R$ %1$s parece ser o preço do LITRO. O campo Valor é o TOTAL pago na bomba.\n\n%2$s L × R$ %1$s = R$ %3$s</string>
+    <string name="fuel_check_use">Usar R$ %1$s</string>
+    <string name="fuel_check_keep">Manter como digitei</string>
     <string name="fuel_invalid">Preencha km do painel, litros e valor com números maiores que zero.</string>
     <string name="fuel_delete_message">Excluir este abastecimento?</string>
     <string name="km_background_title">Permitir o tempo todo</string>

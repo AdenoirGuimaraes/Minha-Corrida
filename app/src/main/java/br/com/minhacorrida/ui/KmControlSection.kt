@@ -189,8 +189,7 @@ class KmControlSection(
                 if (saved == null) {
                     Toast.makeText(activity, R.string.fuel_invalid, Toast.LENGTH_LONG).show()
                 } else {
-                    fuelLog.save(saved)
-                    refresh()
+                    confirmTotalAndSave(saved)
                 }
             }
             .setNegativeButton(R.string.diagnostics_close, null)
@@ -208,6 +207,33 @@ class KmControlSection(
             }
         }
         dialog.show()
+    }
+
+    /**
+     * Valor parecendo o preço do litro (ex.: 12,8 L por R$ 6,38)? Pergunta antes de salvar e
+     * oferece o total (litros × valor).
+     */
+    private fun confirmTotalAndSave(entry: FuelEntry) {
+        val suggested = br.com.minhacorrida.core.km.FuelEntryCheck.suggestedTotal(entry.liters, entry.totalPrice)
+        if (suggested == null) {
+            fuelLog.save(entry)
+            refresh()
+            return
+        }
+        AlertDialog.Builder(activity)
+            .setTitle(R.string.fuel_check_title)
+            .setMessage(
+                activity.getString(R.string.fuel_check_message, money(entry.totalPrice), decimal(entry.liters), money(suggested)),
+            )
+            .setPositiveButton(activity.getString(R.string.fuel_check_use, money(suggested))) { _, _ ->
+                fuelLog.save(entry.copy(totalPrice = suggested))
+                refresh()
+            }
+            .setNegativeButton(R.string.fuel_check_keep) { _, _ ->
+                fuelLog.save(entry)
+                refresh()
+            }
+            .show()
     }
 
     private fun km(value: BigDecimal) = value.stripTrailingZeros().let {

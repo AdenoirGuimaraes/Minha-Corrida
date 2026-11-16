@@ -145,4 +145,23 @@ class RideLifecycleUseCaseTest {
         assertIs<RideLifecycleEvent.ConfirmedWithoutOffer>(lifecycle.onScreen(Platform.UBER, uberIndoBuscar))
         assertTrue(rides().isEmpty())
     }
+
+    @Test
+    fun `pedido de 16-11 - fim da Uber reconhecido mesmo com lixo do OCR ou frase completa`() {
+        listOf(
+            listOf("Oo Como foi a viagem?"),
+            listOf("Como foi a viagem com Fernanda?"),
+            listOf("Como foi sua viagem?"),
+            listOf("Fernanda", "Avaliar passageiro"),
+            listOf("Avalie o usuário"),
+        ).forEach { screen ->
+            lifecycle.onOffer(fernanda)
+            assertIs<RideLifecycleEvent.Confirmed>(lifecycle.onScreen(Platform.UBER, uberIndoBuscar))
+            assertIs<RideLifecycleEvent.Completed>(lifecycle.onScreen(Platform.UBER, screen), "não reconheceu: $screen")
+        }
+        // Tela de corrida comum não conclui.
+        lifecycle.onOffer(fernanda)
+        lifecycle.onScreen(Platform.UBER, uberIndoBuscar)
+        assertNull(lifecycle.onScreen(Platform.UBER, uberEmViagem))
+    }
 }

@@ -39,6 +39,9 @@ class RideReaderService : AccessibilityService() {
     private lateinit var extractor: ScreenTextExtractor
     private lateinit var ocrReader: ScreenOcrReader
     private lateinit var overlay: RideOverlayController
+    /** Frase da meta ainda não falada até o fim (repetida se uma oferta interromper). */
+    @Volatile private var pendingGoal: String? = null
+    @Volatile private var pendingGoalAt = 0L
     private lateinit var destinationHints: DestinationHints
     private var voice: VoiceAnnouncer? = null
 
@@ -495,10 +498,22 @@ class RideReaderService : AccessibilityService() {
         try {
             if (!container.settings.isGoalVoiceEnabled()) return
             val text = container.goalVoice.announcement() ?: return
-            android.os.Handler(android.os.Looper.getMainLooper()).post { voice?.speak(text) }
+            container.logger.debug(TAG, "Meta: $text")
+            // Pequena espera: o app de corrida toca os próprios sons ao fechar a viagem.
+            handler.postDelayed({ speakGoal(text) }, GOAL_VOICE_DELAY_MS)
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao falar a meta", e)
         }
+    }
+
+    /**
+     * Fala a meta na fila (sem cortar outra fala). Se uma oferta verde interromper antes de
+     * terminar, a frase da meta é repetida depois do anúncio da oferta ([announceIfGood]).
+     */
+    private fun speakGoal(text: String) {
+        pendingGoal = text
+        pendingGoalAt = SystemClock.elapsedRealtime()
+        voice?.queue(text) { pendingGoal = null }
     }
 
     /**
@@ -512,6 +527,9 @@ class RideReaderService : AccessibilityService() {
             if (analysis.offer.sameRideAs(lastSpokenOffer)) return
             lastSpokenOffer = analysis.offer
             voice?.speak(container.formatter.speech(analysis))
+            // A oferta cortou a frase da meta? Ela volta logo depois.
+            pendingGoal?.takeIf { SystemClock.elapsedRealtime() - pendingGoalAt < GOAL_VOICE_MAX_AGE_MS }
+                ?.let { goal -> voice?.queue(goal) { pendingGoal = null } }
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao anunciar a corrida", e)
         }
@@ -691,6 +709,9 @@ class RideReaderService : AccessibilityService() {
         const val TAG = "RideReaderService"
         val UBER_PACKAGE: String = Platform.UBER.packageNames.first()
         const val DEBOUNCE_MS = 120L
+        const val GOAL_VOICE_DELAY_MS = 2_000L
+        /** Meta não falada há mais que isso não é mais repetida (ficou velha). */
+        const val GOAL_VOICE_MAX_AGE_MS = 60_000L
         const val MAP_SETTLE_MS = 300L
         const val MAP_RETRY_MS = 500L
         const val MAP_FAST_ATTEMPTS = 3

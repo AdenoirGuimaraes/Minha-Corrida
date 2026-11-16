@@ -165,7 +165,9 @@ class RideLifecycleUseCase(
 
         // Uber (relatório de 09/11 18:49–19:00). OCR às vezes junta lixo antes ("Oo Encontro com").
         val UBER_RIDE = Regex("""(?i)(^|\s)(?:encontro com|destino de)\s+(\p{L}[\p{L} .'-]{0,40})$""")
-        val UBER_DONE = Regex("""(?i)^(como foi a viagem\??|avaliar usu[aá]rio)$""")
+        // Fim da corrida na Uber. Sem âncoras (pedido de 16/11): o OCR junta lixo antes/depois e a
+        // frase pode vir completa ("Como foi a viagem com Fernanda?"), e aí a voz da meta não falava.
+        val UBER_DONE = Regex("""(?i)(como foi (a |sua )?viagem|avalia?r? (o |a )?(usu[aá]rio|passageir[oa])|avalie (o |a )?(usu[aá]rio|passageir[oa]))""")
 
         // inDrive (relatório de 09/11 18:26–18:43).
         val INDRIVE_WAITING = Regex("""(?i)oferecendo sua tarifa\s*R\$\s*(\d+(?:[.,]\d{1,2})?)""")

@@ -40,3 +40,15 @@ class ReceiptsTest {
         assertFailsWith<IllegalArgumentException> { MaintenanceEntry("m3", LocalDate.now(), "Pneu", BigDecimal.ZERO) }
     }
 }
+
+/** Pedido de 16/11: valor do litro digitado no lugar do total pago. */
+class FuelEntryCheckTest {
+    @Test
+    fun `valor do litro no lugar do total sugere o total`() {
+        val check = br.com.minhacorrida.core.km.FuelEntryCheck
+        assertEquals("81.66", check.suggestedTotal(BigDecimal("12.8"), BigDecimal("6.38"))!!.toPlainString())
+        kotlin.test.assertNull(check.suggestedTotal(BigDecimal("12.8"), BigDecimal("81.66")))   // total certo
+        kotlin.test.assertNull(check.suggestedTotal(BigDecimal("1.0"), BigDecimal("6.38")))     // 1 litro: R$ 6,38 é plausível
+        kotlin.test.assertNull(check.suggestedTotal(BigDecimal("40"), BigDecimal("50.00")))     // barato demais, mas não é preço de litro
+    }
+}
