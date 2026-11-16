@@ -48,7 +48,7 @@ De um lado ao outro da tela. **Faixa do topo na cor do app** (Uber preta com let
 inDrive verde-limão com letras pretas) e a nota do passageiro. Três quadrados:
 **R$/km** (com km total e a soma), **Lucro** (com valor da corrida e gasto; "Prejuízo" se negativo)
 e **Mín. verde** (menor valor da corrida que deixa o card verde: atinge o mínimo de R$/km **e** o lucro líquido mínimo — vale o maior dos dois; embaixo aparecem os dois mínimos). Fundo verde = boa, amarelo = lucro baixo, vermelho = abaixo.
-Voz em velocidade 1,4×.
+Voz em velocidade 1,4×. Depois de cada corrida concluída, a voz fala quanto falta para a meta do dia (ou "Meta do dia batida! Passou …"), com o mesmo "Fica com você" da aba Corridas; liga/desliga em Configurações → Voz (0.2.58).
 Card fechado (toque ou tempo) não reaparece enquanto a oferta continua na tela; se a oferta sair da tela
 (2,5 s ou mais, ou outra oferta aparecer) e for reaberta, o card aparece de novo (0.2.57).
 
