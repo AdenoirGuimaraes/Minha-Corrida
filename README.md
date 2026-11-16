@@ -232,6 +232,15 @@ configurado). No inDrive os valores são calculados sobre o Mín. verde arredond
 O "~X km" do cartão é a distância ATÉ o passageiro (bolha azul, ponto A); a outra bolha (verde, ponto B)
 é a viagem. Antes saíam trocadas no card (o total, o R$/km, o lucro e a cor não mudavam).
 
+## Voz da meta na Uber e conferência do abastecimento (0.2.63)
+
+- Fim da corrida na Uber reconhecido também com lixo do OCR e frases completas ("Como foi a viagem com …?",
+  "Avaliar passageiro", "Avalie o usuário"); antes só a linha exata, e a voz da meta não falava.
+- A frase da meta entra na fila 2 s depois do fim (sem cortar outra fala); se um anúncio de oferta verde
+  interromper, ela é repetida logo depois (até 60 s).
+- Abastecimento: valor que parece o preço do litro (ex.: 12,8 L por R$ 6,38) pede confirmação e oferece o
+  total (litros × valor).
+
 ## Busca longa (0.2.61)
 
 Configurações → Destino e busca → "Avisar busca longa acima de (km)" (padrão 4,0; vazio desliga).
