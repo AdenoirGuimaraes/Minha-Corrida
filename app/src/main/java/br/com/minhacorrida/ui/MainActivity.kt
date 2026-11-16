@@ -98,6 +98,7 @@ class MainActivity : Activity() {
     private lateinit var cbUber: CheckBox
     private lateinit var cbInDrive: CheckBox
     private lateinit var cbVoice: CheckBox
+    private lateinit var cbGoalVoice: CheckBox
 
     private val ioExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -253,6 +254,7 @@ class MainActivity : Activity() {
         cbUber = findViewById(R.id.cbUber)
         cbInDrive = findViewById(R.id.cbInDrive)
         cbVoice = findViewById(R.id.cbVoice)
+        cbGoalVoice = findViewById(R.id.cbGoalVoice)
         // Depois de todos os campos encontrados: vírgula automática.
         attachDecimalMasks()
     }
@@ -419,6 +421,7 @@ class MainActivity : Activity() {
         cbUber.isChecked = Platform.UBER in platforms
         cbInDrive.isChecked = Platform.INDRIVE in platforms
         cbVoice.isChecked = settings.isVoiceEnabled()
+        cbGoalVoice.isChecked = settings.isGoalVoiceEnabled()
     }
 
     /** Valida todos os campos antes de gravar qualquer um deles. */
@@ -485,6 +488,7 @@ class MainActivity : Activity() {
             settings.setMinProfitPerMinute(minPerMinute)
             settings.setEnabledPlatforms(platforms)
             settings.setVoiceEnabled(cbVoice.isChecked)
+            settings.setGoalVoiceEnabled(cbGoalVoice.isChecked)
             container.goalSettings.setDailyGoal(dailyGoal)
             container.goalSettings.setProfitDeductions(deductions)
             toast(getString(R.string.saved))

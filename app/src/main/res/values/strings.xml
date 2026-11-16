@@ -43,6 +43,7 @@
     <string name="apps_title">Apps lidos e informados</string>
     <string name="invalid_platforms">Marque pelo menos um app</string>
     <string name="voice_title">Falar corridas</string>
+    <string name="goal_voice_label">Depois de cada corrida, falar quanto falta para a meta do dia</string>
     <string name="voice_label">Falar \"Aceitar corrida\" nas corridas verdes</string>
     <string name="app_uber">Uber</string>
     <string name="app_indrive">inDrive</string>

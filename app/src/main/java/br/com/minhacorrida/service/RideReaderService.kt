@@ -415,6 +415,7 @@ class RideReaderService : AccessibilityService() {
                         "contraproposta de R$ ${event.fare.toPlainString().replace('.', ',')} enviada: aguardando o passageiro"
                 }
                 container.diagnostics.record(pkg, "acompanhamento da corrida", texts.take(20), emptyList(), summary, force = true)
+                if (event is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Completed) announceGoal()
             }
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao acompanhar a corrida", e)
@@ -483,6 +484,20 @@ class RideReaderService : AccessibilityService() {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
             destinationHints.onOfferShown(analysis)
             announceIfGood(analysis)
+        }
+    }
+
+    /**
+     * Corrida concluída: fala quanto falta para a meta do dia (ou que bateu), se ligado nas
+     * Configurações e houver meta. Roda na thread do histórico; a fala vai para a principal.
+     */
+    private fun announceGoal() {
+        try {
+            if (!container.settings.isGoalVoiceEnabled()) return
+            val text = container.goalVoice.announcement() ?: return
+            android.os.Handler(android.os.Looper.getMainLooper()).post { voice?.speak(text) }
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao falar a meta", e)
         }
     }
 

@@ -414,6 +414,11 @@
                         android:id="@+id/cbVoice"
                         style="@style/CheckItem"
                         android:text="@string/voice_label" />
+
+                    <CheckBox
+                        android:id="@+id/cbGoalVoice"
+                        style="@style/CheckItem"
+                        android:text="@string/goal_voice_label" />
                 </LinearLayout>
 
                 <!-- Backup: salvar no Drive/celular, enviar (Gmail…) e restaurar. -->

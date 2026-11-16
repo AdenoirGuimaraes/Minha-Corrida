@@ -56,4 +56,9 @@ interface SettingsRepository {
     fun isVoiceEnabled(): Boolean
 
     fun setVoiceEnabled(enabled: Boolean)
+
+    /** Voz "Faltam R$ … para a meta do dia" depois de cada corrida concluída (padrão: ligada). */
+    fun isGoalVoiceEnabled(): Boolean = false
+
+    fun setGoalVoiceEnabled(enabled: Boolean) = Unit
 }

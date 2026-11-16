@@ -157,6 +157,12 @@ class SharedPrefsSettingsRepository(context: Context) :
         prefs.edit().putBoolean(KEY_VOICE, enabled).apply()
     }
 
+    override fun isGoalVoiceEnabled(): Boolean = prefs.getBoolean(KEY_GOAL_VOICE, true)
+
+    override fun setGoalVoiceEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_GOAL_VOICE, enabled).apply()
+    }
+
     private companion object {
         const val PREFS_NAME = "minha_corrida_prefs"
         const val KEY_MIN_VALUE_PER_KM = "min_value_per_km"
@@ -167,6 +173,7 @@ class SharedPrefsSettingsRepository(context: Context) :
         const val KEY_MIN_RATING = "min_passenger_rating"
         const val KEY_PLATFORMS = "enabled_platforms"
         const val KEY_VOICE = "voice_enabled"
+        const val KEY_GOAL_VOICE = "goal_voice_enabled"
         const val KEY_INDRIVE_FEE = "indrive_fee_percent"
         const val KEY_MIN_NET_PROFIT = "min_net_profit"
         const val KEY_MIN_PROFIT_PER_MINUTE = "min_profit_per_minute"

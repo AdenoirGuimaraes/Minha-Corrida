@@ -102,6 +102,10 @@ class AppContainer(context: Context) {
     )
     val diagnosticsReport = br.com.minhacorrida.core.diagnostics.DiagnosticsReportFormatter()
     val rideHistory = RideHistoryUseCase(rideHistoryRepository, settings, logger)
+    /** Frase "Faltam R$ … para a meta do dia" falada depois de cada corrida. */
+    val goalVoice: br.com.minhacorrida.core.goal.GoalVoiceUseCase by lazy {
+        br.com.minhacorrida.core.goal.GoalVoiceUseCase(rideHistory, goalSettings, dailyCommute, logger)
+    }
     val historyFormatter = RideHistoryFormatter()
     val checkForUpdate = CheckForUpdateUseCase(
         GitHubReleaseSource(BuildConfig.RELEASE_API_URL, logger),
