@@ -10,8 +10,10 @@ import java.math.BigDecimal
  * Lê a oferta do inDrive somente na tela aberta ("Pedido de viagem").
  *
  * As distâncias reais estão nas duas bolhas do mapa ("8 min 3,4 km" e "6 min 1,8 km"),
- * que são imagem — chegam aqui via OCR. O cartão traz "~1,8 km", que identifica
- * qual bolha é o trajeto; a outra é o deslocamento até o passageiro.
+ * que são imagem — chegam aqui via OCR. O cartão traz "~2,6 km", que é a distância ATÉ O
+ * PASSAGEIRO (bolha azul, no ponto A); a outra bolha (verde, no ponto B) é a viagem com ele.
+ * Corrigido em 15/11: antes o "~" era tratado como a viagem e busca/viagem saíam trocadas
+ * (o total, o R$/km, o lucro e a cor não mudam).
  * A lista principal é ignorada: sem a distância de busca o R$/km fica inflado.
  */
 class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferParser {
@@ -30,15 +32,15 @@ class InDriveOfferParser(private val logger: AppLogger = NoOpLogger) : RideOffer
                 return null
             }
 
-            // Trajeto = bolha igual ao "~X km" do cartão; sem ele, a primeira bolha.
-            val approxTrip = distances.firstOrNull { it.approximate }?.km
-            val tripIndex = approxTrip
-                ?.let { trip -> mapKms.indexOfFirst { isSame(it, trip) } }
+            // Busca = bolha igual ao "~X km" do cartão (distância até o passageiro); sem ele, a primeira bolha.
+            val approxPickup = distances.firstOrNull { it.approximate }?.km
+            val pickupIndex = approxPickup
+                ?.let { pickupKm -> mapKms.indexOfFirst { isSame(it, pickupKm) } }
                 ?.takeIf { it >= 0 } ?: 0
-            val trip = mapLegs[tripIndex]
-            val others = mapLegs.filterIndexed { index, _ -> index != tripIndex }
+            val pickup = mapLegs[pickupIndex]
+            val others = mapLegs.filterIndexed { index, _ -> index != pickupIndex }
             // Evita contar a mesma bolha duas vezes (lida pela acessibilidade e pelo OCR).
-            val pickup = others.firstOrNull { !isSame(it.km, trip.km) } ?: others.first()
+            val trip = others.firstOrNull { !isSame(it.km, pickup.km) } ?: others.first()
 
             RideOffer(
                 platform, fare, tripKm = trip.km, pickupKm = pickup.km,

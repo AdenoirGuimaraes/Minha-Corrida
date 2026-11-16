@@ -31,22 +31,36 @@ class InDriveOfferParserTest {
         val texts = Fixtures.INDRIVE_DETAIL_ACCESSIBILITY + Fixtures.INDRIVE_MAP_OCR
         val offer = parser.parse(texts)!!
         assertEquals(0, BigDecimal("11").compareTo(offer.fare))
-        assertKm("1.8", offer.tripKm)
-        assertKm("3.4", offer.pickupKm)
+        // "~1,8 km" do cartão = até a passageira; a viagem é a outra bolha (15/11).
+        assertKm("1.8", offer.pickupKm)
+        assertKm("3.4", offer.tripKm)
         assertFalse(parser.needsVisualReading(texts))
     }
 
     @Test
-    fun `trajeto e identificado pelo til mesmo com bolhas em outra ordem`() {
+    fun `busca e identificada pelo til mesmo com bolhas em outra ordem`() {
+        // Géssica: Guarujá → Havan (Guarujá), viagem curta; os 7,3 km eram até ela.
         val offer = parser.parse(Fixtures.INDRIVE_DETAIL)!!
-        assertKm("7.3", offer.tripKm)
-        assertKm("3.3", offer.pickupKm)
+        assertKm("7.3", offer.pickupKm)
+        assertKm("3.3", offer.tripKm)
+    }
+
+    @Test
+    fun `pedido de 15-11 - bolha azul ate o ponto A e busca, bolha verde ate o B e viagem`() {
+        // Print das 21:51 (Tchuco, R$ 10): azul "6 min 2,6 km" (até A), verde "4 min 1,4 km" (A → B), cartão "~2,6 km".
+        val offer = parser.parse(
+            listOf("Pedido de viagem", "4 min 1,4 km", "6 min 2,6 km", "R$ 2,4/km ~2,6 km", "R$ 10", "Aceitar por R$ 10"),
+        )!!
+        assertKm("2.6", offer.pickupKm)
+        assertEquals(6, offer.pickupMinutes)
+        assertKm("1.4", offer.tripKm)
+        assertEquals(4, offer.tripMinutes)
     }
 
     @Test
     fun `bolha lida em dobro nao e somada duas vezes`() {
         val offer = parser.parse(listOf("7,3 km", "7,3 km", "3,3 km", "~7,3 km", "Aceitar por R$ 10"))!!
-        assertKm("3.3", offer.pickupKm)
+        assertKm("3.3", offer.tripKm)
     }
 
     @Test
