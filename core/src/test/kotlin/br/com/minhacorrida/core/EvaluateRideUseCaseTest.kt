@@ -71,7 +71,7 @@ class EvaluateRideUseCaseTest {
         val card = br.com.minhacorrida.core.format.RideAnalysisFormatter()
             .card(evaluate(offer, RideRules(BigDecimal("1.00"), operatingCost = cost, minNetProfit = BigDecimal("3.00"))))
         assertEquals("7,41", card.minimumValue)
-        assertEquals("R$ 1,00/km\nLucro R$ 3,00", card.minimumLabel)
+        assertEquals("Pelo lucro R$ 3,00\nR$ 1,06/km", card.minimumLabel)     // 7,41 ÷ 7 km
     }
 
     @Test

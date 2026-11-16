@@ -89,14 +89,18 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
      * Ex.: "R$ 2,00/km\nLucro R$ 6,00\nR$ 0,48/min". Sem lucro mínimo (ou sem custos): "R$ 2,00/km".
      * A linha R$/min é o que a corrida daria por minuto se paga no Mín. verde (≈ se estimado).
      */
-    private fun minimumLabel(analysis: RideAnalysis): String {
-        val lines = mutableListOf("R$ ${money(analysis.minimum.minValuePerKm)}/km")
-        analysis.minimum.minNetProfit?.let { lines += "Lucro R$ ${money(it)}" }
-        analysis.minimum.profitPerMinuteAtGreen?.let {
-            lines += "${if (analysis.time.estimated) "≈ " else ""}R$ ${money(it)}/min"
-        }
-        return lines.joinToString("\n")
-    }
+    private fun minimumLabel(analysis: RideAnalysis): String = GreenFareLabel.text(
+        greenFare = analysis.minimum.greenFare,
+        platform = analysis.offer.platform,
+        feePercent = analysis.metrics.feePercent,
+        totalKm = analysis.metrics.totalKm,
+        cost = analysis.profit?.cost,
+        minValuePerKm = analysis.minimum.minValuePerKm,
+        minNetProfit = analysis.minimum.minNetProfit,
+        // A linha R$/min só aparece com o mínimo por minuto configurado.
+        minutes = analysis.time.minutes.takeIf { analysis.minimum.profitPerMinuteAtGreen != null },
+        minutesEstimated = analysis.time.estimated,
+    )
 
     /**
      * 1ª linha do quadrado Lucro: lucro por minuto e os minutos da corrida, ex. "R$ 0,68/min · 11 min".

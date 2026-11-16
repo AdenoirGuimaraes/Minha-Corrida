@@ -197,18 +197,18 @@ class RideHistoryFormatter(
             profitValue = if (cost != null) money(record.netProfit.abs()) else "—",
             profitDetails = if (cost != null) "${perMinuteLine(record)}$fareLine\nGasto R$ ${money(cost)}" else "$fareLine\nSem custos",
             minimumValue = money(CounterOffer.displayGreenFare(green, record.platform)),
-            minimumLabel = "R$ ${money(minValuePerKm)}/km" +
-                effectiveMinProfit?.let { "\nLucro R$ ${money(it)}" }.orEmpty() +
-                (if (minProfitPerMinute != null) greenPerMinuteLine(record, green, cost) else ""),
+            minimumLabel = GreenFareLabel.text(
+                greenFare = green,
+                platform = record.platform,
+                feePercent = record.feePercent,
+                totalKm = record.totalKm,
+                cost = cost,
+                minValuePerKm = minValuePerKm,
+                minNetProfit = effectiveMinProfit,
+                minutes = record.minutes.takeIf { minProfitPerMinute != null },
+                minutesEstimated = record.minutesEstimated,
+            ),
         )
-    }
-
-    /** "\nR$ 0,48/min": lucro por minuto se paga no Mín. verde (como no card da oferta); "" sem minutos/custos. */
-    private fun greenPerMinuteLine(record: RideRecord, green: BigDecimal, cost: BigDecimal?): String {
-        val minutes = record.minutes?.takeIf { it > 0 } ?: return ""
-        if (cost == null) return ""
-        val perMinute = br.com.minhacorrida.core.usecase.CalculateRideMetricsUseCase.perMinuteAt(green, record.feePercent, cost, minutes)
-        return "\n${if (record.minutesEstimated) "≈ " else ""}R$ ${money(perMinute)}/min"
     }
 
     /** "R$ 0,77/min · 11 min\n" (com "≈" se estimado), como no card da oferta; "" sem minutos. */
