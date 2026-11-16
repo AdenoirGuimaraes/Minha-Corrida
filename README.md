@@ -221,6 +221,22 @@ Card fechado (toque ou tempo) não reaparece enquanto a oferta continua na tela;
 - Botão "📊 Melhores horários, dias e Uber × inDrive" (últimos 7, 30 ou 60 dias): R$/km, lucro médio e lucro/hora em corrida por faixa de 3 h, por dia da semana e por app (com a taxa paga); ⭐ = melhor R$/km com pelo menos 3 corridas. O relatório .md tem as mesmas tabelas.
 - **Seus mínimos × ofertas**: cada oferta lida é guardada só com números (hora, app, valor, km, R$/km, lucro, minutos) em `ofertas.jsonl`, separado do histórico e fora do backup, apagada após 60 dias (~30 KB/dia). Mostra a mediana do R$/km das ofertas, quantas atingem seus mínimos e se eles estão altos, equilibrados ou folgados para o município.
 
+## Mín. verde: qual mínimo decidiu (0.2.59)
+
+Embaixo do Mín. verde: "Pelo R$ 2,00/km" + o lucro que a corrida dá nesse valor (corridas longas) ou
+"Pelo lucro R$ 6,00" + o R$/km que dá nesse valor (corridas curtas), e o R$/min (com o mínimo por minuto
+configurado). No inDrive os valores são calculados sobre o Mín. verde arredondado mostrado.
+
+## inDrive: busca e viagem (0.2.60)
+
+O "~X km" do cartão é a distância ATÉ o passageiro (bolha azul, ponto A); a outra bolha (verde, ponto B)
+é a viagem. Antes saíam trocadas no card (o total, o R$/km, o lucro e a cor não mudavam).
+
+## Busca longa (0.2.61)
+
+Configurações → Destino e busca → "Avisar busca longa acima de (km)" (padrão 4,0; vazio desliga).
+Acima do limite, o card mostra "⚠️ Busca longa: 6,9 km (viagem 2,6 km)" — só avisa, a cor não muda.
+
 ## Mín. verde no inDrive (0.2.50)
 
 No inDrive o Mín. verde aparece arredondado para cima em reais (R$ 13,42 → R$ 14,00), base da contraproposta. A cor do card usa o valor exato.
