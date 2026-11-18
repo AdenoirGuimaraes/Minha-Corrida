@@ -157,6 +157,14 @@ class SharedPrefsSettingsRepository(context: Context) :
         prefs.edit().putBoolean(KEY_VOICE, enabled).apply()
     }
 
+    /** Quem monta a regra dos bairros (o AppContainer liga aqui; evita depender do repositório de bairros). */
+    @Volatile var destinationPolicyProvider: () -> br.com.minhacorrida.core.neighborhood.DestinationPolicy? = { null }
+    @Volatile var maxPickupProvider: () -> java.math.BigDecimal? = { null }
+
+    override fun getDestinationPolicy() = runCatching { destinationPolicyProvider() }.getOrNull()
+
+    override fun getMaxPickupKm() = runCatching { maxPickupProvider() }.getOrNull()
+
     override fun isGoalVoiceEnabled(): Boolean = prefs.getBoolean(KEY_GOAL_VOICE, true)
 
     override fun setGoalVoiceEnabled(enabled: Boolean) {

@@ -261,7 +261,7 @@
                         android:textSize="13sp" />
                 </LinearLayout>
 
-                <!-- Destino da corrida (itens 1 e 2): DestinationSection. -->
+                <!-- Destino e busca (17/11): cidade (IBGE), bairros marcados e busca longa. DestinationSection. -->
                 <LinearLayout
                     style="@style/Section"
                     android:orientation="vertical">
@@ -275,30 +275,73 @@
                         style="@style/CheckItem"
                         android:text="@string/dest_enabled" />
 
+                    <!-- Aviso de bairros novos lidos nas ofertas (toque abre a marcação). -->
                     <TextView
-                        android:id="@+id/tvDestBase"
+                        android:id="@+id/tvNewBairros"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_section"
+                        android:backgroundTint="#3A3012"
+                        android:padding="12dp"
+                        android:textColor="#FFF5D16A"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+
+                    <TextView
+                        style="@style/FieldLabel"
+                        android:text="@string/dest_uf_label" />
+
+                    <Spinner
+                        android:id="@+id/spUf"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp" />
+
+                    <TextView
+                        style="@style/FieldLabel"
+                        android:text="@string/dest_city_label" />
+
+                    <AutoCompleteTextView
+                        android:id="@+id/acCity"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:completionThreshold="1"
+                        android:hint="@string/dest_city_hint"
+                        android:importantForAutofill="no"
+                        android:inputType="textCapWords"
+                        android:textColor="@color/mc_text"
+                        android:textColorHint="@color/mc_text_muted" />
+
+                    <TextView
+                        android:id="@+id/tvCityStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/mc_text_muted"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/tvBairrosSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
                         android:textColor="@color/mc_text"
                         android:textSize="14sp" />
 
                     <Button
-                        android:id="@+id/btnDestBase"
+                        android:id="@+id/btnMarkBairros"
+                        style="@style/YellowButton"
+                        android:text="@string/dest_mark_bairros" />
+
+                    <Button
+                        android:id="@+id/btnLoadBairros"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:backgroundTint="@color/mc_surface"
-                        android:text="@string/dest_base_button"
+                        android:text="@string/dest_load_bairros"
                         android:textColor="@color/mc_yellow" />
-
-                    <TextView
-                        style="@style/FieldLabel"
-                        android:text="@string/dest_far_label" />
-
-                    <EditText
-                        android:id="@+id/etDestFar"
-                        style="@style/NumberField" />
 
                     <TextView
                         style="@style/FieldLabel"
@@ -310,18 +353,12 @@
                         android:hint="@string/dest_pickup_hint" />
 
                     <TextView
-                        style="@style/FieldLabel"
-                        android:text="@string/dest_avoid_label" />
-
-                    <EditText
-                        android:id="@+id/etDestAvoid"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="@string/dest_avoid_hint"
-                        android:importantForAutofill="no"
-                        android:inputType="textCapWords"
-                        android:textColor="@color/mc_text"
-                        android:textColorHint="@color/mc_text_muted" />
+                        android:layout_marginTop="6dp"
+                        android:text="@string/dest_return_help"
+                        android:textColor="@color/mc_text_muted"
+                        android:textSize="13sp" />
                 </LinearLayout>
 
                 <!-- Km rodados (GPS) e abastecimentos (tanque cheio): KmControlSection. -->

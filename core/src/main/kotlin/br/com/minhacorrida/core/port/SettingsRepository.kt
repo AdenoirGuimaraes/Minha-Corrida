@@ -57,6 +57,12 @@ interface SettingsRepository {
 
     fun setVoiceEnabled(enabled: Boolean)
 
+    /** Bairros marcados (bom/longe/não vou) para avaliar o destino; null = sem cidade escolhida. */
+    fun getDestinationPolicy(): br.com.minhacorrida.core.neighborhood.DestinationPolicy? = null
+
+    /** Limite da busca (km até o passageiro) para o destaque no card; null = desligado. */
+    fun getMaxPickupKm(): java.math.BigDecimal? = null
+
     /** Voz "Faltam R$ … para a meta do dia" depois de cada corrida concluída (padrão: ligada). */
     fun isGoalVoiceEnabled(): Boolean = false
 

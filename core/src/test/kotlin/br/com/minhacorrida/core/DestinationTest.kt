@@ -40,31 +40,7 @@ class DestinationTest {
         assertNull(DestinationReader.inDrive(listOf("Rua A 10 (Santa Helena)")))   // só o embarque
     }
 
-    private val settings = DestinationSettings()
-    private val cost = BigDecimal("0.85")
-
-    @Test
-    fun `destino longe mostra a volta vazia e o lucro com a volta`() {
-        val hint = DestinationAdvisor.advise(Place("x", "Guarujá", "Lages"), BigDecimal("8.4"), cost, BigDecimal("7.91"), settings)!!
-        assertEquals("⚠️ Destino longe: Guarujá\nVolta vazia ≈ 8,4 km · R$ 7,14 → lucro c/ volta R$ 0,77", hint.text)
-        assertTrue(hint.warning)
-        val loss = DestinationAdvisor.advise(Place("x", "Guarujá", "Lages"), BigDecimal("8.4"), cost, BigDecimal("5.00"), settings)!!
-        assertTrue(loss.text.endsWith("→ prejuízo c/ volta R$ 2,14"))
-    }
-
-    @Test
-    fun `fora da cidade, bairro a evitar e destino perto`() {
-        assertEquals(
-            "⚠️ Fora de Lages: Centro, Correia Pinto",
-            DestinationAdvisor.advise(Place("x", "Centro", "Correia Pinto"), null, cost, BigDecimal("9"), settings)!!.text,
-        )
-        val avoid = settings.copy(avoid = listOf("guaruja"))                    // sem acento também vale
-        assertEquals("⛔ Bairro a evitar: Guarujá", DestinationAdvisor.advise(Place("x", "Guarujá", "Lages"), null, cost, null, avoid)!!.text)
-        val near = DestinationAdvisor.advise(Place("x", "Centro", "Lages"), BigDecimal("1.5"), cost, BigDecimal("9"), settings)!!
-        assertEquals("📍 Destino: Centro", near.text)                           // volta curta: sem linha de volta
-        assertFalse(near.warning)
-        assertNull(DestinationAdvisor.advise(Place("x", "Centro", "Lages"), null, cost, null, settings.copy(enabled = false)))
-    }
+    // (17/11) O texto do destino agora vem do painel do card: ver NeighborhoodTest.
 
     @Test
     fun `km da volta pela linha reta vezes 1,3`() {

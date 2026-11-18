@@ -23,6 +23,10 @@ data class RideRules(
     val minNetProfit: BigDecimal? = null,
     /** Lucro mínimo por minuto de corrida (busca + viagem); abaixo dele o card fica amarelo. */
     val minProfitPerMinute: BigDecimal? = null,
+    /** Bairros marcados (bom/longe/não vou); null = sem cidade escolhida. */
+    val destinations: br.com.minhacorrida.core.neighborhood.DestinationPolicy? = null,
+    /** Busca acima disso ganha destaque no card (só aviso); null = desligado. */
+    val maxPickupKm: BigDecimal? = null,
 ) {
     companion object {
         /** Regras de agora, das configurações do motorista. */
@@ -33,6 +37,8 @@ data class RideRules(
             inDriveFeePercent = settings.getInDriveFeePercent(),
             minNetProfit = settings.getMinNetProfit(),
             minProfitPerMinute = settings.getMinProfitPerMinute(),
+            destinations = settings.getDestinationPolicy(),
+            maxPickupKm = settings.getMaxPickupKm(),
         )
     }
 
@@ -53,17 +59,39 @@ class EvaluateRideUseCase(private val calculateMetrics: CalculateRideMetricsUseC
         val profit = rules.operatingCost?.let { calculateMetrics.profit(offer, metrics, it) }
         val time = br.com.minhacorrida.core.model.RideTime.of(offer)
         val perMinute = profit?.netProfit?.divide(BigDecimal(time.minutes), 2, java.math.RoundingMode.HALF_UP)
-        val rating = classify(metrics.valuePerKm, lowRating, profit?.netProfit, perMinute, rules)
+        // Destino: bairro marcado "não vou" deixa o card vermelho; "longe" põe a volta no Mín. verde.
+        val destination = runCatching { offer.destination?.let { rules.destinations?.classify(it) } }.getOrNull()
+        val avoid = destination?.mark == br.com.minhacorrida.core.neighborhood.NeighborhoodMark.AVOID
+        val rating = if (avoid) {
+            RideRating.BELOW_MINIMUM
+        } else {
+            classify(metrics.valuePerKm, lowRating, profit?.netProfit, perMinute, rules)
+        }
+        val returnCost = if (destination?.mark == br.com.minhacorrida.core.neighborhood.NeighborhoodMark.FAR) {
+            destination.returnKm?.let { km -> profit?.costPerKm?.let { (km * it).setScale(2, java.math.RoundingMode.HALF_UP) } }
+        } else {
+            null
+        }
+        var minimum = calculateMetrics.minimumFare(
+            metrics, rules.minValuePerKm, profit, rules.minNetProfit, time.minutes, rules.minProfitPerMinute,
+        )
+        if (returnCost != null && returnCost.signum() > 0) {
+            minimum = minimum.copy(
+                greenFare = minimum.greenFare + CalculateRideMetricsUseCase.grossFor(returnCost, metrics.feePercent),
+                returnCost = returnCost,
+            )
+        }
+        val pickup = offer.pickupKm
         return RideAnalysis(
             offer = offer,
             metrics = metrics,
             rating = rating,
-            minimum = calculateMetrics.minimumFare(
-                metrics, rules.minValuePerKm, profit, rules.minNetProfit, time.minutes, rules.minProfitPerMinute,
-            ),
+            minimum = minimum,
             profit = profit,
             lowPassengerRating = lowRating,
             time = time,
+            destination = destination,
+            longPickup = rules.maxPickupKm != null && pickup != null && pickup > rules.maxPickupKm,
         )
     }
 

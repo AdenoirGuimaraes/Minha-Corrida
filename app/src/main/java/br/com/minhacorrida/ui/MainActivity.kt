@@ -152,7 +152,12 @@ class MainActivity : Activity() {
             "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
         )
         backupSection.bind()
-        destinationSection = DestinationSection(this, container.destinationSettings).also { it.bind() }
+        destinationSection = DestinationSection(
+            this, container.destinationSettings, container.neighborhoods, container.placesOnline, ioExecutor,
+        ) { newCount ->
+            // Ponto na aba Configurações enquanto houver bairro novo lido nas ofertas sem marcação.
+            tabSettings.text = getString(R.string.tab_settings) + if (newCount > 0) " •" else ""
+        }.also { it.bind() }
         rgSimApp.setOnCheckedChangeListener { _, _ -> updatePreview() }
 
         watchFieldsForPreview()
@@ -172,6 +177,8 @@ class MainActivity : Activity() {
         }
         // Voltando ao app na aba Corridas: mostra as corridas verdes que chegaram nesse meio-tempo.
         if (::historyScreen.isInitialized && currentTab == Tab.HISTORY) historyScreen.refresh()
+        // Bairros novos lidos nas ofertas enquanto o app estava em segundo plano.
+        if (::destinationSection.isInitialized) destinationSection.refresh()
         tvStatus.setText(if (isServiceEnabled()) R.string.status_on else R.string.status_off)
 
         // Voltou da tela de permissão: instala o APK que já estava baixado.

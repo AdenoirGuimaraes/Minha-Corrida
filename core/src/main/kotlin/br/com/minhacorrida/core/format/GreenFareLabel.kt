@@ -33,9 +33,14 @@ object GreenFareLabel {
         minNetProfit: BigDecimal?,
         minutes: Int?,
         minutesEstimated: Boolean,
+        /** Volta vazia já somada ao [greenFare] (bairro LONGE); sai do lucro mostrado. */
+        returnCost: BigDecimal? = null,
     ): String {
         val shown = CounterOffer.displayGreenFare(greenFare, platform)
-        val net = CalculateRideMetricsUseCase.netOf(shown, feePercent)
+        val back = returnCost ?: BigDecimal.ZERO
+        // Líquido no Mín. verde menos a volta: o que sobra de verdade pagando a volta.
+        val fullNet = CalculateRideMetricsUseCase.netOf(shown, feePercent)
+        val net = fullNet - back
         val lines = mutableListOf<String>()
         if (cost == null || minNetProfit == null) {
             lines += "R$ ${money(minValuePerKm)}/km"
@@ -47,10 +52,11 @@ object GreenFareLabel {
                 }
                 Rule.PROFIT -> {
                     lines += "Pelo lucro R$ ${money(minNetProfit)}"
-                    if (totalKm.signum() > 0) lines += "R$ ${money(net.divide(totalKm, 2, RoundingMode.HALF_UP))}/km"
+                    if (totalKm.signum() > 0) lines += "R$ ${money(fullNet.divide(totalKm, 2, RoundingMode.HALF_UP))}/km"
                 }
             }
         }
+        if (back.signum() > 0) lines.add(1.coerceAtMost(lines.size), "+ volta R$ ${money(back)}")
         if (cost != null && minutes != null && minutes > 0) {
             val perMinute = (net - cost).divide(BigDecimal(minutes), 2, RoundingMode.HALF_UP)
             lines += "${if (minutesEstimated) "≈ " else ""}R$ ${money(perMinute)}/min"

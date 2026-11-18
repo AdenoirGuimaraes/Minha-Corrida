@@ -100,9 +100,6 @@ interface DestinationSettingsRepository {
     fun save(settings: DestinationSettings)
 }
 
-/** Texto e se é aviso (⚠️/⛔) para a linha do destino no card. */
-data class DestinationHint(val text: String, val warning: Boolean)
-
 /**
  * Monta a linha do destino no card (itens 1 e 2 do backlog):
  * "⚠️ Destino longe: Guarujá\nVolta vazia ≈ 8,4 km · R$ 7,14 → lucro c/ volta R$ 0,77".
@@ -120,43 +117,6 @@ object DestinationAdvisor {
         BigDecimal(DistanceAccumulator.haversineMeters(destination, base) * ROAD_FACTOR / 1000).setScale(1, RoundingMode.HALF_UP)
 
     /**
-     * @param returnKm km de volta até a base; null se o endereço não foi localizado (ainda).
-     * @param costPerKm gasto por km (gasolina + manutenção); null sem custos.
-     * @param netProfit lucro da corrida; null sem custos.
-     */
-    fun advise(
-        place: Place?,
-        returnKm: BigDecimal?,
-        costPerKm: BigDecimal?,
-        netProfit: BigDecimal?,
-        settings: DestinationSettings,
-    ): DestinationHint? {
-        if (!settings.enabled || place == null) return null
-        val avoid = place.neighborhood?.let { n -> settings.avoid.any { same(it, n) } } ?: false
-        val outside = place.city != null && !same(place.city, settings.baseCity)
-        val far = returnKm != null && returnKm > settings.farKm
-        val label = listOfNotNull(place.neighborhood, place.city?.takeIf { outside }).joinToString(", ")
-            .ifEmpty { place.raw.take(40) }
-        val headline = when {
-            avoid -> "⛔ Bairro a evitar: $label"
-            outside -> "⚠️ Fora de ${settings.baseCity}: $label"
-            far -> "⚠️ Destino longe: $label"
-            else -> "📍 Destino: $label"
-        }
-        val back = returnKm?.takeIf { it >= MIN_RETURN_KM && costPerKm != null }?.let { km ->
-            val cost = (km * costPerKm!!).setScale(2, RoundingMode.HALF_UP)
-            val after = netProfit?.let { it - cost }
-            val result = when {
-                after == null -> ""
-                after.signum() < 0 -> " → prejuízo c/ volta R$ ${money(after.abs())}"
-                else -> " → lucro c/ volta R$ ${money(after)}"
-            }
-            "Volta vazia ≈ ${km1(km)} km · R$ ${money(cost)}$result"
-        }
-        return DestinationHint(listOfNotNull(headline, back).joinToString("\n"), avoid || outside || far)
-    }
-
-    /**
      * Aviso de busca longa (pedido de 15/11, só informa; a cor do card não muda):
      * "⚠️ Busca longa: 6,9 km (viagem 2,6 km)". null se a busca está dentro do limite ou sem limite.
      */
@@ -168,7 +128,7 @@ object DestinationAdvisor {
     /** Compara nomes sem acento e sem maiúsculas ("guaruja" = "Guarujá"). */
     fun same(a: String, b: String) = normalize(a) == normalize(b)
 
-    private fun normalize(text: String) =
+    fun normalize(text: String) =
         Normalizer.normalize(text.trim().lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "")
 
     private fun money(v: BigDecimal) = v.setScale(2, RoundingMode.HALF_UP).toPlainString().replace('.', ',')

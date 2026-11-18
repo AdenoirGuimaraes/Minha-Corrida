@@ -205,17 +205,9 @@
     <string name="insights_60">Últimos 60 dias (tudo)</string>
     <!-- Destino da corrida -->
     <string name="dest_title">Destino e busca</string>
-    <string name="dest_enabled">Mostrar o destino no card (bairro, longe, a evitar e volta vazia)</string>
-    <string name="dest_base_default">Base: centro de Lages (padrão). A volta vazia é calculada até a base.</string>
-    <string name="dest_base_set">Base marcada: %1$s, %2$s. A volta vazia é calculada até aqui.</string>
-    <string name="dest_base_button">📍 Usar minha localização atual como base</string>
-    <string name="dest_base_saved">Base marcada ✅</string>
-    <string name="dest_base_failed">Não consegui sua localização agora. Ligue o GPS e tente de novo.</string>
-    <string name="dest_far_label">Avisar "destino longe" com volta acima de (km)</string>
+    <string name="dest_enabled">Usar os bairros marcados no card (bom, longe, não vou)</string>
     <string name="dest_pickup_label">Avisar "busca longa" acima de (km até o passageiro; vazio = não avisar)</string>
     <string name="dest_pickup_hint">Ex.: 4,0</string>
-    <string name="dest_avoid_label">Bairros a evitar (separados por vírgula)</string>
-    <string name="dest_avoid_hint">Ex.: Guarujá, Santa Mônica</string>
     <!-- Comprovantes e manutenções -->
     <string name="receipt_title">Foto do comprovante</string>
     <string name="receipt_add">📷 Adicionar foto do comprovante</string>
@@ -236,4 +228,30 @@
     <string name="maintenance_invalid">Informe o que foi feito e o valor.</string>
     <string name="maintenance_delete_message">Excluir esta manutenção? A foto do comprovante também sai.</string>
     <string name="maintenance_row">🔧 %1$s · %2$s · R$ %3$s</string>
+    <string name="dest_uf_label">Estado</string>
+    <string name="dest_city_label">Município</string>
+    <string name="dest_city_hint">Digite as primeiras letras</string>
+    <string name="dest_city_loading">Carregando os municípios…</string>
+    <string name="dest_city_chosen">Cidade: %1$s – %2$s</string>
+    <string name="dest_city_none">Escolha o estado e o município.</string>
+    <string name="dest_bairros_summary">Bairros de %1$s: %2$d · Bom %3$d · Longe %4$d · Não vou %5$d · Sem marcação %6$d</string>
+    <string name="dest_mark_bairros">Marcar bairros</string>
+    <string name="dest_load_bairros">Buscar bairros no mapa</string>
+    <string name="dest_loading_bairros">Buscando os bairros no mapa…</string>
+    <string name="dest_loaded_bairros">%1$d bairros encontrados no mapa.</string>
+    <string name="dest_new_bairros">🆕 %1$d bairro(s) novo(s) nas ofertas para marcar: %2$s. Toque para marcar.</string>
+    <string name="dest_return_help">Volta vazia (bairro Longe): do destino até o bairro Bom mais perto. O Mín. verde já inclui essa volta.</string>
+    <string name="bairros_title">Bairros de %1$s</string>
+    <string name="bairros_legend">Bom: dentro da sua base, vai sempre.\nLonge: só se o valor pagar a volta vazia.\nNão vou: o card fica vermelho.</string>
+    <string name="bairros_search">Buscar bairro</string>
+    <string name="bairros_all">Todos</string>
+    <string name="bairros_good">Bom</string>
+    <string name="bairros_far">Longe</string>
+    <string name="bairros_avoid">Não vou</string>
+    <string name="bairros_unmarked">Sem marcação</string>
+    <string name="bairros_new">Novos</string>
+    <string name="bairros_add">+ Adicionar bairro</string>
+    <string name="bairros_add_hint">Nome do bairro</string>
+    <string name="bairros_close">Pronto</string>
+    <string name="bairros_empty">Nenhum bairro aqui. Toque em "Buscar bairros no mapa" nas Configurações ou adicione à mão.</string>
 </resources>

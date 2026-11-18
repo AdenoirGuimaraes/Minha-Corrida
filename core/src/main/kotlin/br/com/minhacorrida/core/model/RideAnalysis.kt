@@ -58,6 +58,8 @@ data class MinimumFare(
     val minNetProfit: BigDecimal? = null,
     val greenFare: BigDecimal = minimumFare,
     val profitPerMinuteAtGreen: BigDecimal? = null,
+    /** Custo da volta vazia já somado ao [greenFare] (destino em bairro LONGE); null sem volta. */
+    val returnCost: BigDecimal? = null,
 )
 
 /**
@@ -115,6 +117,10 @@ data class RideAnalysis(
     val lowPassengerRating: Boolean = false,
     /** Minutos da corrida (busca + viagem). */
     val time: RideTime = RideTime.of(offer),
+    /** Destino com a marcação do motorista; null sem cidade escolhida ou sem bairro lido. */
+    val destination: br.com.minhacorrida.core.neighborhood.DestinationInfo? = null,
+    /** Busca acima do limite configurado (destaque no card). */
+    val longPickup: Boolean = false,
 ) {
     /** Lucro por minuto (lucro ÷ minutos); null sem custos do carro. */
     val profitPerMinute: BigDecimal?

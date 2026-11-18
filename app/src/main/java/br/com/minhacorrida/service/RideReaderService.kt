@@ -42,7 +42,6 @@ class RideReaderService : AccessibilityService() {
     /** Frase da meta ainda não falada até o fim (repetida se uma oferta interromper). */
     @Volatile private var pendingGoal: String? = null
     @Volatile private var pendingGoalAt = 0L
-    private lateinit var destinationHints: DestinationHints
     private var voice: VoiceAnnouncer? = null
 
 
@@ -91,10 +90,6 @@ class RideReaderService : AccessibilityService() {
             ocrReader = ScreenOcrReader(this, container.logger)
             overlay = RideOverlayController(this, container.formatter, container.logger) { dismissed ->
                 visibility.onDismissed(dismissed.offer)
-            }
-            // Linha do destino (bairro, longe/evitar, volta vazia), preenchida depois do card.
-            destinationHints = DestinationHints(this, container.destinationSettings, container.logger) { offer, text ->
-                overlay.setDestination(offer, text)
             }
             // Motor de voz preparado já na conexão, para não atrasar o primeiro card.
             voice = runCatching { VoiceAnnouncer(this, container.logger) }
@@ -247,7 +242,7 @@ class RideReaderService : AccessibilityService() {
                     counterOfferHoldUntil = SystemClock.elapsedRealtime() + seconds * 1_000L
                     lastAnalysis = result.analysis
                     overlay.show(result.analysis, seconds)
-                    destinationHints.onOfferShown(result.analysis)
+                    noteDestination(result.analysis)
                     announceIfGood(result.analysis)
                 }
                 br.com.minhacorrida.core.usecase.InDriveTap.Skipped -> {
@@ -485,8 +480,24 @@ class RideReaderService : AccessibilityService() {
         // Oferta fechada (toque ou tempo) não reabre enquanto está na tela; reaberta, volta a aparecer.
         if (visibility.shouldShow(analysis.offer, SystemClock.elapsedRealtime())) {
             overlay.show(analysis, container.settings.getOverlayTimeoutSeconds())
-            destinationHints.onOfferShown(analysis)
+            noteDestination(analysis)
             announceIfGood(analysis)
+        }
+    }
+
+    /**
+     * Bairro do destino que ainda não está na lista da cidade entra como "novo" (aviso nas
+     * Configurações para marcar). Destino em outra cidade não entra.
+     */
+    private fun noteDestination(analysis: RideAnalysis) {
+        try {
+            val info = analysis.destination ?: return
+            if (info.outsideCity != null) return
+            if (container.neighborhoods.noteSeen(info.neighborhood)) {
+                container.logger.debug(TAG, "Bairro novo lido numa oferta: ${info.neighborhood}")
+            }
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao anotar o bairro", e)
         }
     }
 

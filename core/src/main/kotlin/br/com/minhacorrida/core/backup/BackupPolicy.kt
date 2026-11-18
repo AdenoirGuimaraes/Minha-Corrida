@@ -24,6 +24,7 @@ object BackupPolicy {
         "minha_corrida_trips",
         "minha_corrida_parking",
         "minha_corrida_maintenance_log",
+        "minha_corrida_neighborhoods",
     )
 
     /** Arquivos da pasta do app que vão no backup. */

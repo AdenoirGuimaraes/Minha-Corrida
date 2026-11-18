@@ -22,6 +22,23 @@ data class RideCardText(
     val profitDetails: String,
     val minimumValue: String,
     val minimumLabel: String,
+    /** Painel de baixo (destino, busca, volta); null no card do histórico. */
+    val panel: CardPanel? = null,
+)
+
+/**
+ * Painel embaixo dos quadrados do card (pedido de 17/11), linhas alinhadas:
+ * DESTINO [BOM|LONGE|NÃO VOU] bairro · BUSCA km até o passageiro e da viagem · VOLTA (só longe).
+ * @property mark marcação do bairro (cor da etiqueta); null = neutro, sem etiqueta.
+ */
+data class CardPanel(
+    val destination: String?,
+    val mark: br.com.minhacorrida.core.neighborhood.NeighborhoodMark?,
+    val pill: String?,
+    val pickup: String,
+    val pickupLong: Boolean,
+    val returnLine: String?,
+    val note: String?,
 )
 
 /** Formata a análise para exibição em pt-BR. */
@@ -81,7 +98,46 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
                 ?: "$fare\nInforme os custos",
             minimumValue = money(CounterOffer.displayGreenFare(analysis.minimum.greenFare, offer.platform)),
             minimumLabel = minimumLabel(analysis),
+            panel = panel(analysis),
         )
+    }
+
+    /** Linhas do painel de baixo: destino com a marcação, busca e, para bairro longe, a volta. */
+    fun panel(analysis: RideAnalysis): CardPanel {
+        val offer = analysis.offer
+        val info = analysis.destination
+        val mark = info?.mark
+        val name = info?.let { d -> listOfNotNull(d.neighborhood, d.outsideCity).joinToString(", ") }
+            ?: offer.destination?.let { it.neighborhood ?: it.city }
+        val pill = when {
+            info?.outsideCity != null -> "OUTRA CIDADE"
+            mark == br.com.minhacorrida.core.neighborhood.NeighborhoodMark.GOOD -> "BOM"
+            mark == br.com.minhacorrida.core.neighborhood.NeighborhoodMark.FAR -> "LONGE"
+            mark == br.com.minhacorrida.core.neighborhood.NeighborhoodMark.AVOID -> "NÃO VOU"
+            else -> null
+        }
+        val pickup = offer.pickupKm?.let { p ->
+            val text = "${km(p)} km · viagem ${km(offer.tripKm)} km"
+            if (analysis.longPickup) "Busca longa: $text" else text
+        } ?: "viagem ${km(offer.tripKm)} km"
+        val back = analysis.minimum.returnCost
+        val returnLine = if (back != null && info?.returnKm != null) {
+            val after = analysis.profit?.netProfit?.let { it - back }
+            val result = when {
+                after == null -> ""
+                after.signum() < 0 -> "\nPrejuízo com a volta: R$ ${money(after.abs())}"
+                else -> "\nLucro com a volta: R$ ${money(after)}"
+            }
+            "≈ ${km(info.returnKm)} km · R$ ${money(back)}$result"
+        } else {
+            null
+        }
+        val note = if (mark == br.com.minhacorrida.core.neighborhood.NeighborhoodMark.AVOID) {
+            "Bairro marcado como “não vou”: recusar."
+        } else {
+            null
+        }
+        return CardPanel(name, mark, pill, pickup, analysis.longPickup, returnLine, note)
     }
 
     /**
@@ -100,6 +156,7 @@ class RideAnalysisFormatter(private val locale: Locale = Locale("pt", "BR")) {
         // A linha R$/min só aparece com o mínimo por minuto configurado.
         minutes = analysis.time.minutes.takeIf { analysis.minimum.profitPerMinuteAtGreen != null },
         minutesEstimated = analysis.time.estimated,
+        returnCost = analysis.minimum.returnCost,
     )
 
     /**

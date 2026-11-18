@@ -71,6 +71,11 @@ class AppContainer(context: Context) {
         br.com.minhacorrida.infra.SharedPrefsMaintenanceLog(context, logger)
     }
     val receiptPhotos: br.com.minhacorrida.infra.ReceiptPhotos by lazy { br.com.minhacorrida.infra.ReceiptPhotos(context, logger) }
+    /** Cidade e bairros marcados (bom/longe/não vou) e as listas online (IBGE, mapa). */
+    val neighborhoods: br.com.minhacorrida.infra.SharedPrefsNeighborhoodRepository by lazy {
+        br.com.minhacorrida.infra.SharedPrefsNeighborhoodRepository(context, logger)
+    }
+    val placesOnline: br.com.minhacorrida.infra.PlacesOnline by lazy { br.com.minhacorrida.infra.PlacesOnline(context, logger) }
     /** Destino da corrida: base, distância de "longe" e bairros a evitar (Configurações). */
     val destinationSettings: br.com.minhacorrida.core.destination.DestinationSettingsRepository by lazy {
         br.com.minhacorrida.infra.SharedPrefsDestinationSettings(context, logger)
@@ -112,4 +117,18 @@ class AppContainer(context: Context) {
         BuildConfig.VERSION_CODE,
         logger,
     )
+
+    init {
+        // Regra dos bairros e limite da busca entram nas regras de cada oferta (RideRules.from).
+        prefsSettings.destinationPolicyProvider = {
+            val config = destinationSettings.get()
+            val city = neighborhoods.city()
+            if (!config.enabled || city == null) {
+                null
+            } else {
+                br.com.minhacorrida.core.neighborhood.NeighborhoodPolicy(city, neighborhoods.all(), config.base)
+            }
+        }
+        prefsSettings.maxPickupProvider = { destinationSettings.get().maxPickupKm }
+    }
 }
