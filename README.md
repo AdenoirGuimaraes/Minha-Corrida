@@ -232,6 +232,20 @@ configurado). No inDrive os valores são calculados sobre o Mín. verde arredond
 O "~X km" do cartão é a distância ATÉ o passageiro (bolha azul, ponto A); a outra bolha (verde, ponto B)
 é a viagem. Antes saíam trocadas no card (o total, o R$/km, o lucro e a cor não mudavam).
 
+## Bairros marcados e painel do card (0.2.64)
+
+- Configurações → Destino e busca: estado (lista fixa) e município (API de localidades do IBGE, digita as
+  primeiras letras; lista guardada no celular). Bairros da cidade pelo OpenStreetMap (Overpass, com o ponto
+  central) + os lidos nas ofertas + adicionados à mão.
+- Tela "Bairros de <cidade>": busca, filtros (Todos, Bom, Longe, Não vou, Sem marcação, Novos) e Bom | Longe |
+  Não vou em cada bairro (tocar de novo desmarca). Sem marcação = neutro.
+- Card: painel embaixo dos quadrados — DESTINO [BOM/LONGE/NÃO VOU/OUTRA CIDADE] bairro · BUSCA (destaque se
+  longa) · VOLTA (só longe: km, custo e lucro com a volta).
+- "Não vou": card vermelho. "Longe": o Mín. verde soma a volta vazia (destino → bairro Bom mais perto, linha
+  reta × 1,3; sem nenhum Bom, até a base) e o quadrado mostra "+ volta R$ x". Outra cidade conta como longe.
+- Bairro novo lido numa oferta entra como "novo": aviso nas Configurações e um ponto na aba até ser marcado.
+- Saíram: "destino longe acima de X km", bairros a evitar digitados e o botão da base. Os bairros entram no backup.
+
 ## Voz da meta na Uber e conferência do abastecimento (0.2.63)
 
 - Fim da corrida na Uber reconhecido também com lixo do OCR e frases completas ("Como foi a viagem com …?",
