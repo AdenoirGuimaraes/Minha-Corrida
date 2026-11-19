@@ -232,6 +232,16 @@ configurado). No inDrive os valores são calculados sobre o Mín. verde arredond
 O "~X km" do cartão é a distância ATÉ o passageiro (bolha azul, ponto A); a outra bolha (verde, ponto B)
 é a viagem. Antes saíam trocadas no card (o total, o R$/km, o lucro e a cor não mudavam).
 
+## Destino lido certo e valor sem vírgula (0.2.66)
+
+- "Outra cidade" só quando o texto é mesmo outro município: parecido com a cidade escolhida (até 2 letras,
+  ex.: OCR "Laqes") conta como a mesma; com a lista do IBGE no celular, só um município dela; sem a lista,
+  só texto limpo. Linhas que não são endereço (previsão do tempo "22° 16°", "sex.") são ignoradas.
+- Endereço da Uber cortado ("Rua …, Triângulo,"): o último pedaço é o bairro e a cidade fica desconhecida.
+  Nome de rua, número e lixo não viram bairro (nem entram como "bairro novo").
+- Uber: valor sem vírgula conferido pelo R$/km — acima de R$ 8/km, o último dígito é lixo do OCR
+  ("R$ 7059" → R$ 7,05); se ainda não fizer sentido, a leitura é ignorada.
+
 ## Bairros marcados e painel do card (0.2.64)
 
 - Configurações → Destino e busca: estado (lista fixa) e município (API de localidades do IBGE, digita as
