@@ -44,6 +44,26 @@ class PlacesOnline(context: Context, private val logger: AppLogger) {
         }
     }
 
+    private val knownNames = java.util.concurrent.ConcurrentHashMap<String, Set<String>>()
+
+    /**
+     * Nomes (normalizados) dos municípios do estado já baixados — só o que está no celular, sem
+     * internet; vazio se ainda não baixou. Usado para saber se um texto é mesmo outra cidade.
+     */
+    fun cachedCityNames(uf: String): Set<String> = knownNames.getOrPut(uf) {
+        try {
+            val cache = File(cacheDir, "municipios_$uf.json")
+            if (!cache.exists()) return emptySet()
+            val array = JSONArray(cache.readText())
+            (0 until array.length()).map {
+                br.com.minhacorrida.core.destination.DestinationAdvisor.normalize(array.getJSONObject(it).getString("nome"))
+            }.toSet()
+        } catch (e: Exception) {
+            logger.warn(TAG, "Municípios guardados ilegíveis", e)
+            emptySet()
+        }
+    }
+
     /** Bairros (e subdivisões) do OpenStreetMap dentro do município. */
     fun neighborhoods(city: CityChoice): List<Neighborhood> {
         val name = city.name.replace("\"", "")

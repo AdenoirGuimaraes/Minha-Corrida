@@ -126,7 +126,9 @@ class AppContainer(context: Context) {
             if (!config.enabled || city == null) {
                 null
             } else {
-                br.com.minhacorrida.core.neighborhood.NeighborhoodPolicy(city, neighborhoods.all(), config.base)
+                br.com.minhacorrida.core.neighborhood.NeighborhoodPolicy(
+                    city, neighborhoods.all(), config.base, placesOnline.cachedCityNames(city.uf),
+                )
             }
         }
         prefsSettings.maxPickupProvider = { destinationSettings.get().maxPickupKm }

@@ -104,4 +104,40 @@ class NeighborhoodTest {
         assertEquals(listOf("Laguna", "Lages"), BrazilianStates.filterCities(listOf("Laguna", "Lages", "Joinville"), "lag"))
         assertEquals(27, BrazilianStates.ALL.size)
     }
+
+    @Test
+    fun `pedido de 19-11 - OCR da cidade errado ou lixo nao vira outra cidade`() {
+        val withIbge = NeighborhoodPolicy(lages, bairros, center, setOf("lages", "correia pinto", "sao joaquim"))
+        assertNull(withIbge.classify(Place("x", "Centro", "Laqes"))!!.outsideCity)        // "Laqes" = Lages
+        assertNull(withIbge.classify(Place("x", "Triângulo", "22° 16°"))!!.outsideCity)   // previsão do tempo
+        assertNull(withIbge.classify(Place("x", "Centro", "Verificado"))!!.outsideCity)   // não é município
+        assertEquals("Correia Pinto", withIbge.classify(Place("x", "Centro", "Correia Pinto"))!!.outsideCity)
+        // Sem a lista do IBGE no celular: só texto limpo e diferente conta como outra cidade.
+        assertNull(policy.classify(Place("x", "Centro", "22° 16°"))!!.outsideCity)
+        assertNull(policy.classify(Place("x", "Centro", "Lagés"))!!.outsideCity)
+    }
+
+    @Test
+    fun `pedido de 19-11 - endereco da Uber cortado e linhas que nao sao endereco`() {
+        // Leitura 202 do diagnóstico: card da Uber sobre a tela inicial (previsão do tempo no meio).
+        val texts = listOf(
+            "2 UberX", "★ 4,92 (30)", "R$ 10,0l", "6 min (2.1 km)", "sex.", "Lages", "sáb.", "Verificado",
+            "Clara, Lages", "7 minutos (3.1 km)", "Rua Presidente Kennedy, Triângulo,", "22° 16°", "27° 17°",
+            "Rua Manoel Coimbra, 1120, Santa", "Aceitar", "X", "Uber",
+        )
+        val place = br.com.minhacorrida.core.destination.DestinationReader.uber(texts)!!
+        assertEquals("Triângulo", place.neighborhood)
+        assertNull(place.city)                                                       // cortado: cidade desconhecida
+        assertNull(br.com.minhacorrida.core.destination.DestinationReader.neighborhoodOrNull("Rua Presidente Kennedy"))
+        assertNull(br.com.minhacorrida.core.destination.DestinationReader.neighborhoodOrNull("1120"))
+        assertEquals("Vila Comboni", br.com.minhacorrida.core.destination.DestinationReader.commaAddress("Rua João Estanislau, 158, Vila Comboni, Lages")!!.neighborhood)
+    }
+
+    @Test
+    fun `pedido de 19-11 - valor da Uber sem virgula e longo e ignorado`() {
+        val parser = br.com.minhacorrida.core.parser.UberOfferParser(br.com.minhacorrida.core.port.NoOpLogger)
+        val card = listOf("UberX", "R$ 7059", "* 5,00 (23)", "6 min (2.3 km)", "Avenida Duque de Caxias, Centro, Lages", "6 minutos (2.0 km)", "Aceitar")
+        assertNull(parser.parse(card))
+        assertEquals("7.04", parser.parse(card.map { if (it == "R$ 7059") "R$ 704" else it })!!.fare.toPlainString())
+    }
 }

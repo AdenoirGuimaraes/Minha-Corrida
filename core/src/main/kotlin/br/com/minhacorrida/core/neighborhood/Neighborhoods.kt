@@ -80,16 +80,45 @@ class NeighborhoodPolicy(
     private val city: CityChoice?,
     private val neighborhoods: List<Neighborhood>,
     private val fallbackBase: GeoPoint,
+    /** Municípios do estado (IBGE, já normalizados); vazio = lista ainda não baixada. */
+    private val knownCities: Set<String> = emptySet(),
 ) : DestinationPolicy {
 
     override fun classify(place: Place): DestinationInfo? {
         val name = place.neighborhood?.takeIf { it.isNotBlank() } ?: return null
-        val outside = place.city?.takeIf { c -> city != null && !DestinationAdvisor.same(c, city.name) }
+        val outside = place.city?.takeIf { c -> city != null && isAnotherCity(c, city.name) }
         if (outside != null) return DestinationInfo(name, NeighborhoodMark.FAR, outsideCity = outside)
         val found = find(name)
         val mark = found?.mark
         val returnKm = if (mark == NeighborhoodMark.FAR) found.point?.let { returnKmFrom(it) } else null
         return DestinationInfo(found?.name ?: name, mark, returnKm = returnKm)
+    }
+
+    /**
+     * "Outra cidade" só quando o texto é mesmo outro município (19/11: OCR "Laqes", "22° 16°" e
+     * pedaços de endereço viravam outra cidade): parecido com a cidade escolhida (até 2 letras de
+     * diferença) = mesma; com a lista do IBGE, só conta se for um município dela; sem a lista, só
+     * texto limpo (letras e espaços).
+     */
+    fun isAnotherCity(text: String, chosen: String): Boolean {
+        val t = DestinationAdvisor.normalize(text)
+        val c = DestinationAdvisor.normalize(chosen)
+        if (t.isEmpty() || t == c || (c.length >= 5 && editDistance(t, c) <= 2)) return false
+        return if (knownCities.isNotEmpty()) t in knownCities else t.all { it.isLetter() || it == ' ' || it == '-' } && t.length >= 3
+    }
+
+    private fun editDistance(a: String, b: String): Int {
+        val row = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) {
+            var previous = row[0]
+            row[0] = i
+            for (j in 1..b.length) {
+                val current = row[j]
+                row[j] = minOf(row[j] + 1, row[j - 1] + 1, previous + if (a[i - 1] == b[j - 1]) 0 else 1)
+                previous = current
+            }
+        }
+        return row[b.length]
     }
 
     fun find(name: String): Neighborhood? = neighborhoods.firstOrNull { DestinationAdvisor.same(it.name, name) }

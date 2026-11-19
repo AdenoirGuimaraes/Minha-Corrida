@@ -27,7 +27,8 @@ object DestinationReader {
             val lines = texts.drop(last + 1)
                 .takeWhile { line ->
                     val t = line.trim()
-                    t.isNotEmpty() && t.lowercase() !in STOP_WORDS && !t.startsWith("R$") && !DISTANCE_LINE.containsMatchIn(t)
+                    t.isNotEmpty() && t.lowercase() !in STOP_WORDS && !t.startsWith("R$") &&
+                        !DISTANCE_LINE.containsMatchIn(t) && looksLikeAddressLine(t)
                 }
                 .take(MAX_ADDRESS_LINES)
             lines.takeIf { it.isNotEmpty() }?.let { commaAddress(it.joinToString(" ").replace(Regex("\\s+"), " ").trim()) }
@@ -43,26 +44,48 @@ object DestinationReader {
             val parts = segments(inside)
             when {
                 parts.isEmpty() -> null
-                parts.size == 1 -> Place(line.trim(), afterDash(parts[0]), null)
-                else -> Place(line.trim(), afterDash(parts[parts.size - 2]), city(parts.last()))
+                parts.size == 1 -> Place(line.trim(), neighborhoodOrNull(afterDash(parts[0])), null)
+                else -> Place(line.trim(), neighborhoodOrNull(afterDash(parts[parts.size - 2])), city(parts.last()))
             }
         }
     } catch (e: Exception) {
         null
     }
 
-    /** "Rua 31 de Março, 953, Guarujá, Lages" → bairro Guarujá, cidade Lages. */
+    /**
+     * "Rua 31 de Março, 953, Guarujá, Lages" → bairro Guarujá, cidade Lages.
+     * Endereço cortado (termina em vírgula: "Rua Presidente Kennedy, Triângulo,") → o último pedaço
+     * é o bairro e a cidade fica desconhecida (19/11: o bairro virava "outra cidade").
+     */
     fun commaAddress(raw: String): Place? {
         val parts = segments(raw)
+        val cut = raw.trimEnd().endsWith(",")
         return when {
             parts.isEmpty() -> null
-            parts.size == 1 -> Place(raw, parts[0], null)
-            else -> {
-                val neighborhood = parts[parts.size - 2].takeUnless { it.any(Char::isDigit) && it.none(Char::isLetter) }
-                Place(raw, neighborhood, city(parts.last()))
-            }
+            parts.size == 1 -> Place(raw, neighborhoodOrNull(parts[0]), null)
+            cut -> Place(raw, neighborhoodOrNull(parts.last()), null)
+            else -> Place(raw, neighborhoodOrNull(parts[parts.size - 2]), city(parts.last()))
         }
     }
+
+    /** Nome de rua, número ou lixo não é bairro (não entra na lista de bairros novos). */
+    fun neighborhoodOrNull(text: String): String? {
+        val t = text.trim()
+        val letters = t.count(Char::isLetter)
+        return when {
+            letters < 3 || t.length > 40 -> null
+            t.any(Char::isDigit) -> null
+            STREET.containsMatchIn(t) -> null
+            else -> t
+        }
+    }
+
+    /** Linha de endereço: tem letras; não é temperatura ("22° 16°") nem dia da semana ("sex."). */
+    private fun looksLikeAddressLine(t: String): Boolean =
+        t.count(Char::isLetter) >= 3 && '°' !in t && !WEEKDAY.matches(t)
+
+    private val STREET = Regex("""(?i)^(r\.|rua|av\.?|avenida|travessa|tv\.|rodovia|rod\.|estrada|alameda|servid[aã]o|br-?\d)\b""")
+    private val WEEKDAY = Regex("""(?i)^(seg|ter|qua|qui|sex|s[aá]b|dom)\.?$""")
 
     private fun segments(text: String) = text.split(',').map { it.trim() }.filter { it.isNotEmpty() }
 

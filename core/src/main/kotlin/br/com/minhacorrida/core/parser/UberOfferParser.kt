@@ -102,6 +102,12 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
      */
     private fun fareValue(raw: String): BigDecimal? {
         val missingComma = raw.none { it == ',' || it == '.' } && raw.length >= MIN_DIGITS_WITHOUT_COMMA
+        // 4 dígitos ou mais sem vírgula (19/11: "R$ 7059" era R$ 7,05 + lixo do OCR e deu R$ 16,42/km):
+        // não dá para saber onde estão os centavos; ignora esta leitura (a próxima vem certa).
+        if (missingComma && raw.length >= MAX_DIGITS_WITHOUT_COMMA) {
+            logger.warn(TAG, "Valor \"R$ $raw\" sem vírgula e longo demais; leitura ignorada")
+            return null
+        }
         return if (missingComma) {
             logger.warn(TAG, "Valor \"R$ $raw\" sem vírgula no OCR; lido como centavos")
             BigDecimal(raw).movePointLeft(2)
@@ -165,6 +171,7 @@ class UberOfferParser(private val logger: AppLogger = NoOpLogger) : RideOfferPar
     private companion object {
         const val TAG = "UberOfferParser"
         const val MIN_DIGITS_WITHOUT_COMMA = 3
+        const val MAX_DIGITS_WITHOUT_COMMA = 4
 
         /** 1,5 km/min = 90 km/h: acima disso, distância urbana lida pelo OCR perdeu o ponto. */
         val MAX_KM_PER_MINUTE = BigDecimal("1.5")
