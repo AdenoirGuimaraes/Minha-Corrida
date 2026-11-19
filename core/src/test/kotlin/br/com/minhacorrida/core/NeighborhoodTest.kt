@@ -134,10 +134,11 @@ class NeighborhoodTest {
     }
 
     @Test
-    fun `pedido de 19-11 - valor da Uber sem virgula e longo e ignorado`() {
+    fun `pedido de 19-11 - valor da Uber sem virgula conferido pelo R$ por km`() {
         val parser = br.com.minhacorrida.core.parser.UberOfferParser(br.com.minhacorrida.core.port.NoOpLogger)
         val card = listOf("UberX", "R$ 7059", "* 5,00 (23)", "6 min (2.3 km)", "Avenida Duque de Caxias, Centro, Lages", "6 minutos (2.0 km)", "Aceitar")
-        assertNull(parser.parse(card))
+        // 70,59 ÷ 4,3 km = R$ 16,42/km: impossível → "7059" sem o último dígito = R$ 7,05.
+        assertEquals("7.05", parser.parse(card)!!.fare.toPlainString())
         assertEquals("7.04", parser.parse(card.map { if (it == "R$ 7059") "R$ 704" else it })!!.fare.toPlainString())
     }
 }
