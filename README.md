@@ -232,6 +232,13 @@ configurado). No inDrive os valores são calculados sobre o Mín. verde arredond
 O "~X km" do cartão é a distância ATÉ o passageiro (bolha azul, ponto A); a outra bolha (verde, ponto B)
 é a viagem. Antes saíam trocadas no card (o total, o R$/km, o lucro e a cor não mudavam).
 
+## OCR sem o próprio card e remover bairro (0.2.68)
+
+- O OCR ignora a área do card do Minha Corrida na captura (linhas com o centro dentro dele saem) e ainda
+  filtra os textos do card ("toque para fechar", "Prejuízo/Lucro com a volta", "VOLTA", "Lucro R$" …).
+- Uber: R$/km abaixo de R$ 0,40 ou, sem vírgula, acima de R$ 8 com valor curto ("R$ 79") descarta a leitura.
+- Tela de bairros: "✕" em cada bairro remove na hora, sem perguntar.
+
 ## Destino lido certo e valor sem vírgula (0.2.66)
 
 - "Outra cidade" só quando o texto é mesmo outro município: parecido com a cidade escolhida (até 2 letras,
