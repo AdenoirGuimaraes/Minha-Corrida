@@ -67,9 +67,9 @@ Card fechado (toque ou tempo) não reaparece enquanto a oferta continua na tela;
   | Pedido | cartão lido (guardado como "último pedido") | "Pedido de viagem" lido |
   | Aguardando | — | "Oferecendo sua tarifa R$ 13. Aguarde a resposta" |
   | **Confirmada → grava** | "Encontro com Fernanda" / "Destino de …" | "R$ 13 · Dinheiro" + "Estou aqui" / "Começar a corrida" / … |
-  | **Concluída → ✅ realizada** | "Como foi a viagem?" / "Avaliar usuário" | "Avalie seu passageiro" |
+  | **Concluída → ✅ realizada** | "Como foi a viagem?" / "Avaliar usuário" (tela ou toque) / "Quanto você recebeu em dinheiro?" / "Concluir pagamento" | "Avalie seu passageiro" |
 
-  - A corrida gravada é o último pedido lido daquele app (até 10 min antes), de **qualquer cor**.
+  - A corrida gravada é o último pedido lido daquele app (Uber: até 1 min antes; inDrive: até 10 min), de **qualquer cor**.
     No inDrive o valor é o da tela da corrida — inclui contraproposta pelo valor pronto **ou pelo lápis** —
     e a taxa é descontada.
   - Ofertas que chegam durante uma corrida não são gravadas; telas repetidas da mesma corrida também não.
@@ -231,6 +231,14 @@ configurado). No inDrive os valores são calculados sobre o Mín. verde arredond
 
 O "~X km" do cartão é a distância ATÉ o passageiro (bolha azul, ponto A); a outra bolha (verde, ponto B)
 é a viagem. Antes saíam trocadas no card (o total, o R$/km, o lucro e a cor não mudavam).
+
+## Corrida certa e concluída na Uber (0.2.71)
+
+- Uber: só vale a oferta lida no último minuto antes de "Encontro com…". Em 19/11 (20:23) a oferta aceita
+  não foi lida e o app gravou uma recusada minutos antes (R$ 18,08, 13,1 km); agora não grava nada nesse caso.
+- Corrida em dinheiro: a Uber termina em "Quanto você recebeu em dinheiro?" / "Concluir pagamento" e a avaliação
+  chega só como toque ("Avaliar usuário"); os dois marcam a corrida como realizada (e a voz da meta fala).
+- inDrive: a mesma contraproposta na tela só entra uma vez no relatório de diagnóstico.
 
 ## OCR sem o próprio card e remover bairro (0.2.68)
 
