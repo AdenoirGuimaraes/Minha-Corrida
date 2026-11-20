@@ -253,5 +253,6 @@
     <string name="bairros_add">+ Adicionar bairro</string>
     <string name="bairros_add_hint">Nome do bairro</string>
     <string name="bairros_close">Pronto</string>
+    <string name="bairros_remove">Remover %1$s</string>
     <string name="bairros_empty">Nenhum bairro aqui. Toque em "Buscar bairros no mapa" nas Configurações ou adicione à mão.</string>
 </resources>

@@ -141,4 +141,21 @@ class NeighborhoodTest {
         assertEquals("7.05", parser.parse(card)!!.fare.toPlainString())
         assertEquals("7.04", parser.parse(card.map { if (it == "R$ 7059") "R$ 704" else it })!!.fare.toPlainString())
     }
+
+    @Test
+    fun `pedido de 19-11 - R$ 79 sem virgula e o proprio card nao viram valor da corrida`() {
+        val parser = br.com.minhacorrida.core.parser.UberOfferParser(br.com.minhacorrida.core.port.NoOpLogger)
+        // Leitura 217: R$ 7 lido como "R$ 79" (sem vírgula e sem um dígito) = R$ 14,91/km.
+        val card = listOf(
+            "2 UberX", "R$ 79", "* 5,00 (12) O Verificado", "8 min (2.8 km)", "Rua Presidente Nereu Ramos, Centro,",
+            "Lages", "7 minutos (2.5 km)", "X", "R. Manoel Hermogenes Dias, 474, Bom", "Jesus, Lages", "Tenho interesse",
+        )
+        assertNull(parser.parse(card))
+        assertEquals("7.00", parser.parse(card.map { if (it == "R$ 79") "R$ 7,00" else it })!!.fare.toPlainString())
+        // Leitura 73: o painel do próprio card foi lido junto com o cartão da Uber.
+        val own = listOf("VOLTA", "0,7 km R$ 0,64", "Prejuízo com a volta: R$ 0,10", "toque para fechar", "Lucro R$ 6,00")
+        assertEquals(listOf("0,7 km R$ 0,64"), br.com.minhacorrida.core.parser.OwnCardText.strip(own))
+        // R$/km impossível de tão baixo também é ignorado.
+        assertNull(parser.parse(listOf("UberX", "R$ 0,10", "3 min (1.1 km)", "Rua A, Centro, Lages", "10 min (3.8 km)", "Aceitar")))
+    }
 }

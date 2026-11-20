@@ -63,6 +63,11 @@ class SharedPrefsNeighborhoodRepository(context: Context, private val logger: Ap
     }
 
     @Synchronized
+    override fun remove(name: String) {
+        write(all().filterNot { DestinationAdvisor.same(it.name, name) })
+    }
+
+    @Synchronized
     override fun add(name: String) {
         val clean = name.trim()
         if (clean.isEmpty() || all().any { DestinationAdvisor.same(it.name, clean) }) return

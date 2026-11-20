@@ -613,12 +613,14 @@ class RideReaderService : AccessibilityService() {
         ocrInFlight = true
         val requestedFor = ocrPackage to ocrOfferKey
         handler.postDelayed({
-            ocrReader.read(topPx, bottomPx) { lines ->
+            ocrReader.read(topPx, bottomPx, overlay.screenBounds()) { lines ->
                 ocrInFlight = false
                 ocrTakenAtMs = SystemClock.elapsedRealtime()
                 // Resultado de um alvo que já perdeu a vez (ex.: mapa do inDrive quando
                 // o cartão da Uber apareceu) é descartado.
-                if (requestedFor == (ocrPackage to ocrOfferKey)) ocrTexts = lines
+                if (requestedFor == (ocrPackage to ocrOfferKey)) {
+                    ocrTexts = br.com.minhacorrida.core.parser.OwnCardText.strip(lines)
+                }
                 handler.removeCallbacks(analyzeTask)
                 handler.post(analyzeTask)
             }

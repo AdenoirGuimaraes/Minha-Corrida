@@ -73,6 +73,18 @@ class RideOverlayController(
     }
 
     /** Remove o leitor imediatamente, sem marcar a oferta como fechada. */
+    /**
+     * Onde o card está na tela agora (para o OCR não ler o próprio card — 19/11: "Prejuízo com a
+     * volta: R$ 0,10" virou o valor da corrida). null se o card não está aberto.
+     */
+    fun screenBounds(): android.graphics.Rect? {
+        val current = view ?: return null
+        if (!current.isShown || current.width == 0) return null
+        val location = IntArray(2)
+        current.getLocationOnScreen(location)
+        return android.graphics.Rect(location[0], location[1], location[0] + current.width, location[1] + current.height)
+    }
+
     fun hideNow() {
         handler.removeCallbacks(hideTask)
         handler.removeCallbacks(autoCloseTask)

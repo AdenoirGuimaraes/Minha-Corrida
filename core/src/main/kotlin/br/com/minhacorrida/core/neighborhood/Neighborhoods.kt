@@ -44,6 +44,9 @@ interface NeighborhoodRepository {
     /** Marca (ou desmarca, com null) um bairro; marcar tira o aviso de "novo". */
     fun setMark(name: String, mark: NeighborhoodMark?)
 
+    /** Tira o bairro da lista (nome de rua ou lixo que entrou como "bairro novo"). */
+    fun remove(name: String)
+
     /** Bairro adicionado à mão (não estava no mapa). */
     fun add(name: String)
 

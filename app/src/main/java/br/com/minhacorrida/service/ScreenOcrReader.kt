@@ -20,6 +20,7 @@ class ScreenOcrReader(
     private val logger: AppLogger,
 ) {
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    @Volatile private var exclude: android.graphics.Rect? = null
 
     val isSupported: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
 
@@ -28,7 +29,14 @@ class ScreenOcrReader(
      * @param regionBottomPx limite inferior da área lida.
      * @param onResult linhas reconhecidas (vazia em caso de falha); chamado uma única vez.
      */
-    fun read(regionTopPx: Int, regionBottomPx: Int, onResult: (List<String>) -> Unit) {
+    fun read(
+        regionTopPx: Int,
+        regionBottomPx: Int,
+        /** Área a ignorar (o card do próprio app, se aberto): linhas com o centro dentro dela saem. */
+        exclude: android.graphics.Rect? = null,
+        onResult: (List<String>) -> Unit,
+    ) {
+        this.exclude = exclude
         val once = OnceCallback(onResult)
         if (!isSupported) {
             once(emptyList())
@@ -86,7 +94,14 @@ class ScreenOcrReader(
 
             recognizer.process(InputImage.fromBitmap(region, 0))
                 .addOnSuccessListener { text ->
-                    val lines = text.textBlocks.flatMap { block -> block.lines.map { it.text } }
+                    val skip = exclude
+                    val lines = text.textBlocks.flatMap { block -> block.lines }
+                        .filter { line ->
+                            // Caixa da linha está no recorte: soma o topo para comparar com a tela.
+                            val box = line.boundingBox
+                            skip == null || box == null || !skip.contains(box.centerX(), box.centerY() + top)
+                        }
+                        .map { it.text }
                     logger.debug(TAG, "OCR: $lines")
                     onResult(lines)
                 }

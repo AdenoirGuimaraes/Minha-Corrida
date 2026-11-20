@@ -181,6 +181,21 @@ class NeighborhoodPicker(
                 }
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)).apply { marginStart = dp(4) })
         }
+        // Remover (pedido de 19/11): apaga na hora, sem perguntar.
+        line.addView(Button(activity).apply {
+            text = "✕"
+            textSize = 14f
+            minWidth = 0
+            minimumWidth = 0
+            setPadding(0, 0, 0, 0)
+            setTextColor(0xFFFF9C93.toInt())
+            background = null
+            contentDescription = activity.getString(R.string.bairros_remove, n.name)
+            setOnClickListener {
+                repository.remove(n.name)
+                render()
+            }
+        }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(2) })
         return LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(3), 0, dp(3))
