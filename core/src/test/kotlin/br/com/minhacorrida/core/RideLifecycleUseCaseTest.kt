@@ -206,7 +206,7 @@ class RideLifecycleUseCaseTest {
     }
 
     @Test
-    fun `toque em Avaliar usuario conclui; outros toques nao`() {
+    fun `toque em Avaliar usuario conclui e outros toques nao`() {
         lifecycle.onOffer(fernanda)
         lifecycle.onScreen(Platform.UBER, uberIndoBuscar)
         assertNull(lifecycle.onTap(Platform.UBER, "Tenho interesse"))
