@@ -9,7 +9,7 @@ object OwnCardText {
     private val MARKERS = listOf(
         "toque para fechar", "lucro com a volta", "prejuízo com a volta", "prejuizo com a volta",
         "mín. verde", "min. verde", "busca longa", "pelo lucro", "pelo r$", "+ volta", "não vou", "nao vou",
-        "outra cidade", "líquido r$", "liquido r$", "gasto r$",
+        "outra cidade", "líquido r$", "liquido r$", "gasto r$", "lucro r$",
     )
     private val LABELS = setOf("volta", "destino", "busca", "lucro", "r$/km")
 
