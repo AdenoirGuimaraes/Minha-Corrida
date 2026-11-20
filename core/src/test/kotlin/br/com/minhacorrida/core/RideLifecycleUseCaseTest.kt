@@ -202,7 +202,7 @@ class RideLifecycleUseCaseTest {
         // "Coletar pagamento" aparece durante a viagem: não conclui.
         lifecycle.onOffer(offer(Platform.UBER, "20.00", "1.0", "2.0"))
         lifecycle.onScreen(Platform.UBER, uberIndoBuscar)
-        assertNull(lifecycle.onScreen(Platform.UBER, listOf("Destino de Luciane", "Coletar pagamento")))
+        assertNull(lifecycle.onScreen(Platform.UBER, uberEmViagem + "Coletar pagamento"))
     }
 
     @Test
