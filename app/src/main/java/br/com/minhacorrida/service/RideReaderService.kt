@@ -190,15 +190,22 @@ class RideReaderService : AccessibilityService() {
     }
 
     /**
-     * Toque na Uber: só vai para o diagnóstico. O relatório de 09/11 mostrou que os toques no
+     * Toque na Uber: vai para o diagnóstico. O relatório de 09/11 mostrou que os toques no
      * cartão da oferta ("Tenho interesse", X) não chegam ao app; a corrida é gravada quando
-     * aparece "Encontro com <passageiro>" (RideLifecycleUseCase).
+     * aparece "Encontro com <passageiro>" (RideLifecycleUseCase). O toque em "Avaliar usuário"
+     * conclui a corrida (19/11: na corrida em dinheiro a avaliação não aparece como tela).
      */
     private fun onUberButtonTapped(event: AccessibilityEvent, pkg: String) {
         try {
             val text = tappedText(event)
             val texts = (if (text.isEmpty()) listOf("(sem texto)") else listOf(text)) + tapDetails(event)
             container.diagnostics.record(pkg, "toque na Uber", texts, emptyList(), "toque registrado", force = true)
+            if (text.isNotEmpty()) {
+                historyExecutor.execute {
+                    val event = container.rideLifecycle.onTap(Platform.UBER, text) ?: return@execute
+                    reportLifecycle(pkg, listOf(text), event)
+                }
+            }
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao registrar toque na Uber", e)
         }
@@ -401,22 +408,38 @@ class RideReaderService : AccessibilityService() {
             analysis?.let { container.rideLifecycle.onOffer(it) }
             historyExecutor.execute {
                 val event = container.rideLifecycle.onScreen(platform, texts) ?: return@execute
-                val summary = when (event) {
-                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Confirmed ->
-                        "corrida confirmada: R$ ${event.record.fare.toPlainString().replace('.', ',')} " +
-                            "· ${event.record.totalKm.toPlainString().replace('.', ',')} km (guardada na aba Corridas)"
-                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.ConfirmedWithoutOffer ->
-                        "corrida confirmada sem pedido lido antes: não guardada (use Registrar Corrida)"
-                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Completed ->
-                        "corrida concluída: marcada como realizada"
-                    is br.com.minhacorrida.core.usecase.RideLifecycleEvent.CounterOfferSent ->
-                        "contraproposta de R$ ${event.fare.toPlainString().replace('.', ',')} enviada: aguardando o passageiro"
-                }
-                container.diagnostics.record(pkg, "acompanhamento da corrida", texts.take(20), emptyList(), summary, force = true)
-                if (event is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Completed) announceGoal()
+                reportLifecycle(pkg, texts, event)
             }
         } catch (e: Exception) {
             container.logger.error(TAG, "Falha ao acompanhar a corrida", e)
+        }
+    }
+
+    /**
+     * Registra no diagnóstico o que mudou na corrida e, se ela terminou, fala a meta.
+     * Roda na thread do histórico (chamado por [followRide] e pelo toque na Uber).
+     */
+    private fun reportLifecycle(
+        pkg: String,
+        texts: List<String>,
+        event: br.com.minhacorrida.core.usecase.RideLifecycleEvent,
+    ) {
+        try {
+            val summary = when (event) {
+                is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Confirmed ->
+                    "corrida confirmada: R$ ${event.record.fare.toPlainString().replace('.', ',')} " +
+                        "· ${event.record.totalKm.toPlainString().replace('.', ',')} km (guardada na aba Corridas)"
+                is br.com.minhacorrida.core.usecase.RideLifecycleEvent.ConfirmedWithoutOffer ->
+                    "corrida confirmada sem pedido lido antes: não guardada (use Registrar Corrida)"
+                is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Completed ->
+                    "corrida concluída: marcada como realizada"
+                is br.com.minhacorrida.core.usecase.RideLifecycleEvent.CounterOfferSent ->
+                    "contraproposta de R$ ${event.fare.toPlainString().replace('.', ',')} enviada: aguardando o passageiro"
+            }
+            container.diagnostics.record(pkg, "acompanhamento da corrida", texts.take(20), emptyList(), summary, force = true)
+            if (event is br.com.minhacorrida.core.usecase.RideLifecycleEvent.Completed) announceGoal()
+        } catch (e: Exception) {
+            container.logger.error(TAG, "Falha ao registrar o acompanhamento da corrida", e)
         }
     }
 

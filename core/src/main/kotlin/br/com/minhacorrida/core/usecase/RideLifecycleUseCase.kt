@@ -42,6 +42,12 @@ sealed class RideLifecycleEvent {
  * contraproposta feita pelo valor pronto ou pelo lápis. Guarda de qualquer cor: foi o
  * motorista que aceitou. Enquanto uma corrida está em andamento, as telas repetidas dela
  * não gravam de novo; ofertas novas durante a corrida não são gravadas.
+ *
+ * Uber (19/11, corrida das 20:23): a oferta aceita (R$ 14,01) não foi lida e o app gravou uma
+ * oferta recusada minutos antes (R$ 18,08, 13,1 km). Na Uber a oferta dura ~15 s e a confirmação
+ * vem logo após o aceite, então só vale o pedido lido no último minuto ([offerMaxAge]).
+ * Corrida em dinheiro (19/11): a Uber termina em "Quanto você recebeu em dinheiro?" /
+ * "Concluir pagamento" e a avaliação só aparece como toque ("Avaliar usuário") — ambos concluem.
  */
 class RideLifecycleUseCase(
     private val evaluate: EvaluateRideUseCase,
@@ -56,6 +62,9 @@ class RideLifecycleUseCase(
 
     private val lastOffer = mutableMapOf<Platform, Seen>()
     private val active = mutableMapOf<Platform, Active>()
+
+    /** Última contraproposta avisada por app: a tela "aguardando" se repete a cada segundo. */
+    private val lastCounter = mutableMapOf<Platform, BigDecimal>()
 
     /** Pedido lido na tela (card mostrado). Durante uma corrida, também é guardado: pode ser a próxima. */
     @Synchronized
@@ -81,10 +90,31 @@ class RideLifecycleUseCase(
         null
     }
 
+    /**
+     * Toque num botão do app (ex.: "Avaliar usuário" na Uber, que não aparece como tela na corrida
+     * em dinheiro). Só serve para concluir a corrida em andamento; nunca grava corrida nova.
+     * @return [RideLifecycleEvent.Completed] se o toque encerrou a corrida, ou null.
+     */
+    @Synchronized
+    fun onTap(platform: Platform, text: String): RideLifecycleEvent? = try {
+        val t = text.trim()
+        val done = when (platform) {
+            Platform.UBER -> isUberEnd(t)
+            Platform.INDRIVE -> INDRIVE_DONE.containsMatchIn(t)
+            else -> false
+        }
+        if (done && t.isNotEmpty()) complete(platform) else null
+    } catch (e: Exception) {
+        logger.error(TAG, "Falha ao tratar toque ($platform)", e)
+        null
+    }
+
     // ---- Uber ----
 
+    private fun isUberEnd(line: String) = UBER_DONE.containsMatchIn(line) || UBER_CASH_DONE.containsMatchIn(line)
+
     private fun uberScreen(lines: List<String>): RideLifecycleEvent? {
-        if (lines.any { UBER_DONE.containsMatchIn(it) }) return complete(Platform.UBER)
+        if (lines.any { isUberEnd(it) }) return complete(Platform.UBER)
         // "Encontro com Fernanda" (indo buscar) ou "Destino de Fernanda" (em viagem).
         val passenger = lines.firstNotNullOfOrNull { UBER_RIDE.find(it)?.groupValues?.get(2)?.trim() }
             ?: return null
@@ -99,7 +129,11 @@ class RideLifecycleUseCase(
         if (lines.any { INDRIVE_DONE.containsMatchIn(it) }) return complete(Platform.INDRIVE)
 
         lines.firstNotNullOfOrNull { INDRIVE_WAITING.find(it) }?.let { match ->
-            return NumberParser.parse(match.groupValues[1])?.let { RideLifecycleEvent.CounterOfferSent(it) }
+            val fare = NumberParser.parse(match.groupValues[1]) ?: return null
+            // Mesma contraproposta na tela de novo: já avisada (o relatório enchia de repetições).
+            if (lastCounter[Platform.INDRIVE]?.compareTo(fare) == 0) return null
+            lastCounter[Platform.INDRIVE] = fare
+            return RideLifecycleEvent.CounterOfferSent(fare)
         }
 
         val inRide = lines.any { line -> INDRIVE_RIDE_MARKERS.any { line.startsWith(it, ignoreCase = true) } }
@@ -115,11 +149,12 @@ class RideLifecycleUseCase(
     /** Guarda o último pedido daquele app (com o valor final, no inDrive) como corrida aceita. */
     private fun confirm(platform: Platform, key: String, fare: BigDecimal?): RideLifecycleEvent {
         val now = clock()
-        val seen = lastOffer[platform]?.takeIf { now - it.atMillis <= OFFER_MAX_AGE_MS }
+        lastCounter.remove(platform)
+        val seen = lastOffer[platform]?.takeIf { now - it.atMillis <= offerMaxAge(platform) }
         if (seen == null) {
             // Sem km não há como calcular: marca como ativa para não insistir a cada leitura.
             active[platform] = Active(null, key, now)
-            logger.warn(TAG, "$platform: corrida confirmada sem pedido lido antes; não guardada")
+            logger.warn(TAG, "$platform: corrida confirmada sem pedido lido no prazo; não guardada")
             return RideLifecycleEvent.ConfirmedWithoutOffer(platform)
         }
         val original = seen.analysis
@@ -156,17 +191,27 @@ class RideLifecycleUseCase(
 
     private fun currentRules() = RideRules.from(settings)
 
+    /** Prazo entre o pedido lido e a confirmação: Uber 1 min; inDrive 10 min (o passageiro demora). */
+    private fun offerMaxAge(platform: Platform): Long =
+        if (platform == Platform.UBER) UBER_OFFER_MAX_AGE_MS else OFFER_MAX_AGE_MS
+
     private companion object {
         const val TAG = "RideLifecycle"
 
         /** Pedido lido até 10 min antes da confirmação (inDrive: o passageiro pode demorar). */
         const val OFFER_MAX_AGE_MS = 10 * 60_000L
+
+        /** Uber: a oferta dura ~15 s e "Encontro com" vem logo após o aceite (corrida de 19/11 20:23). */
+        const val UBER_OFFER_MAX_AGE_MS = 60_000L
         const val ACTIVE_MAX_AGE_MS = 3 * 60 * 60_000L
 
         // Uber (relatório de 09/11 18:49–19:00). OCR às vezes junta lixo antes ("Oo Encontro com").
         val UBER_RIDE = Regex("""(?i)(^|\s)(?:encontro com|destino de)\s+(\p{L}[\p{L} .'-]{0,40})$""")
         // Fim da corrida na Uber. Sem âncoras (pedido de 16/11): o OCR junta lixo antes/depois e a
         // frase pode vir completa ("Como foi a viagem com Fernanda?"), e aí a voz da meta não falava.
+        // Corrida em dinheiro (19/11 21:00): "Quanto você recebeu em dinheiro?" → "Concluir pagamento".
+        // "Coletar pagamento" aparece DURANTE a viagem e não conta.
+        val UBER_CASH_DONE = Regex("""(?i)(concluir pagamento|quanto voc[eê] recebeu|recolher o pagamento em dinheiro)""")
         val UBER_DONE = Regex("""(?i)(como foi (a |sua )?viagem|avalia?r? (o |a )?(usu[aá]rio|passageir[oa])|avalie (o |a )?(usu[aá]rio|passageir[oa]))""")
 
         // inDrive (relatório de 09/11 18:26–18:43).

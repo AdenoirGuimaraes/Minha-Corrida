@@ -165,4 +165,63 @@ class RideLifecycleUseCaseTest {
         lifecycle.onScreen(Platform.UBER, uberIndoBuscar)
         assertNull(lifecycle.onScreen(Platform.UBER, uberEmViagem))
     }
+
+    @Test
+    fun `Uber 19-11 20h23 - oferta recusada minutos antes nao vira a corrida aceita`() {
+        // R$ 18,08 (3,9 + 9,2 km) lida e recusada; a aceita (R$ 14,01) não foi lida.
+        lifecycle.onOffer(offer(Platform.UBER, "18.08", "3.9", "9.2"))
+        now += 2 * 60_000L
+        assertIs<RideLifecycleEvent.ConfirmedWithoutOffer>(lifecycle.onScreen(Platform.UBER, uberIndoBuscar))
+        assertTrue(rides().isEmpty())
+    }
+
+    @Test
+    fun `Uber oferta lida segundos antes do Encontro com continua valendo`() {
+        lifecycle.onOffer(fernanda)
+        now += 40_000L
+        assertIs<RideLifecycleEvent.Confirmed>(lifecycle.onScreen(Platform.UBER, uberIndoBuscar))
+    }
+
+    @Test
+    fun `inDrive mantem 10 min entre o pedido e o aceite do passageiro`() {
+        lifecycle.onOffer(janaPedido)
+        now += 5 * 60_000L
+        assertIs<RideLifecycleEvent.Confirmed>(lifecycle.onScreen(Platform.INDRIVE, indoBuscar))
+    }
+
+    @Test
+    fun `Uber corrida em dinheiro 19-11 conclui no pagamento`() {
+        val pagamento = listOf("o Dinheiro", "Quanto você recebeu em dinheiro?", "Outro valor", "R$ 3,70")
+        val concluir = listOf("R$ 3,70", "Deslize para recolher o pagamento em dinheiro", "Concluir pagamento")
+        listOf(pagamento, concluir).forEachIndexed { i, screen ->
+            lifecycle.onOffer(offer(Platform.UBER, "${12 + i}.00", "1.0", "2.0"))
+            assertIs<RideLifecycleEvent.Confirmed>(lifecycle.onScreen(Platform.UBER, uberIndoBuscar))
+            assertIs<RideLifecycleEvent.Completed>(lifecycle.onScreen(Platform.UBER, screen))
+        }
+        assertTrue(rides().all { it.done })
+        // "Coletar pagamento" aparece durante a viagem: não conclui.
+        lifecycle.onOffer(offer(Platform.UBER, "20.00", "1.0", "2.0"))
+        lifecycle.onScreen(Platform.UBER, uberIndoBuscar)
+        assertNull(lifecycle.onScreen(Platform.UBER, listOf("Destino de Luciane", "Coletar pagamento")))
+    }
+
+    @Test
+    fun `toque em Avaliar usuario conclui; outros toques nao`() {
+        lifecycle.onOffer(fernanda)
+        lifecycle.onScreen(Platform.UBER, uberIndoBuscar)
+        assertNull(lifecycle.onTap(Platform.UBER, "Tenho interesse"))
+        assertIs<RideLifecycleEvent.Completed>(lifecycle.onTap(Platform.UBER, "Avaliar usuário"))
+        assertTrue(rides().single().done)
+        // Sem corrida em andamento, o toque não faz nada.
+        assertNull(lifecycle.onTap(Platform.UBER, "Avaliar usuário"))
+    }
+
+    @Test
+    fun `contraproposta repetida na tela so avisa uma vez`() {
+        lifecycle.onOffer(janaPedido)
+        assertIs<RideLifecycleEvent.CounterOfferSent>(lifecycle.onScreen(Platform.INDRIVE, oferecendo))
+        assertNull(lifecycle.onScreen(Platform.INDRIVE, oferecendo))
+        val outra = listOf("Oferecendo sua tarifa R$ 15. Aguarde a resposta", "Jana")
+        assertIs<RideLifecycleEvent.CounterOfferSent>(lifecycle.onScreen(Platform.INDRIVE, outra))
+    }
 }
